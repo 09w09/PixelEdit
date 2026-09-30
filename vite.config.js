@@ -4,22 +4,14 @@ export default defineConfig({
   base: './',
   plugins: [
     {
-      name: 'pixeledit-runtime-overrides',
+      name: 'pixeledit-module-entry',
       transformIndexHtml() {
         return [
           {
             tag: 'script',
             attrs: {
               type: 'module',
-              src: './svg-vector-runtime.js',
-            },
-            injectTo: 'body',
-          },
-          {
-            tag: 'script',
-            attrs: {
-              type: 'module',
-              src: './pixel-stroke-runtime.js',
+              src: './src/main.js',
             },
             injectTo: 'body',
           },
