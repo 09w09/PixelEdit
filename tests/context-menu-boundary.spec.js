@@ -26,24 +26,24 @@ test('native context menu is prevented everywhere while custom menu appears only
     const input = document.createElement('input'); document.body.appendChild(input);
     const select = document.createElement('select'); document.body.appendChild(select);
     const textarea = document.createElement('textarea'); document.body.appendChild(textarea);
-    const targets = {
-      body: document.body,
-      globalToolbar: document.querySelector('#globalToolbar'),
-      toolOptions: document.querySelector('#toolOptionsBar'),
-      toolDock: document.querySelector('#leftSidebar'),
-      properties: document.querySelector('#properties'),
-      history: document.querySelector('#historyDock'),
-      status: document.querySelector('.status'),
-      ruler: document.querySelector('#topRuler'),
-      splitter: document.querySelector('#leftWidthSplitter'),
-      viewport: document.querySelector('#viewport'),
-      input,
-      select,
-      textarea,
-      canvas: document.querySelector('#screenCanvas'),
-      layer: document.querySelector(`.layer-row[data-node-id="${node.id}"]`),
+    const targetResolvers = {
+      body: () => document.body,
+      globalToolbar: () => document.querySelector('#globalToolbar'),
+      toolOptions: () => document.querySelector('#toolOptionsBar'),
+      toolDock: () => document.querySelector('#leftSidebar'),
+      properties: () => document.querySelector('#properties'),
+      history: () => document.querySelector('#historyDock'),
+      status: () => document.querySelector('.status'),
+      ruler: () => document.querySelector('#topRuler'),
+      splitter: () => document.querySelector('#leftWidthSplitter'),
+      viewport: () => document.querySelector('#viewport'),
+      input: () => input,
+      select: () => select,
+      textarea: () => textarea,
+      canvas: () => document.querySelector('#screenCanvas'),
+      layer: () => document.querySelector(`.layer-row[data-node-id="${node.id}"]`),
     };
-    return Object.fromEntries(Object.entries(targets).map(([key, target]) => [key, dispatch(target)]));
+    return Object.fromEntries(Object.entries(targetResolvers).map(([key, resolve]) => [key, dispatch(resolve())]));
   });
   for (const [key, value] of Object.entries(result)) expect(value.prevented, key).toBe(true);
   for (const key of ['body', 'globalToolbar', 'toolOptions', 'toolDock', 'properties', 'history', 'status', 'ruler', 'splitter', 'viewport', 'input', 'select', 'textarea']) {
