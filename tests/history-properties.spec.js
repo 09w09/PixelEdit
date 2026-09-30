@@ -5,19 +5,16 @@ async function openEditor(page) {
   await page.waitForFunction(() => Boolean(window.PixelEditorTest?.editor));
 }
 
-function historySnapshot() {
-  return [...document.querySelectorAll('#historyDock .history-item')].map(button => ({
-    label: button.textContent.trim(),
-    index: Number(button.dataset.historyIndex),
-    active: button.classList.contains('active'),
-  }));
-}
-
 test('history renders newest first while data indices remain chronological', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     const C = window.PixelEditor.commands;
+    const snapshot = () => [...document.querySelectorAll('#historyDock .history-item')].map(button => ({
+      label: button.textContent.trim(),
+      index: Number(button.dataset.historyIndex),
+      active: button.classList.contains('active'),
+    }));
     editor.newProject({ force: true });
     const id = editor.activePage().id;
     editor.exec(new C.UpdatePageCommand(id, { name: 'A' }, '第一步'));
@@ -27,7 +24,7 @@ test('history renders newest first while data indices remain chronological', asy
     return {
       cursor: editor.bus.cursor,
       labels: editor.bus.entries.map(entry => entry.label),
-      items: historySnapshot(),
+      items: snapshot(),
     };
   });
 
@@ -43,6 +40,11 @@ test('undo redo and branch history keep reversed display mapped to real cursor',
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     const C = window.PixelEditor.commands;
+    const snapshot = () => [...document.querySelectorAll('#historyDock .history-item')].map(button => ({
+      label: button.textContent.trim(),
+      index: Number(button.dataset.historyIndex),
+      active: button.classList.contains('active'),
+    }));
     editor.newProject({ force: true });
     const id = editor.activePage().id;
     editor.exec(new C.UpdatePageCommand(id, { name: 'A' }, '第一步'));
@@ -50,12 +52,12 @@ test('undo redo and branch history keep reversed display mapped to real cursor',
     editor.exec(new C.UpdatePageCommand(id, { name: 'C' }, '第三步'));
 
     editor.bus.undo(); editor.renderAll();
-    const afterUndo = { cursor: editor.bus.cursor, items: historySnapshot() };
+    const afterUndo = { cursor: editor.bus.cursor, items: snapshot() };
     editor.bus.redo(); editor.renderAll();
-    const afterRedo = { cursor: editor.bus.cursor, items: historySnapshot() };
+    const afterRedo = { cursor: editor.bus.cursor, items: snapshot() };
     editor.bus.undo(); editor.renderAll();
     editor.exec(new C.UpdatePageCommand(id, { name: 'BRANCH' }, '分支步骤'));
-    const afterBranch = { cursor: editor.bus.cursor, entries: editor.bus.entries.map(entry => entry.label), items: historySnapshot() };
+    const afterBranch = { cursor: editor.bus.cursor, entries: editor.bus.entries.map(entry => entry.label), items: snapshot() };
     return { afterUndo, afterRedo, afterBranch };
   });
 
