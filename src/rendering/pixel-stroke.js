@@ -67,7 +67,7 @@ function forEachStrokePixel(x1, y1, x2, y2, lineWidth, emit) {
 }
 
 function lineStrokeBounds(node) {
-  const lineWidth = Math.round(Number(node?.lineWidth) || 0);
+  const lineWidth = Math.round(Number(node?.stroke?.width) || 0);
   if (!node || lineWidth <= 0) {
     const x1 = Math.round(Number(node?.x1) || 0);
     const y1 = Math.round(Number(node?.y1) || 0);
