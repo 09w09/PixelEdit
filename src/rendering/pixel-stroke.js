@@ -42,8 +42,6 @@ function forEachStrokePixel(x1, y1, x2, y2, lineWidth, emit) {
   const dy = endY - startY;
   const offsetStart = strokeOffsetStart(width);
 
-  // A zero-length line has no direction. Treat it as a square brush stamp so
-  // its width is still exactly lineWidth in both axes.
   if (dx === 0 && dy === 0) {
     for (let oy = 0; oy < width; oy += 1) {
       for (let ox = 0; ox < width; ox += 1) {
@@ -53,10 +51,6 @@ function forEachStrokePixel(x1, y1, x2, y2, lineWidth, emit) {
     return;
   }
 
-  // Thicken along the minor axis using parallel one-pixel Bresenham tracks.
-  // This keeps an N-pixel stroke exactly N pixels thick instead of using a
-  // radius test, which made even widths (2, 4, ...) one pixel too large.
-  // All tracks share the same longitudinal endpoints, giving a flat/butt cap.
   const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
   for (let index = 0; index < width; index += 1) {
     const offset = offsetStart + index;
@@ -106,7 +100,7 @@ function lineStrokeBounds(node) {
   };
 }
 
-export function installPixelStrokeRuntime(target = globalThis) {
+function installPixelStrokeRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const R = PE?.renderer;
   const M = PE?.model;
@@ -152,6 +146,4 @@ export function installPixelStrokeRuntime(target = globalThis) {
   };
 }
 
-if (globalThis.PixelEditor) {
-  installPixelStrokeRuntime(globalThis);
-}
+export { rasterThinLine, forEachStrokePixel, lineStrokeBounds, installPixelStrokeRuntime };
