@@ -6,9 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "playwright test",
+    "test:svg": "playwright test tests/svg-vector.spec.js",
+    "test:preview": "playwright test tests/svg-vector.spec.js --config playwright.preview.config.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "vite": "^7.0.0"
   }
 }
