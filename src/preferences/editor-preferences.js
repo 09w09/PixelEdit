@@ -1,7 +1,8 @@
-const PREFERENCE_KEY = 'pixeledit:v16:preferences';
-const AUTOSAVE_KEY = 'pixel-editor-v16-autosave';
-const DEFAULT_FILENAME = 'pixel-project-v16.pix';
+const PREFERENCE_KEY = 'pixeledit:v17:preferences';
+const AUTOSAVE_KEY = 'pixel-editor-v17-autosave';
+const DEFAULT_FILENAME = 'pixel-project-v17.pix';
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
+const TOOL_FILL_MODES = new Set(['transparent', 'solid']);
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const integer = (value, fallback, min = -Infinity, max = Infinity) => {
@@ -20,9 +21,10 @@ function defaultEditorPreferences() {
       pencil: { width: 1, color: 1 },
       eraser: { width: 1 },
       line: { width: 1, color: 1, style: 'solid' },
-      rectangle: { width: 1, color: 1, style: 'solid' },
-      circle: { width: 1, color: 1, style: 'solid' },
-      polygon: { width: 1, color: 1, style: 'solid' },
+      rectangle: { width: 1, color: 1, style: 'solid', fill: { mode: 'transparent', color: 1 } },
+      circle: { width: 1, color: 1, style: 'solid', fill: { mode: 'transparent', color: 1 } },
+      polygon: { width: 1, color: 1, style: 'solid', fill: { mode: 'transparent', color: 1 } },
+      text: { fontFamily: 'sans-serif', fontSize: 16, lastScalableFontSize: 16 },
     },
     transparencyPreview: false,
   };
@@ -30,10 +32,22 @@ function defaultEditorPreferences() {
 
 function normalizeTool(tool, input, fallback) {
   const source = input && typeof input === 'object' ? input : {};
-  const out = { ...fallback };
+  const out = structuredClone(fallback);
   if ('width' in fallback) out.width = integer(source.width, fallback.width, 1, 100);
   if ('color' in fallback) out.color = Number(source.color) === 0 ? 0 : 1;
   if ('style' in fallback) out.style = STROKE_STYLES.has(source.style) ? source.style : fallback.style;
+  if ('fill' in fallback) {
+    const fill = source.fill && typeof source.fill === 'object' ? source.fill : {};
+    out.fill = {
+      mode: TOOL_FILL_MODES.has(fill.mode) ? fill.mode : fallback.fill.mode,
+      color: Number(fill.color) === 0 ? 0 : 1,
+    };
+  }
+  if (tool === 'text') {
+    out.fontFamily = typeof source.fontFamily === 'string' && source.fontFamily.trim() ? source.fontFamily : fallback.fontFamily;
+    out.fontSize = integer(source.fontSize, fallback.fontSize, 1, 200);
+    out.lastScalableFontSize = integer(source.lastScalableFontSize, fallback.lastScalableFontSize, 1, 200);
+  }
   return out;
 }
 
@@ -94,19 +108,13 @@ function updateEditorPreferences(current, patch) {
   return normalizePreferences(mergeObjects(normalizePreferences(current), patch));
 }
 
-function referencedAssetIds(project) {
-  const ids = new Set();
-  for (const font of project.fonts || []) if (font.assetId) ids.add(font.assetId);
-  for (const page of project.pages || []) for (const node of page.nodes || []) if (node.assetId) ids.add(node.assetId);
-  return ids;
-}
-
 function installEditorPreferencesRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  if (!PE?.model || !PE?.persistence || !PE?.ui?.Workspace) throw new Error('PixelEditor is not initialized');
+  if (!PE?.model || !PE?.persistence || !PE?.ui?.Workspace || !PE?.schemaV17) {
+    throw new Error('PixelEditor V17 schema is not initialized');
+  }
   if (PE.editorPreferencesInstalled) return;
   PE.editorPreferencesInstalled = true;
-  PE.version = 16;
   PE.preferences = {
     PREFERENCE_KEY,
     AUTOSAVE_KEY,
@@ -118,65 +126,11 @@ function installEditorPreferencesRuntime(target = globalThis) {
     normalizePreferences,
   };
 
-  const M = PE.model;
   const P = PE.persistence;
   const Workspace = PE.ui.Workspace;
 
-  M.createProject = function createProjectV16(name = '未命名工程') {
-    const page = M.createPage('页面 1');
-    return {
-      version: 16,
-      width: 400,
-      height: 300,
-      name,
-      pages: [page],
-      activePageId: page.id,
-      fonts: [],
-    };
-  };
-  delete M.defaultWorkspaceLayout;
-
-  function validate(project) {
-    if (!project || typeof project !== 'object') throw new Error('工程数据无效');
-    if (project.version !== 16) throw new Error('只支持 V16 工程');
-    if (project.width !== 400 || project.height !== 300) throw new Error('工程尺寸必须为 400×300');
-    if (Object.hasOwn(project, 'workspaceLayout')) throw new Error('V16 工程不得包含 workspaceLayout');
-    if (!Array.isArray(project.pages) || project.pages.length < 1) throw new Error('工程必须至少包含 1 个页面');
-    if (!Array.isArray(project.fonts)) throw new Error('工程字体数据无效');
-    const pageIds = new Set();
-    for (const page of project.pages) {
-      if (!page || typeof page !== 'object' || !page.id) throw new Error('页面数据无效');
-      if (pageIds.has(page.id)) throw new Error('页面 ID 重复');
-      pageIds.add(page.id);
-      if (page.width !== 400 || page.height !== 300) throw new Error('页面尺寸必须为 400×300');
-      if (!Array.isArray(page.nodes)) throw new Error('页面图层数据无效');
-      if (page.nodes.some(node => node.type === 'background')) throw new Error('V16 页面不得包含 background 图层');
-      new M.TreeModel(page).validateHierarchy();
-    }
-    if (!pageIds.has(project.activePageId)) throw new Error('activePageId 必须指向现有页面');
-    return project;
-  }
-
-  P.ProjectSerializer = {
-    validate,
-    referencedAssetIds,
-    serialize(project, assets) {
-      validate(project);
-      const output = structuredClone(project);
-      output.assets = assets.referenced(referencedAssetIds(project));
-      return JSON.stringify(output);
-    },
-    deserialize(raw) {
-      const output = typeof raw === 'string' ? JSON.parse(raw) : structuredClone(raw);
-      validate(output);
-      const records = output.assets || [];
-      delete output.assets;
-      return { project: output, assets: new M.AssetStore(records) };
-    },
-  };
-
   const BaseProjectFiles = P.ProjectFiles;
-  P.ProjectFiles = class ProjectFilesV16 extends BaseProjectFiles {
+  P.ProjectFiles = class ProjectFilesV17 extends BaseProjectFiles {
     async saveAs() {
       const picker = this.io?.showSaveFilePicker || target.showSaveFilePicker;
       if (!picker) throw new Error('save picker unavailable');
@@ -194,7 +148,7 @@ function installEditorPreferencesRuntime(target = globalThis) {
     }
   };
 
-  P.Autosave = class AutosaveV16 {
+  P.Autosave = class AutosaveV17 {
     constructor(state, storage = null, key = AUTOSAVE_KEY) {
       this.state = state;
       this.key = key;
@@ -217,7 +171,7 @@ function installEditorPreferencesRuntime(target = globalThis) {
   };
 
   const oldMount = Workspace.prototype.mount;
-  Workspace.prototype.mount = function mountV16() {
+  Workspace.prototype.mount = function mountV17Preferences() {
     this.editorPreferences = loadEditorPreferences();
     return oldMount.call(this);
   };
@@ -230,7 +184,7 @@ function installEditorPreferencesRuntime(target = globalThis) {
     return structuredClone(this.editorPreferences.workspace);
   };
 
-  Workspace.prototype.applyLayout = function applyLayoutV16() {
+  Workspace.prototype.applyLayout = function applyLayoutV17() {
     if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences();
     const layout = this.editorPreferences.workspace;
     document.documentElement.style.setProperty('--left-w', `${layout.leftWidth}px`);
@@ -245,7 +199,7 @@ function installEditorPreferencesRuntime(target = globalThis) {
     if (rightBottom) rightBottom.style.flex = `${1 - layout.rightSplit} 1 0`;
   };
 
-  Workspace.prototype.setupDockSplitters = function setupDockSplittersV16() {
+  Workspace.prototype.setupDockSplitters = function setupDockSplittersV17() {
     const width = (selector, key, direction) => {
       const element = document.querySelector(selector);
       if (!element) return;
@@ -292,25 +246,25 @@ function installEditorPreferencesRuntime(target = globalThis) {
   };
 
   const oldRenderAll = Workspace.prototype.renderAll;
-  Workspace.prototype.renderAll = function renderAllV16(options = {}) {
+  Workspace.prototype.renderAll = function renderAllV17(options = {}) {
     const result = oldRenderAll.call(this, options);
     const status = document.querySelector('#statusText');
-    if (status) status.textContent = '400×300 · 1-bit · V16';
-    document.title = `400×300 黑白像素编辑器 V16${this.state?.dirty ? ' *' : ''}`;
-    document.documentElement.dataset.pixelEditor = 'v16';
-    if (target.PixelEditorTest) target.PixelEditorTest.version = 16;
+    if (status) status.textContent = '400×300 · 1-bit · V17';
+    document.title = `400×300 黑白像素编辑器 V17${this.state?.dirty ? ' *' : ''}`;
+    document.documentElement.dataset.pixelEditor = 'v17';
+    if (target.PixelEditorTest) target.PixelEditorTest.version = 17;
     return result;
   };
 
   const oldTestApi = Workspace.prototype.testApi;
-  Workspace.prototype.testApi = function testApiV16() {
+  Workspace.prototype.testApi = function testApiV17() {
     const api = oldTestApi.call(this);
-    api.version = 16;
+    api.version = 17;
     return api;
   };
 
   const oldSaveProject = Workspace.prototype.saveProject;
-  Workspace.prototype.saveProject = async function saveProjectV16() {
+  Workspace.prototype.saveProject = async function saveProjectV17() {
     if (!this.state.projectFileName && typeof target.showSaveFilePicker !== 'function') this.state.projectFileName = DEFAULT_FILENAME;
     return oldSaveProject.call(this);
   };
