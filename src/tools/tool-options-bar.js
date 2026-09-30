@@ -17,6 +17,12 @@ const SELECTION_ACTIONS = [
   { action: 'rotate-ccw-90', title: '逆时针旋转 90°', icon: ICONS.rotateCcw, run: editor => editor.runSelectionTransform?.('rotate-ccw-90') },
 ];
 
+function actionRequirement(action) {
+  if (action.startsWith('align-')) return 2;
+  if (action.startsWith('distribute-')) return 3;
+  return 1;
+}
+
 function ensureStyles() {
   if (document.querySelector('#pixeleditToolOptionsStyles')) return;
   const style = document.createElement('style');
@@ -86,13 +92,21 @@ class ToolOptionsBar {
     this.element = element;
   }
 
+  modifiableSelectionCount() {
+    const runtime = globalThis.PixelEditor?.selectionTransform;
+    if (!runtime?.modifiableSelectionRoots) return this.editor.state.selection.ids.length;
+    return runtime.modifiableSelectionRoots(this.editor.activePage(), this.editor.state.selection).length;
+  }
+
   renderSelectionTools() {
     const fragment = document.createDocumentFragment();
     const alignGroup = group();
     const distributeGroup = group();
     const transformGroup = group();
+    const modifiableCount = this.modifiableSelectionCount();
     for (const definition of SELECTION_ACTIONS) {
       const button = iconButton({ action: definition.action, title: definition.title, svg: definition.icon });
+      button.disabled = modifiableCount < actionRequirement(definition.action);
       button.addEventListener('click', () => definition.run(this.editor));
       if (definition.action.startsWith('align-')) alignGroup.appendChild(button);
       else if (definition.action.startsWith('distribute-')) distributeGroup.appendChild(button);
@@ -100,7 +114,9 @@ class ToolOptionsBar {
     }
     const angle = numberInput('toolOptionRotation', 0, -3600, 3600);
     angle.setAttribute('aria-label', '旋转角度');
+    angle.disabled = modifiableCount < 1;
     const rotate = iconButton({ action: 'rotate-angle', title: '旋转指定角度', svg: ICONS.rotateCw });
+    rotate.disabled = modifiableCount < 1;
     rotate.addEventListener('click', () => {
       const value = Number(angle.value);
       if (Number.isFinite(value) && value !== 0) this.editor.runSelectionTransform?.('rotate-angle', value);
@@ -223,6 +239,13 @@ function installToolOptionsRuntime(target = globalThis) {
     this.toolOptionsBar?.render();
     return result;
   };
+
+  const originalRenderAll = Workspace.prototype.renderAll;
+  Workspace.prototype.renderAll = function renderAllWithToolAvailability(options = {}) {
+    const result = originalRenderAll.call(this, options);
+    this.toolOptionsBar?.render();
+    return result;
+  };
 }
 
-export { SELECTION_ACTIONS, ToolOptionsBar, installGlobalToolbar, installToolOptionsRuntime };
+export { SELECTION_ACTIONS, ToolOptionsBar, actionRequirement, installGlobalToolbar, installToolOptionsRuntime };
