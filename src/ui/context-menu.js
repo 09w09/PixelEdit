@@ -96,7 +96,6 @@ function installContextMenuRuntime(target = globalThis) {
   };
 
   Workspace.prototype.onContextMenu = function sharedCanvasContextMenu(event) {
-    event.preventDefault();
     const point = this.logicalPoint(event);
     const hit = new I.HitTest(this.state.project, this.activePage().id, this.state.assets).topmostAt(point.x, point.y, { ignoreLocked: false });
     return this.openContextMenu({ source: 'canvas', nodeId: hit?.id || null, event });
@@ -116,15 +115,12 @@ function installContextMenuRuntime(target = globalThis) {
     });
   };
 
+  // The document-level context-menu boundary owns right-click routing. Layer
+  // rows keep all of their normal bindings here without a second contextmenu
+  // listener, so native suppression has exactly one authority.
   const oldBindLayer = PageDock.prototype.bindLayer;
   PageDock.prototype.bindLayer = function bindLayerWithSharedContext(row) {
-    oldBindLayer.call(this, row);
-    const id = row.dataset.nodeId;
-    row.addEventListener('contextmenu', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      this.editor.openContextMenu({ source: 'layers', nodeId: id, event });
-    });
+    return oldBindLayer.call(this, row);
   };
 
   PE.contextMenu = {
