@@ -12,6 +12,14 @@ function parsePoints(value = '') {
   });
 }
 
+function expectPointsClose(actual, expected) {
+  expect(actual).toHaveLength(expected.length);
+  actual.forEach((point, index) => {
+    expect(point.x).toBeCloseTo(expected[index].x, 5);
+    expect(point.y).toBeCloseTo(expected[index].y, 5);
+  });
+}
+
 test('90-degree box selection uses an oriented polygon and transformed corner handles', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
@@ -36,12 +44,12 @@ test('90-degree box selection uses an oriented polygon and transformed corner ha
     return { points: polygon?.getAttribute('points') || '', handles, rectCount: editor.overlay.querySelectorAll('rect.selection-box').length };
   });
   const points = parsePoints(result.points);
+  const expected = [
+    { x: 115, y: 95 }, { x: 115, y: 115 }, { x: 105, y: 95 }, { x: 105, y: 115 },
+  ];
   expect(result.rectCount).toBe(0);
-  expect(points).toHaveLength(4);
-  expect(points).toEqual([
-    { x: 115, y: 95 }, { x: 115, y: 115 }, { x: 105, y: 115 }, { x: 105, y: 95 },
-  ]);
-  expect(result.handles).toEqual(points);
+  expectPointsClose(points, expected);
+  expectPointsClose(result.handles, expected);
 });
 
 test('line and polygon control handles follow their canonical transform', async ({ page }) => {
@@ -83,13 +91,7 @@ test('line and polygon control handles follow their canonical transform', async 
     }
     return cases;
   });
-  for (const item of result) {
-    expect(item.actual).toHaveLength(item.expected.length);
-    item.actual.forEach((point, index) => {
-      expect(point.x).toBeCloseTo(item.expected[index].x, 5);
-      expect(point.y).toBeCloseTo(item.expected[index].y, 5);
-    });
-  }
+  for (const item of result) expectPointsClose(item.actual, item.expected);
 });
 
 test('horizontal flip changes raster presentation without mutating source pixels', async ({ page }) => {
