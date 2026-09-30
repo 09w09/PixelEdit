@@ -94,7 +94,10 @@ test('per-tool defaults persist locally and never mutate existing nodes', async 
     const C = window.PixelEditor.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
-    const existing = M.createNode('line', { parentId: active.id, x1: 2, y1: 2, x2: 20, y2: 2, lineWidth: 1 });
+    const existing = M.createNode('line', {
+      parentId: active.id, x1: 2, y1: 2, x2: 20, y2: 2,
+      stroke: { width: 1, color: 1, style: 'solid' },
+    });
     editor.exec(new C.AddNodesCommand([existing], active.id));
     editor.setTool('line');
     const width = document.querySelector('#toolOptionWidth');
@@ -107,7 +110,7 @@ test('per-tool defaults persist locally and never mutate existing nodes', async 
     editor.setTool('line');
     return {
       defaults: editor.getToolDefaults('line'),
-      existingLineWidth: M.nodeById(active, existing.id).lineWidth,
+      existingStroke: M.nodeById(active, existing.id).stroke,
       stored: JSON.parse(localStorage.getItem('pixeledit:v16:preferences')).tools.line,
       controls: {
         width: document.querySelector('#toolOptionWidth').value,
@@ -117,7 +120,7 @@ test('per-tool defaults persist locally and never mutate existing nodes', async 
     };
   });
   expect(first.defaults).toEqual({ width: 4, color: 0, style: 'dash-dot' });
-  expect(first.existingLineWidth).toBe(1);
+  expect(first.existingStroke).toEqual({ width: 1, color: 1, style: 'solid' });
   expect(first.stored).toEqual({ width: 4, color: 0, style: 'dash-dot' });
   expect(first.controls).toEqual({ width: '4', color: '0', style: 'dash-dot' });
 
