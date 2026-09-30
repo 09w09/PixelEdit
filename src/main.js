@@ -5,6 +5,7 @@ import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
+import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
@@ -23,6 +24,7 @@ function installRuntimeModules() {
   installStrokeStyleRuntime(globalThis);
   installTriStateRasterRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
+  installPaintBrushRuntime(globalThis);
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
   installSelectionOverlayRuntime(globalThis);
