@@ -25,7 +25,7 @@ function installToolStateRuntime(target = globalThis) {
 
   Workspace.prototype.setToolDefault = function setToolDefault(tool, key, value) {
     if (!this.editorPreferences) this.editorPreferences = preferences.loadEditorPreferences();
-    const patch = { tools: { [tool]: { [key]: value } } };
+    const patch = { tools: { [tool]: { [key]: value } };
     this.editorPreferences = preferences.updateEditorPreferences(this.editorPreferences, patch);
     preferences.saveEditorPreferences(this.editorPreferences);
     this.toolOptionsBar?.render?.();
@@ -51,10 +51,14 @@ function installToolStateRuntime(target = globalThis) {
     const node = PE.model.nodeById(this.activePage(), this.customGesture?.nodeId);
     if (!node) return result;
     const settings = this.getToolDefaults(tool);
-    node.lineWidth = settings.width;
-    // Transitional V16 creation metadata; Task 3 replaces these with node.stroke.
-    node.strokeColor = settings.color;
-    node.strokeStyle = settings.style;
+    node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || {
+      width: settings.width || 1,
+      color: settings.color === 0 ? 0 : 1,
+      style: settings.style || 'solid',
+    };
+    delete node.lineWidth;
+    delete node.strokeColor;
+    delete node.strokeStyle;
     this.renderCanvas?.();
     return result;
   };
