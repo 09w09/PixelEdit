@@ -1,3 +1,4 @@
+import { installFontManagerRuntime } from './fonts/font-manager.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
@@ -10,6 +11,7 @@ function installRuntimeModules() {
   installRasterLayerRuntime(globalThis);
   installSelectionOverlayRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
+  installFontManagerRuntime(globalThis);
 }
 
 installRuntimeModules();
