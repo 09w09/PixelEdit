@@ -22,7 +22,7 @@ function seedFontAndTextScript() {
   const second = editor.activePage();
   const text2 = M.createNode('text', { parentId: second.id, x: 0, y: 0, w: 80, h: 30, text: 'B', fontFamily: family, fontSize: 14, fixedFontSize: 18 });
   editor.exec(new C.AddNodesCommand([text2], second.id));
-  return { editor, M, family, assetId, firstId: first.id, secondId: second.id, text1Id: text1.id, text2Id: text2.id };
+  return { family, assetId, firstId: first.id, secondId: second.id, text1Id: text1.id, text2Id: text2.id };
 }
 
 test('removing an imported font replaces every page reference and preserves effective size', async ({ page }) => {
