@@ -146,8 +146,8 @@ test('element stroke and transform edits create history without changing tool de
   expect(result.afterToolDefault).toBe(result.afterTransform);
   expect(result.stroke).toEqual({ width: 3, color: 1, style: 'solid' });
   expect(result.transform).toEqual({ rotation: 45, flipX: false, flipY: true });
-  expect(result.defaultsBeforeToolEdit).toEqual({ width: 5, color: 0, style: 'dot' });
-  expect(result.defaultsAfterToolEdit).toEqual({ width: 7, color: 0, style: 'dot' });
+  expect(result.defaultsBeforeToolEdit).toEqual({ width: 5, color: 0, style: 'dot', fill: { mode: 'transparent', color: 1 } });
+  expect(result.defaultsAfterToolEdit).toEqual({ width: 7, color: 0, style: 'dot', fill: { mode: 'transparent', color: 1 } });
 });
 
 test('selection tool buttons refresh enabled state from modifiable selection cardinality', async ({ page }) => {
