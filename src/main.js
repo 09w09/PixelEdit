@@ -5,6 +5,7 @@ import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
+import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
@@ -21,6 +22,7 @@ import { installContextMenuRuntime } from './ui/context-menu.js';
 import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 
 function installRuntimeModules() {
+  installV17SchemaRuntime(globalThis);
   installEditorPreferencesRuntime(globalThis);
   installToolStateRuntime(globalThis);
   installToolOptionsRuntime(globalThis);
