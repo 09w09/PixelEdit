@@ -5,14 +5,6 @@ async function openEditor(page) {
   await page.waitForFunction(() => Boolean(window.PixelEditorTest?.editor));
 }
 
-function boxNode(M, pageId, x, y, transform = {}) {
-  return M.createNode('rectangle', {
-    parentId: pageId, x, y, w: 10, h: 10,
-    stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'transparent' },
-    transform,
-  });
-}
-
 test('multi-selection rotation uses union center and is one undoable command', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
@@ -52,28 +44,46 @@ test('multi-selection rotation uses union center and is one undoable command', a
   ]);
 });
 
-test('group flip reflects centers and composes existing rotation and flip state', async ({ page }) => {
+test('group flip reflects transformed visual centers and composes orientation', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     const M = window.PixelEditor.model;
     const C = window.PixelEditor.commands;
+    const R = window.PixelEditor.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 10, y: 20, w: 10, h: 10, transform: { rotation: 30, flipX: false, flipY: true } });
     const b = M.createNode('rectangle', { parentId: p.id, x: 30, y: 20, w: 10, h: 10, transform: { rotation: -20, flipX: true, flipY: false } });
     editor.exec(new C.AddNodesCommand([a, b], p.id));
     editor.state.selection.replace([a.id, b.id]);
+    const context = { project: editor.state.project, pageId: p.id, assets: editor.state.assets };
+    const beforeBounds = [a.id, b.id].map(id => R.FramebufferRenderer.visualBounds(id, context));
+    const left = Math.min(...beforeBounds.map(item => item.x));
+    const right = Math.max(...beforeBounds.map(item => item.x + item.w));
+    const pivotX = (left + right) / 2;
+    const beforeCenters = beforeBounds.map(item => ({ x: item.x + item.w / 2, y: item.y + item.h / 2 }));
+
     editor.runSelectionTransform('flip-horizontal');
-    return [a.id, b.id].map(id => {
+    const afterContext = { project: editor.state.project, pageId: p.id, assets: editor.state.assets };
+    const after = [a.id, b.id].map(id => {
       const node = M.nodeById(editor.activePage(), id);
-      return { x: node.x, y: node.y, transform: structuredClone(node.transform) };
+      const bounds = R.FramebufferRenderer.visualBounds(id, afterContext);
+      return {
+        center: { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 },
+        transform: structuredClone(node.transform),
+      };
     });
+    return { pivotX, beforeCenters, after };
   });
 
-  expect(result).toEqual([
-    { x: 30, y: 20, transform: { rotation: -30, flipX: true, flipY: true } },
-    { x: 10, y: 20, transform: { rotation: 20, flipX: false, flipY: false } },
+  result.after.forEach((item, index) => {
+    expect(item.center.x).toBeCloseTo(result.pivotX * 2 - result.beforeCenters[index].x, 8);
+    expect(item.center.y).toBeCloseTo(result.beforeCenters[index].y, 8);
+  });
+  expect(result.after.map(item => item.transform)).toEqual([
+    { rotation: -30, flipX: true, flipY: true },
+    { rotation: 20, flipX: false, flipY: false },
   ]);
 });
 
@@ -133,7 +143,7 @@ test('align and distribute operate on transformed visual bounds', async ({ page 
   });
 
   expect(Math.max(...result.tops) - Math.min(...result.tops)).toBeLessThan(1e-5);
-  expect(Math.abs(result.gaps[0] - result.gaps[1])).toBeLessThanOrEqual(1);
+  expect(Math.abs(result.gaps[0] - result.gaps[1])).toBeLessThanOrEqual(1e-5);
 });
 
 test('zero-angle and empty selection transforms do not create history entries', async ({ page }) => {
