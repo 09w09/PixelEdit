@@ -8,9 +8,13 @@ import { installEditorPreferencesRuntime } from './preferences/editor-preference
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
+import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
+import { installToolStateRuntime } from './tools/tool-state.js';
 
 function installRuntimeModules() {
   installEditorPreferencesRuntime(globalThis);
+  installToolStateRuntime(globalThis);
+  installToolOptionsRuntime(globalThis);
   installImageRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
