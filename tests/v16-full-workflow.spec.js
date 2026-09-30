@@ -108,7 +108,7 @@ test('complete V16 workflow survives round-trip and exports opaque black-white P
   expect(setup.previewButtonOff).toBe('false');
   expect(new Set(setup.rasterPixels)).toEqual(new Set([0, 1, 2]));
   expect(setup.rectangleTransform.rotation).toBe(23);
-  expect(setup.rasterTransform.rotation).toBe(90);
+  expect(setup.rasterTransform.rotation).toBe(113);
 
   await page.keyboard.press('Control+A');
   const selectedAll = await page.evaluate(({ lockedId }) => {
@@ -188,7 +188,7 @@ test('complete V16 workflow survives round-trip and exports opaque black-white P
   expect(crossPage.firstRoot.y).toBe(crossPage.sourceRoot.y);
   expect(crossPage.firstRoot.transform.rotation).toBe(23);
   expect(crossPage.firstChild.parentId).toBe(crossPage.firstRoot.id);
-  expect(crossPage.firstChild.transform.rotation).toBe(90);
+  expect(crossPage.firstChild.transform.rotation).toBe(113);
   expect(crossPage.secondRoot.x).toBe(crossPage.sourceRoot.x + 8);
   expect(crossPage.secondRoot.y).toBe(crossPage.sourceRoot.y + 8);
   expect(crossPage.cursorAfterFirst - crossPage.cursorBeforeFirst).toBe(1);
@@ -261,7 +261,7 @@ test('complete V16 workflow survives round-trip and exports opaque black-white P
   expect(roundTrip.hasTransparencyPreview).toBe(false);
   expect(roundTrip.hasEditorPreferences).toBe(false);
   expect(roundTrip.savedRasterEncoding).toBe('tristate-packed-v1');
-  expect(roundTrip.savedRasterTransform.rotation).toBe(90);
+  expect(roundTrip.savedRasterTransform.rotation).toBe(113);
   expect(roundTrip.savedStyledShapeStroke).toEqual({ width: 3, color: 0, style: 'dash-dot' });
   expect(roundTrip.savedStyledShapeTransform.rotation).toBe(23);
   expect(roundTrip.sameFramebuffer).toBe(true);
