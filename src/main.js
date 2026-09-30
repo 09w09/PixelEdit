@@ -14,6 +14,7 @@ import { installTextLayoutRuntime } from './rendering/text-layout.js';
 import { installTransparencyOverlayRuntime } from './rendering/transparency-overlay.js';
 import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
+import { installTransformModelRuntime } from './transforms/transform-model.js';
 
 function installRuntimeModules() {
   installEditorPreferencesRuntime(globalThis);
@@ -27,6 +28,7 @@ function installRuntimeModules() {
   installPaintBrushRuntime(globalThis);
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
+  installTransformModelRuntime(globalThis);
   installSelectionOverlayRuntime(globalThis);
   installTransparencyOverlayRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
