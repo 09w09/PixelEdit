@@ -211,7 +211,7 @@ test('project serialization round-trip preserves referenced image assets and hie
       serializedAssetCount: JSON.parse(raw).assets.length,
     };
   });
-  expect(result.projectVersion).toBe(15);
+  expect(result.projectVersion).toBe(16);
   expect(result.assetExists).toBe(true);
   expect(result.hierarchyValid).toBe(true);
   expect(result.serializedAssetCount).toBe(1);
