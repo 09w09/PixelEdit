@@ -1,3 +1,4 @@
+import { installElementClipboardRuntime } from './clipboard/element-clipboard.js';
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
 import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
@@ -16,6 +17,7 @@ import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
 import { installSelectionTransformRuntime } from './transforms/selection-transform.js';
 import { installTransformModelRuntime } from './transforms/transform-model.js';
+import { installContextMenuRuntime } from './ui/context-menu.js';
 
 function installRuntimeModules() {
   installEditorPreferencesRuntime(globalThis);
@@ -31,6 +33,8 @@ function installRuntimeModules() {
   installEditBoundariesRuntime(globalThis);
   installTransformModelRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
+  installElementClipboardRuntime(globalThis);
+  installContextMenuRuntime(globalThis);
   installSelectionOverlayRuntime(globalThis);
   installTransparencyOverlayRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
