@@ -1,107 +1,15 @@
-const RASTER_ENCODING = 'bitset-base64-v1';
-
-function bytesToBase64(bytes) {
-  let binary = '';
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(value) {
-  const binary = atob(String(value || ''));
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-function encodeRasterPixels(pixels) {
-  const source = pixels instanceof Uint8Array ? pixels : Uint8Array.from(pixels || []);
-  const bytes = new Uint8Array(Math.ceil(source.length / 8));
-  for (let index = 0; index < source.length; index += 1) {
-    if (source[index]) bytes[index >> 3] |= 1 << (index & 7);
-  }
-  return bytesToBase64(bytes);
-}
-
-function decodeRasterPixels(data, width, height) {
-  const length = Math.max(0, Math.round(Number(width) || 0) * Math.round(Number(height) || 0));
-  const bytes = base64ToBytes(data);
-  const pixels = new Uint8Array(length);
-  for (let index = 0; index < length; index += 1) {
-    pixels[index] = (bytes[index >> 3] || 0) >> (index & 7) & 1;
-  }
-  return pixels;
-}
-
-function createRasterPayload(width, height, pixels = null) {
-  const length = Math.max(1, Math.round(Number(width) || 1)) * Math.max(1, Math.round(Number(height) || 1));
-  const normalized = new Uint8Array(length);
-  if (pixels) {
-    const source = pixels instanceof Uint8Array ? pixels : Uint8Array.from(pixels);
-    normalized.set(source.subarray(0, length));
-  }
-  return { encoding: RASTER_ENCODING, data: encodeRasterPixels(normalized) };
-}
-
-function pixelsFromNode(node) {
-  if (!node?.raster || node.raster.encoding !== RASTER_ENCODING) {
-    return new Uint8Array(Math.max(1, Number(node?.w) || 1) * Math.max(1, Number(node?.h) || 1));
-  }
-  return decodeRasterPixels(node.raster.data, node.w, node.h);
-}
-
-function paintRaster(node, points, value) {
-  const pixels = pixelsFromNode(node);
-  const width = Math.max(1, Math.round(Number(node.w) || 1));
-  const height = Math.max(1, Math.round(Number(node.h) || 1));
-  for (const point of points || []) {
-    const x = Math.round(Number(point.x));
-    const y = Math.round(Number(point.y));
-    if (x < 0 || y < 0 || x >= width || y >= height) continue;
-    pixels[y * width + x] = value ? 1 : 0;
-  }
-  return createRasterPayload(width, height, pixels);
-}
-
-function resizeRaster(node, geometry) {
-  const oldX = Math.round(Number(node.x) || 0);
-  const oldY = Math.round(Number(node.y) || 0);
-  const oldW = Math.max(1, Math.round(Number(node.w) || 1));
-  const oldH = Math.max(1, Math.round(Number(node.h) || 1));
-  const x = Math.round(Number(geometry.x) || 0);
-  const y = Math.round(Number(geometry.y) || 0);
-  const w = Math.max(1, Math.round(Number(geometry.w) || 1));
-  const h = Math.max(1, Math.round(Number(geometry.h) || 1));
-  const source = pixelsFromNode(node);
-  const output = new Uint8Array(w * h);
-
-  for (let ny = 0; ny < h; ny += 1) {
-    const globalY = y + ny;
-    const oy = globalY - oldY;
-    if (oy < 0 || oy >= oldH) continue;
-    for (let nx = 0; nx < w; nx += 1) {
-      const globalX = x + nx;
-      const ox = globalX - oldX;
-      if (ox < 0 || ox >= oldW) continue;
-      output[ny * w + nx] = source[oy * oldW + ox];
-    }
-  }
-
-  return { x, y, w, h, raster: createRasterPayload(w, h, output) };
-}
-
-function pixelsToRgba(pixels, width, height) {
-  const rgba = new Uint8ClampedArray(width * height * 4);
-  for (let index = 0; index < width * height; index += 1) {
-    const value = pixels[index] ? 0 : 255;
-    const offset = index * 4;
-    rgba[offset] = rgba[offset + 1] = rgba[offset + 2] = value;
-    rgba[offset + 3] = 255;
-  }
-  return rgba;
-}
+import {
+  RASTER_TRANSPARENT,
+  RASTER_WHITE,
+  RASTER_BLACK,
+  RASTER_ENCODING,
+  createTriStateRaster,
+  decodeTriStatePixels,
+  pixelsFromRasterNode,
+  paintTriStateRaster,
+  resizeTriStateRaster,
+  triStatePixelsToRgba,
+} from '../raster/tristate-raster.js';
 
 function adaptRasterProject(project, assets) {
   const clone = structuredClone(project);
@@ -110,8 +18,12 @@ function adaptRasterProject(project, assets) {
     for (const node of page.nodes || []) {
       if (node.type !== 'raster') continue;
       const id = `__pixeledit_raster__${node.id}`;
-      const pixels = pixelsFromNode(node);
-      runtimes.set(id, { width: node.w, height: node.h, data: pixelsToRgba(pixels, node.w, node.h) });
+      const pixels = pixelsFromRasterNode(node);
+      runtimes.set(id, {
+        width: node.w,
+        height: node.h,
+        data: triStatePixelsToRgba(pixels, node.w, node.h),
+      });
       node.type = 'image';
       node.assetId = id;
       node.sourceWidth = node.w;
@@ -120,8 +32,10 @@ function adaptRasterProject(project, assets) {
       node.sourceName = '';
       node.svgViewBox = null;
       node.image = {
-        fit: 'stretch', interpolation: 'nearest', cropX: 0, cropY: 0, cropW: node.w, cropH: node.h,
-        bwMode: 'threshold', threshold: 128, invert: false, ditherAlgorithm: 'bayer', bayerMatrix: 4,
+        fit: 'stretch', interpolation: 'nearest', cropX: 0, cropY: 0,
+        cropW: node.w, cropH: node.h,
+        bwMode: 'threshold', threshold: 128, invert: false,
+        ditherAlgorithm: 'bayer', bayerMatrix: 4,
       };
       node.overlay = {};
       delete node.raster;
@@ -139,12 +53,25 @@ function rasterizeSubtree({ project, pageId, nodeId, assets, framebufferRenderer
   for (let index = 0; index < pixels.length; index += 1) {
     const offset = index * 4;
     const alpha = cut.data[offset + 3];
-    if (alpha > 0) {
-      const luma = cut.data[offset] * 0.299 + cut.data[offset + 1] * 0.587 + cut.data[offset + 2] * 0.114;
-      pixels[index] = luma < 128 ? 1 : 0;
+    if (alpha === 0) {
+      pixels[index] = RASTER_TRANSPARENT;
+      continue;
     }
+    const luma = cut.data[offset] * 0.299 + cut.data[offset + 1] * 0.587 + cut.data[offset + 2] * 0.114;
+    pixels[index] = luma < 128 ? RASTER_BLACK : RASTER_WHITE;
   }
   return { x: cut.x, y: cut.y, w: cut.w, h: cut.h, pixels };
+}
+
+function validateRasterProject(project) {
+  for (const page of project.pages || []) {
+    for (const node of page.nodes || []) {
+      if (node.type !== 'raster') continue;
+      if (!node.raster || node.raster.encoding !== RASTER_ENCODING) throw new Error('V16 栅格数据格式无效');
+      decodeTriStatePixels(node.raster.data, node.w, node.h);
+    }
+  }
+  return project;
 }
 
 function installRasterLayerRuntime(target = globalThis) {
@@ -152,9 +79,10 @@ function installRasterLayerRuntime(target = globalThis) {
   const M = PE?.model;
   const C = PE?.commands;
   const R = PE?.renderer;
+  const P = PE?.persistence;
   const Workspace = PE?.ui?.Workspace;
   const Properties = PE?.ui?.Properties;
-  if (!M?.createNode || !R?.FramebufferRenderer || !Workspace) throw new Error('PixelEditor is not initialized');
+  if (!M?.createNode || !R?.FramebufferRenderer || !Workspace || !PE?.tristateRaster) throw new Error('PixelEditor tri-state raster dependencies are not initialized');
   if (PE.rasterLayerInstalled) return;
   PE.rasterLayerInstalled = true;
 
@@ -164,8 +92,13 @@ function installRasterLayerRuntime(target = globalThis) {
     const w = Math.max(1, Math.round(Number(props.w) || 40));
     const h = Math.max(1, Math.round(Number(props.h) || 30));
     let raster;
-    if (props.raster?.encoding === RASTER_ENCODING) raster = structuredClone(props.raster);
-    else raster = createRasterPayload(w, h, props.pixels || null);
+    if (props.raster) {
+      if (props.raster.encoding !== RASTER_ENCODING) throw new Error('V16 栅格数据格式无效');
+      raster = structuredClone(props.raster);
+      decodeTriStatePixels(raster.data, w, h);
+    } else {
+      raster = createTriStateRaster(w, h, props.pixels || null, RASTER_TRANSPARENT);
+    }
     return {
       id: props.id || M.nextId('raster'),
       type: 'raster',
@@ -178,9 +111,24 @@ function installRasterLayerRuntime(target = globalThis) {
       w,
       h,
       aspectLocked: Boolean(props.aspectLocked),
+      transform: structuredClone(props.transform || { rotation: 0, flipX: false, flipY: false }),
       raster,
     };
   };
+
+  if (P?.ProjectSerializer) {
+    const originalSerialize = P.ProjectSerializer.serialize.bind(P.ProjectSerializer);
+    const originalDeserialize = P.ProjectSerializer.deserialize.bind(P.ProjectSerializer);
+    P.ProjectSerializer.serialize = function serializeRasterV16(project, assets) {
+      validateRasterProject(project);
+      return originalSerialize(project, assets);
+    };
+    P.ProjectSerializer.deserialize = function deserializeRasterV16(raw) {
+      const result = originalDeserialize(raw);
+      validateRasterProject(result.project);
+      return result;
+    };
+  }
 
   const framebuffer = R.FramebufferRenderer;
   const originalRenderPage = framebuffer.renderPage;
@@ -218,11 +166,19 @@ function installRasterLayerRuntime(target = globalThis) {
     if (!targetInfo || targetInfo.kind !== 'node' || targetInfo.node.type !== 'raster') {
       return originalBeginPaint.call(this, point);
     }
+    const pencilColor = this.getToolDefaults?.('pencil')?.color === 0 ? RASTER_WHITE : RASTER_BLACK;
     this.notice('');
     this.customGesture = {
-      type: 'paint', targetKind: 'raster', nodeId: targetInfo.node.id, pageId: this.activePage().id,
-      value: this.tool === 'pencil' ? 1 : 0, start: point, last: point, lastPaint: point,
-      originalRaster: structuredClone(targetInfo.node.raster), changed: false,
+      type: 'paint',
+      targetKind: 'raster',
+      nodeId: targetInfo.node.id,
+      pageId: this.activePage().id,
+      value: this.tool === 'eraser' ? RASTER_TRANSPARENT : pencilColor,
+      start: point,
+      last: point,
+      lastPaint: point,
+      originalRaster: structuredClone(targetInfo.node.raster),
+      changed: false,
     };
     this.applyPaintSegment(this.customGesture, point, point);
     this.renderCanvas();
@@ -234,11 +190,11 @@ function installRasterLayerRuntime(target = globalThis) {
     if (gesture.targetKind !== 'raster') return originalApplyPaintSegment.call(this, gesture, a, b);
     const node = M.nodeById(this.activePage(), gesture.nodeId);
     if (!node || node.type !== 'raster') return false;
-    const points = this.linePoints(a, b).map(p => ({ x: p.x - node.x, y: p.y - node.y }));
+    const points = this.linePoints(a, b).map(point => ({ x: point.x - node.x, y: point.y - node.y }));
     const before = node.raster.data;
-    node.raster = paintRaster(node, points, gesture.value);
+    node.raster = paintTriStateRaster(node, points, gesture.value);
     const changed = node.raster.data !== before;
-    gesture.changed = gesture.changed || changed;
+    gesture.changed ||= changed;
     return changed;
   };
 
@@ -251,7 +207,8 @@ function installRasterLayerRuntime(target = globalThis) {
     const finalRaster = structuredClone(node.raster);
     node.raster = structuredClone(gesture.originalRaster);
     if (!gesture.changed) return false;
-    return this.exec(new C.UpdateNodesCommand([node.id], { raster: finalRaster }, page.id, gesture.value ? '栅格铅笔' : '栅格橡皮'));
+    const label = gesture.value === RASTER_TRANSPARENT ? '栅格橡皮' : gesture.value === RASTER_WHITE ? '栅格白色铅笔' : '栅格黑色铅笔';
+    return this.exec(new C.UpdateNodesCommand([node.id], { raster: finalRaster }, page.id, label));
   };
 
   const originalCancelCustomGesture = Workspace.prototype.cancelCustomGesture;
@@ -277,10 +234,25 @@ function installRasterLayerRuntime(target = globalThis) {
     const children = tree.childrenOf(id);
     if (node.type === 'raster' && children.length === 0) return false;
     if (typeof confirm === 'function' && !confirm('确认将该图层及其所有子图层栅格化为固定像素图层吗？')) return false;
-    const cut = rasterizeSubtree({ project: this.state.project, pageId: page.id, nodeId: id, assets: this.state.assets, framebufferRenderer: R.FramebufferRenderer });
+    const cut = rasterizeSubtree({
+      project: this.state.project,
+      pageId: page.id,
+      nodeId: id,
+      assets: this.state.assets,
+      framebufferRenderer: R.FramebufferRenderer,
+    });
     const replacement = M.createNode('raster', {
-      id: node.id, parentId: node.parentId, name: node.name, visible: node.visible, locked: node.locked,
-      x: cut.x, y: cut.y, w: cut.w, h: cut.h, pixels: cut.pixels,
+      id: node.id,
+      parentId: node.parentId,
+      name: node.name,
+      visible: node.visible,
+      locked: node.locked,
+      x: cut.x,
+      y: cut.y,
+      w: cut.w,
+      h: cut.h,
+      pixels: cut.pixels,
+      transform: node.transform,
     });
     const ids = new Set([id, ...tree.descendantsOf(id).map(item => item.id)]);
     const index = page.nodes.findIndex(item => item.id === id);
@@ -311,7 +283,7 @@ function installRasterLayerRuntime(target = globalThis) {
         if (axis === 'w') geometry.h = Math.max(1, Math.round(target / ratio));
         else geometry.w = Math.max(1, Math.round(target * ratio));
       }
-      return resizeRaster(node, geometry);
+      return resizeTriStateRaster(node, geometry);
     }, page.id, '调整栅格尺寸'));
   };
 
@@ -323,7 +295,7 @@ function installRasterLayerRuntime(target = globalThis) {
     const geometry = { x: node.x, y: node.y, w: node.w, h: node.h };
     const original = structuredClone(gesture.original);
     Object.assign(node, original);
-    const patch = resizeRaster(original, geometry);
+    const patch = resizeTriStateRaster(original, geometry);
     return this.exec(new C.UpdateNodesCommand([gesture.nodeId], patch, page.id, '调整栅格大小'));
   };
 
@@ -336,7 +308,7 @@ function installRasterLayerRuntime(target = globalThis) {
     const originalTypeFields = Properties.prototype.typeFields;
     Properties.prototype.typeFields = function typeFields(nodes, locked) {
       if (nodes[0]?.type === 'raster') {
-        return '<div class="property-section"><h4>栅格</h4><div class="muted">固定 1-bit 像素画布，可使用铅笔和橡皮编辑；调整边框只扩展白色区域或裁剪，不缩放像素。</div></div>';
+        return '<div class="property-section"><h4>栅格</h4><div class="muted">固定像素画布：黑、白、透明三态。铅笔写入黑/白，橡皮写入透明；调整边框只扩展透明区域或裁剪，不重采样。</div></div>';
       }
       return originalTypeFields.call(this, nodes, locked);
     };
@@ -351,22 +323,18 @@ function installRasterLayerRuntime(target = globalThis) {
 
   PE.rasterLayer = {
     encoding: RASTER_ENCODING,
-    encodeRasterPixels,
-    decodeRasterPixels,
-    createRasterPayload,
-    paintRaster,
-    resizeRaster,
+    decodeRasterPixels: decodeTriStatePixels,
+    createRasterPayload: createTriStateRaster,
+    paintRaster: paintTriStateRaster,
+    resizeRaster: resizeTriStateRaster,
     rasterizeSubtree,
+    validateRasterProject,
   };
 }
 
 export {
   RASTER_ENCODING,
-  encodeRasterPixels,
-  decodeRasterPixels,
-  createRasterPayload,
-  paintRaster,
-  resizeRaster,
   rasterizeSubtree,
+  validateRasterProject,
   installRasterLayerRuntime,
 };
