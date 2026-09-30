@@ -64,7 +64,7 @@ function installV17SchemaRuntime(target = globalThis) {
     const page = originalCreatePage(name);
     page.width = WIDTH;
     page.height = HEIGHT;
-    page.fill = normalizeFill(page.fill, { background: true });
+    page.fill = { mode: 'solid', color: 0 };
     return page;
   };
 
