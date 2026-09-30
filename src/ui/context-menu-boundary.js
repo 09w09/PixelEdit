@@ -8,7 +8,7 @@ function classifyContextRegion(target) {
   const element = elementForTarget(target);
   if (!element?.closest) return 'none';
   if (element.closest('.layer-row[data-node-id]')) return 'layers';
-  if (element.closest('#canvas')) return 'canvas';
+  if (element.closest('#screenCanvas, #stage')) return 'canvas';
   return 'none';
 }
 
