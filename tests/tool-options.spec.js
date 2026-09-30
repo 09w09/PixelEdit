@@ -111,7 +111,7 @@ test('per-tool defaults persist locally and never mutate existing nodes', async 
     return {
       defaults: editor.getToolDefaults('line'),
       existingStroke: M.nodeById(active, existing.id).stroke,
-      stored: JSON.parse(localStorage.getItem('pixeledit:v16:preferences')).tools.line,
+      stored: JSON.parse(localStorage.getItem('pixeledit:v17:preferences')).tools.line,
       controls: {
         width: document.querySelector('#toolOptionWidth').value,
         color: document.querySelector('#toolOptionColor').value,
@@ -149,7 +149,7 @@ test('row-one transparency toggle is a persisted editor preference', async ({ pa
     const before = button?.getAttribute('aria-pressed');
     button?.click();
     const after = button?.getAttribute('aria-pressed');
-    const stored = JSON.parse(localStorage.getItem('pixeledit:v16:preferences'));
+    const stored = JSON.parse(localStorage.getItem('pixeledit:v17:preferences'));
     return { before, after, stored: stored.transparencyPreview, title: button?.getAttribute('title') };
   });
   expect(state.before).toBe('false');
