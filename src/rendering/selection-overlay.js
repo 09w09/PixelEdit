@@ -148,10 +148,17 @@ function installSelectionOverlayRuntime(target = globalThis) {
       if (sx >= sy) h = Math.max(1, Math.round(w / ratio));
       else w = Math.max(1, Math.round(h * ratio));
     }
-    node.x = west ? anchorX - w : anchorX;
-    node.y = north ? anchorY - h : anchorY;
-    node.w = w;
-    node.h = h;
+    const geometry = {
+      x: west ? anchorX - w : anchorX,
+      y: north ? anchorY - h : anchorY,
+      w,
+      h,
+    };
+    if (node.type === 'raster' && PE.rasterLayer?.resizeRaster) {
+      Object.assign(node, PE.rasterLayer.resizeRaster(gesture.original, geometry));
+    } else {
+      Object.assign(node, geometry);
+    }
     this.renderCanvas();
     this.renderOverlay();
     this.properties.render();
