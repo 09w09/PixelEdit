@@ -89,16 +89,16 @@ test('live northwest raster resize preserves pixels by translation and participa
     editor.beginLiveHandle(handle, { x: 10, y: 10 });
     const gesture = editor.customGesture;
     editor.updateLiveResize(gesture, { x: 9, y: 9 });
-    const live = M.nodeById(active, raster.id);
+    const live = M.nodeById(editor.activePage(), raster.id);
     const livePixels = L.decodeRasterPixels(live.raster.data, live.w, live.h);
     const liveBlack = [];
     for (let y = 0; y < live.h; y++) for (let x = 0; x < live.w; x++) if (livePixels[y * live.w + x]) liveBlack.push([x, y]);
     const committed = editor.commitLiveHandle(gesture);
-    const afterCommit = structuredClone(M.nodeById(active, raster.id));
+    const afterCommit = structuredClone(M.nodeById(editor.activePage(), raster.id));
     const undo = editor.bus.undo();
-    const afterUndo = structuredClone(M.nodeById(active, raster.id));
+    const afterUndo = structuredClone(M.nodeById(editor.activePage(), raster.id));
     const redo = editor.bus.redo();
-    const afterRedo = structuredClone(M.nodeById(active, raster.id));
+    const afterRedo = structuredClone(M.nodeById(editor.activePage(), raster.id));
     return {
       liveGeom: { x: live.x, y: live.y, w: live.w, h: live.h },
       liveBlack,
