@@ -100,30 +100,16 @@ function installFontManagerRuntime(target = globalThis) {
     if (!record) return false;
     const ok = this.exec(new RemoveImportedFontCommand(family));
     if (ok) {
+      PE.textToolOptions?.fallbackRemovedFamily?.(this, family);
       this.fontManager?.unregister(record);
       this.fontManager?.sync(this.state.project.fonts || []);
       this.properties?.render();
+      this.toolOptionsBar?.render?.();
     }
     return ok;
   };
 
   if (Properties) {
-    const originalTypeFields = Properties.prototype.typeFields;
-    Properties.prototype.typeFields = function typeFields(nodes, locked) {
-      let html = originalTypeFields.call(this, nodes, locked);
-      if (nodes[0]?.type !== 'text') return html;
-      const family = nodes[0].fontFamily;
-      const sameFamily = nodes.every(node => node.fontFamily === family);
-      if (!sameFamily || !isImportedFamily(this.editor.state.project, family)) return html;
-      const button = `<div class="mini-actions"><button id="removeFontBtn" type="button" class="danger" ${locked ? 'disabled' : ''}>移除当前字体</button></div>`;
-      const marker = '<button id="importFontBtn" type="button"';
-      const index = html.indexOf(marker);
-      if (index < 0) return html + button;
-      const close = html.indexOf('</button>', index);
-      if (close < 0) return html + button;
-      return html.slice(0, close + 9) + button + html.slice(close + 9);
-    };
-
     const originalBind = Properties.prototype.bind;
     Properties.prototype.bind = function bind(nodes, locked) {
       const result = originalBind.call(this, nodes, locked);
