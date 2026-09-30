@@ -1,12 +1,14 @@
 import { installElementClipboardRuntime } from './clipboard/element-clipboard.js';
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
+import { installFontOptionsRuntime } from './fonts/font-options.js';
 import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
+import { installTextFontActionsRuntime } from './properties/text-font-actions.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
 import { installSelectionGeometryRuntime } from './selection/selection-geometry.js';
@@ -17,6 +19,7 @@ import { installTextLayoutRuntime } from './rendering/text-layout.js';
 import { installTransparencyOverlayRuntime } from './rendering/transparency-overlay.js';
 import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
+import { installTextToolOptionsRuntime } from './tools/text-tool-options.js';
 import { installSelectionTransformRuntime } from './transforms/selection-transform.js';
 import { installTransformModelRuntime } from './transforms/transform-model.js';
 import { installContextMenuRuntime } from './ui/context-menu.js';
@@ -26,7 +29,9 @@ import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 function installRuntimeModules() {
   installV17SchemaRuntime(globalThis);
   installEditorPreferencesRuntime(globalThis);
+  installFontOptionsRuntime(globalThis);
   installToolStateRuntime(globalThis);
+  installTextToolOptionsRuntime(globalThis);
   installToolOptionsRuntime(globalThis);
   installImageRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
@@ -47,6 +52,7 @@ function installRuntimeModules() {
   installTransparencyOverlayRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
   installFontManagerRuntime(globalThis);
+  installTextFontActionsRuntime(globalThis);
   installFontImportRuntime(globalThis);
 }
 
