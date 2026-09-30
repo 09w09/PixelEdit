@@ -1,3 +1,4 @@
+import { renderTextToolOptions } from './text-tool-options.js';
 import { ICONS, iconButton, setIconButton } from '../ui/icon-toolbar.js';
 
 const SHAPE_TOOLS = new Set(['line', 'rectangle', 'circle', 'polygon']);
@@ -41,6 +42,7 @@ function ensureStyles() {
     .tool-option-field input{width:64px}
     .tool-option-field select{width:auto;min-width:72px}
     #toolOptionRotation{width:68px}
+    #toolOptionFont{min-width:150px}
     #globalToolbar .toolbar-icon-button{width:30px;height:30px;padding:5px}
   `;
   document.head.appendChild(style);
@@ -164,6 +166,7 @@ class ToolOptionsBar {
     if (!this.element) return;
     const tool = this.editor.tool;
     if (tool === 'pointer' || tool === 'select') this.renderSelectionTools();
+    else if (tool === 'text') renderTextToolOptions(this.editor, this.element);
     else if (tool === 'pencil' || tool === 'eraser' || SHAPE_TOOLS.has(tool)) this.renderCreationTools(tool);
     else this.element.replaceChildren();
   }
