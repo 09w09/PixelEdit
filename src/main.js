@@ -4,11 +4,13 @@ import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
+import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
 
 function installRuntimeModules() {
+  installEditorPreferencesRuntime(globalThis);
   installImageRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
