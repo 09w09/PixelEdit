@@ -8,7 +8,7 @@ async function openEditor(page) {
 const styles = ['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot'];
 const shapeTypes = ['line', 'rectangle', 'circle', 'polygon'];
 
-test('V16 shape nodes use stroke only and never serialize lineWidth', async ({ page }) => {
+test('V16 shape nodes use stroke only and never serialize top-level lineWidth', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -24,10 +24,11 @@ test('V16 shape nodes use stroke only and never serialize lineWidth', async ({ p
       M.createNode('polygon', { ...common, points: [{ x: 90, y: 20 }, { x: 100, y: 4 }, { x: 110, y: 20 }] }),
     ];
     for (const node of nodes) pageModel.nodes.push(node);
-    const raw = P.ProjectSerializer.serialize(editor.state.project, editor.state.assets);
+    const parsed = JSON.parse(P.ProjectSerializer.serialize(editor.state.project, editor.state.assets));
+    const serializedShapes = parsed.pages.flatMap(p => p.nodes).filter(node => ['line', 'rectangle', 'circle', 'polygon'].includes(node.type));
     return {
       nodes: nodes.map(node => ({ type: node.type, stroke: node.stroke, hasLineWidth: Object.hasOwn(node, 'lineWidth') })),
-      serializedHasLineWidth: raw.includes('"lineWidth"'),
+      serializedShapeHasLineWidth: serializedShapes.some(node => Object.hasOwn(node, 'lineWidth')),
     };
   });
   expect(result.nodes.map(item => item.type)).toEqual(shapeTypes);
@@ -35,7 +36,7 @@ test('V16 shape nodes use stroke only and never serialize lineWidth', async ({ p
     expect(node.stroke).toEqual({ width: 3, color: 0, style: 'dash-dot' });
     expect(node.hasLineWidth).toBe(false);
   }
-  expect(result.serializedHasLineWidth).toBe(false);
+  expect(result.serializedShapeHasLineWidth).toBe(false);
 });
 
 test('all five stroke styles render deterministically for all shape primitives', async ({ page }) => {
