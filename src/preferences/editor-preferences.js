@@ -122,12 +122,17 @@ function installEditorPreferencesRuntime(target = globalThis) {
   const P = PE.persistence;
   const Workspace = PE.ui.Workspace;
 
-  const oldCreateProject = M.createProject;
   M.createProject = function createProjectV16(name = '未命名工程') {
-    const project = oldCreateProject(name);
-    project.version = 16;
-    delete project.workspaceLayout;
-    return project;
+    const page = M.createPage('页面 1');
+    return {
+      version: 16,
+      width: 400,
+      height: 300,
+      name,
+      pages: [page],
+      activePageId: page.id,
+      fonts: [],
+    };
   };
   delete M.defaultWorkspaceLayout;
 
