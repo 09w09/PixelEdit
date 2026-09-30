@@ -24,7 +24,7 @@ async function drawWithTool(page, tool, start, end) {
   }, { tool, start, end });
 }
 
-test('complete V16 workflow survives round-trip and exports opaque black-white PNG pixels', async ({ page }) => {
+test('complete V17 workflow survives round-trip and exports opaque black-white PNG pixels', async ({ page }) => {
   await openEditor(page);
 
   await page.evaluate(() => {
@@ -72,7 +72,7 @@ test('complete V16 workflow survives round-trip and exports opaque black-white P
       h: 18,
       locked: true,
       stroke: { width: 1, color: 1, style: 'solid' },
-      fill: { mode: 'transparent' },
+      fill: { mode: 'transparent', color: 1 },
     });
     editor.exec(new C.AddNodesCommand([raster, locked], source.id, '添加工作流节点'));
 
@@ -231,10 +231,8 @@ test('complete V16 workflow survives round-trip and exports opaque black-white P
       if (r !== g || g !== b || (r !== 0 && r !== 255)) blackWhiteOnly = false;
     }
 
-    const rootKeys = Object.keys(parsed);
     return {
       version: parsed.version,
-      rootKeys,
       hasWorkspaceLayout: Object.hasOwn(parsed, 'workspaceLayout'),
       hasTools: Object.hasOwn(parsed, 'tools'),
       hasTransparencyPreview: Object.hasOwn(parsed, 'transparencyPreview'),
@@ -254,8 +252,8 @@ test('complete V16 workflow survives round-trip and exports opaque black-white P
     };
   });
 
-  expect(roundTrip.version).toBe(16);
-  expect(roundTrip.testApiVersion).toBe(16);
+  expect(roundTrip.version).toBe(17);
+  expect(roundTrip.testApiVersion).toBe(17);
   expect(roundTrip.hasWorkspaceLayout).toBe(false);
   expect(roundTrip.hasTools).toBe(false);
   expect(roundTrip.hasTransparencyPreview).toBe(false);
@@ -268,7 +266,7 @@ test('complete V16 workflow survives round-trip and exports opaque black-white P
   expect(roundTrip.opaque).toBe(true);
   expect(roundTrip.blackWhiteOnly).toBe(true);
   expect(roundTrip.preferencesAfterRestore).toEqual(roundTrip.preferencesBeforeRestore);
-  expect(roundTrip.preferencesAfterRestore.tools.rectangle).toEqual({ width: 3, color: 0, style: 'dash-dot' });
+  expect(roundTrip.preferencesAfterRestore.tools.rectangle).toEqual({ width: 3, color: 0, style: 'dash-dot', fill: { mode: 'transparent', color: 1 } });
   expect(roundTrip.preferencesAfterRestore.transparencyPreview).toBe(false);
   expect(roundTrip.pageCount).toBe(2);
   expect(roundTrip.hierarchyValid).toBe(true);
