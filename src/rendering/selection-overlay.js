@@ -33,6 +33,19 @@ function installSelectionOverlayRuntime(target = globalThis) {
   if (PE.selectionOverlayInstalled) return;
   PE.selectionOverlayInstalled = true;
 
+  const boxHandlePoints = bounds => {
+    const handles = G.sourceHandles(bounds);
+    return ['nw', 'ne', 'sw', 'se'].map(corner => ({ ...handles[corner], corner }));
+  };
+
+  const hitBoxHandle = (bounds, point, zoom) => {
+    const tolerance = handleHitTolerance(zoom);
+    for (const handle of boxHandlePoints(bounds)) {
+      if (Math.hypot(handle.x - point.x, handle.y - point.y) <= tolerance) return handle;
+    }
+    return null;
+  };
+
   function outlineMarkup(node, dx = 0, dy = 0) {
     const geometry = G.selectionGeometry(node);
     if (!geometry) return '';
@@ -138,6 +151,8 @@ function installSelectionOverlayRuntime(target = globalThis) {
   };
 
   PE.selectionOverlay = {
+    boxHandlePoints,
+    hitBoxHandle,
     handleVisualSize,
     handleHitTolerance,
     sourceGeometryBounds: G.sourceGeometryBounds,
