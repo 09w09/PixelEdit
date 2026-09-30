@@ -5,17 +5,14 @@ export default defineConfig({
   plugins: [
     {
       name: 'pixeledit-module-entry',
-      transformIndexHtml() {
-        return [
-          {
-            tag: 'script',
-            attrs: {
-              type: 'module',
-              src: './src/main.js',
-            },
-            injectTo: 'body',
-          },
-        ];
+      transformIndexHtml: {
+        order: 'pre',
+        handler(html) {
+          return html.replace(
+            '</body>',
+            '<script type="module" src="./src/main.js"></script></body>',
+          );
+        },
       },
     },
   ],
