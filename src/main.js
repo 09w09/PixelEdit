@@ -9,6 +9,7 @@ import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
+import { installSelectionGeometryRuntime } from './selection/selection-geometry.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
 import { installStrokeStyleRuntime } from './rendering/stroke-style.js';
@@ -35,6 +36,7 @@ function installRuntimeModules() {
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
   installTransformModelRuntime(globalThis);
+  installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
   installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
