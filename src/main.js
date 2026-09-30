@@ -18,6 +18,7 @@ import { installToolStateRuntime } from './tools/tool-state.js';
 import { installSelectionTransformRuntime } from './transforms/selection-transform.js';
 import { installTransformModelRuntime } from './transforms/transform-model.js';
 import { installContextMenuRuntime } from './ui/context-menu.js';
+import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 
 function installRuntimeModules() {
   installEditorPreferencesRuntime(globalThis);
@@ -35,6 +36,7 @@ function installRuntimeModules() {
   installSelectionTransformRuntime(globalThis);
   installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
+  installHistoryPropertiesRuntime(globalThis);
   installSelectionOverlayRuntime(globalThis);
   installTransparencyOverlayRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
