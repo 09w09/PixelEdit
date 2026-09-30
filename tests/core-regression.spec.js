@@ -76,11 +76,11 @@ test('rectangle, circle, line, polygon and text all render into the 1-bit frameb
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const nodes = [
-      M.createNode('rectangle', { parentId: activePage.id, x: 5, y: 5, w: 30, h: 20, lineWidth: 1, fill: { mode: 'solid' } }),
-      M.createNode('circle', { parentId: activePage.id, x: 45, y: 5, w: 24, h: 24, lineWidth: 1, fill: { mode: 'solid' } }),
-      M.createNode('line', { parentId: activePage.id, x1: 80, y1: 5, x2: 110, y2: 30, lineWidth: 2 }),
-      M.createNode('polygon', { parentId: activePage.id, points: [{ x: 120, y: 30 }, { x: 135, y: 5 }, { x: 150, y: 30 }], lineWidth: 1, fill: { mode: 'solid' } }),
-      M.createNode('text', { parentId: activePage.id, x: 160, y: 5, w: 80, h: 28, text: 'Pixel', fontSize: 18, fill: { mode: 'solid' } }),
+      M.createNode('rectangle', { parentId: activePage.id, x: 5, y: 5, w: 30, h: 20, stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'solid', color: 1 } }),
+      M.createNode('circle', { parentId: activePage.id, x: 45, y: 5, w: 24, h: 24, stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'solid', color: 1 } }),
+      M.createNode('line', { parentId: activePage.id, x1: 80, y1: 5, x2: 110, y2: 30, stroke: { width: 2, color: 1, style: 'solid' } }),
+      M.createNode('polygon', { parentId: activePage.id, points: [{ x: 120, y: 30 }, { x: 135, y: 5 }, { x: 150, y: 30 }], stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'solid', color: 1 } }),
+      M.createNode('text', { parentId: activePage.id, x: 160, y: 5, w: 80, h: 28, text: 'Pixel', fontSize: 18, fill: { mode: 'solid', color: 1 } }),
     ];
     editor.exec(new C.AddNodesCommand(nodes, activePage.id));
     const framebuffer = R.FramebufferRenderer.renderPage(editor.state.project, activePage.id, editor.state.assets);
@@ -211,7 +211,7 @@ test('project serialization round-trip preserves referenced image assets and hie
       serializedAssetCount: JSON.parse(raw).assets.length,
     };
   });
-  expect(result.projectVersion).toBe(16);
+  expect(result.projectVersion).toBe(17);
   expect(result.assetExists).toBe(true);
   expect(result.hierarchyValid).toBe(true);
   expect(result.serializedAssetCount).toBe(1);
