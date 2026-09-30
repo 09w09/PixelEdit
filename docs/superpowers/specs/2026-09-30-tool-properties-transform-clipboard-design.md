@@ -154,7 +154,9 @@ preferences = {
 }
 ```
 
-Preferences are stored in `localStorage` and survive tool changes, page changes, project changes, and browser restarts.
+Preferences are stored under a V16-specific localStorage namespace such as `pixeledit.v16.preferences`. Invalid/corrupt local preference data falls back to defaults; it is not treated as project data and does not trigger project migration.
+
+Preferences survive tool changes, page changes, project changes, and browser restarts.
 
 They do not appear in `.pix` serialization.
 
@@ -217,9 +219,11 @@ Rectangle/circle/polygon retain their existing fill controls. Rectangle retains 
 
 ## 5. Editable Transform Model
 
-Rotation and flipping never rasterize a vector/text/image element.
+Rotation and flipping never rasterize an element.
 
-Every normal visual element supports an editable transform state. The logical model must preserve source geometry separately from the transform.
+All normal visual node types participate, including vector shapes, lines, text, source images, and raster nodes.
+
+The logical model must preserve source/local geometry separately from the transform.
 
 At minimum expose semantic state equivalent to:
 
@@ -233,7 +237,7 @@ transform: {
 }
 ```
 
-The exact internal representation may use an affine matrix, but there must be one canonical transform implementation shared by rendering, hit testing, selection overlays, geometry commands, and export.
+The exact internal representation may use an affine matrix, but there must be one canonical transform implementation shared by rendering, hit testing, selection overlays, geometry commands, painting coordinate mapping, and export.
 
 Transform math may use floating-point coordinates internally to avoid cumulative rounding. Final pixel rendering is rasterized deterministically to the 400×300 logical grid.
 
@@ -274,6 +278,7 @@ The following must all use the same transform semantics:
 - hit testing
 - marquee selection intersection
 - alignment and distribution bounds
+- raster paint coordinate mapping
 - copy/paste
 - PNG export
 - rasterization of transformed subtrees
@@ -334,7 +339,15 @@ On the page background:
 
 The page background can never contain transparent pixels.
 
-### 6.3 Vector fill transparency remains distinct
+### 6.3 Painting transformed rasters
+
+A raster may be rotated/flipped non-destructively and must remain paintable.
+
+Pencil/eraser pointer coordinates are inverse-transformed from canvas/world space into the raster's local pixel grid before modifying tri-state pixels. Painting changes the local raster data only; it does not bake or reset the transform.
+
+Out-of-bounds inverse-mapped points do nothing. The visible brush footprint must remain consistent with the active brush width after transform mapping.
+
+### 6.4 Vector fill transparency remains distinct
 
 Existing vector `fill.mode = 'transparent'` continues to mean "no interior paint" for closed vector shapes. It is not the same storage mechanism as tri-state raster pixels.
 
@@ -345,6 +358,8 @@ Row 1 contains a toggle icon for transparent-pixel preview.
 The preview applies only when the currently selected primary element is a raster.
 
 For transparent pixels inside that selected raster, render a uniform translucent light-blue overlay. Do not use dots or checker patterns.
+
+The preview follows the raster's transform, so the blue area stays aligned with rotated/flipped transparent pixels.
 
 The preview layer:
 
@@ -561,6 +576,7 @@ Testing is full regression, not smoke-only testing.
 - alignment/transform controls appear only for pointer/select;
 - icon controls expose correct tooltips;
 - tool defaults persist in localStorage;
+- invalid local preference data falls back to defaults;
 - tool defaults do not change existing nodes;
 - dock layout persists in localStorage;
 - dock changes do not dirty project;
@@ -583,6 +599,7 @@ For line, rectangle, circle, and polygon:
 - single-element flip horizontal/vertical;
 - single 90° CW/CCW;
 - arbitrary angle;
+- raster, image, text, line, and closed-shape transforms;
 - multi-selection rotation around group bounds center;
 - relative positions rotate as a group;
 - locked selected nodes remain unchanged;
@@ -600,6 +617,8 @@ For line, rectangle, circle, and polygon:
 - eraser to transparent on raster;
 - eraser to white on background;
 - background never transparent;
+- paint rotated/flipped raster through inverse coordinate mapping;
+- paint does not bake/reset raster transform;
 - save/open V16 raster;
 - no legacy raster compatibility path.
 
@@ -607,6 +626,7 @@ For line, rectangle, circle, and polygon:
 
 - only selected raster gets preview;
 - transparent pixels receive uniform translucent blue overlay;
+- transformed raster preview remains spatially aligned;
 - black/white pixels do not;
 - preview off removes overlay;
 - preview not present in framebuffer/PNG/project/history;
@@ -679,7 +699,7 @@ The change is complete only when:
 4. tool defaults and dock layout are local-only preferences;
 5. V16 project serialization contains no workspace layout and no compatibility layer;
 6. line/rectangle/circle/polygon support width, black/white color, and all five stroke styles in both tool defaults and element Properties;
-7. flip and rotation remain editable and are respected by rendering, hit testing, selection, alignment, export, and rasterization;
+7. flip and rotation remain editable for all visual node types and are respected by rendering, painting where applicable, hit testing, selection, alignment, export, and rasterization;
 8. raster data supports transparent/white/black and eraser semantics are correct for raster vs page background;
 9. transparency preview is a solid translucent blue editing overlay only;
 10. Ctrl/Cmd+A, structured subtree copy, cross-page paste, paste offsets, and shared context menu behave as specified;
