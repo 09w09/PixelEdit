@@ -7,6 +7,7 @@ import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
+import { installStrokeStyleRuntime } from './rendering/stroke-style.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
 import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
@@ -17,6 +18,7 @@ function installRuntimeModules() {
   installToolOptionsRuntime(globalThis);
   installImageRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
+  installStrokeStyleRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
