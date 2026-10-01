@@ -44,6 +44,7 @@ function installRuntimeModules() {
   installBinaryImageRuntime(globalThis);
   installBinaryImagePreviewRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
+  installHierarchyClippingRuntime(globalThis);
   installStrokeStyleRuntime(globalThis);
   installShapeStylePropertiesRuntime(globalThis);
   installPageFillPropertiesRuntime(globalThis);
@@ -52,7 +53,6 @@ function installRuntimeModules() {
   installPaintBrushRuntime(globalThis);
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
-  installHierarchyClippingRuntime(globalThis);
   installTransformModelRuntime(globalThis);
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
