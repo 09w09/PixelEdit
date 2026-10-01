@@ -15,13 +15,7 @@ test('normal visual nodes carry editable transform state', async ({ page }) => {
       return { type, transform: node.transform };
     });
   });
-  for (const item of result) expect(item.transform).toEqual({
-    rotation: 23,
-    flipX: true,
-    flipY: false,
-    translateX: 0,
-    translateY: 0,
-  });
+  for (const item of result) expect(item.transform).toEqual({ rotation: 23, flipX: true, flipY: false });
 });
 
 test('rotated visual bounds and render output share the same canonical transform', async ({ page }) => {
