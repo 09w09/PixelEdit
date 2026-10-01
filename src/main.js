@@ -2,6 +2,7 @@ import { installElementClipboardRuntime } from './clipboard/element-clipboard.js
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
 import { installFontOptionsRuntime } from './fonts/font-options.js';
+import { installCommandCoalescingRuntime } from './history/command-coalescing.js';
 import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
@@ -30,6 +31,7 @@ import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 function installRuntimeModules() {
   installV17SchemaRuntime(globalThis);
   installEditorPreferencesRuntime(globalThis);
+  installCommandCoalescingRuntime(globalThis);
   installFontOptionsRuntime(globalThis);
   installToolStateRuntime(globalThis);
   installTextToolOptionsRuntime(globalThis);
