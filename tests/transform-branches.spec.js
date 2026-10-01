@@ -55,13 +55,14 @@ test('90-degree box selection uses perimeter outline and semantic corner handles
   expectPointsClose(result.handles, handlesExpected);
 });
 
-test('line and polygon control handles follow their canonical transform', async ({ page }) => {
+test('line and polygon control handles follow the rendered transform pivot', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     const M = window.PixelEditor.model;
     const C = window.PixelEditor.commands;
     const T = window.PixelEditor.transformModel;
+    const R = window.PixelEditor.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const cases = [];
@@ -77,13 +78,16 @@ test('line and polygon control handles follow their canonical transform', async 
       editor.exec(new C.AddNodesCommand([node], p.id));
       editor.state.selection.replace([node.id]);
       editor.renderOverlay();
-      const base = type === 'line'
-        ? { x: Math.min(node.x1, node.x2), y: Math.min(node.y1, node.y2), w: Math.abs(node.x2 - node.x1), h: Math.abs(node.y2 - node.y1) }
-        : (() => {
-            const xs = node.points.map(q => q.x), ys = node.points.map(q => q.y);
-            return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
-          })();
-      const matrix = T.nodeTransformMatrix(node, base);
+      const context = { project: editor.state.project, pageId: p.id, assets: editor.state.assets };
+      const visual = R.FramebufferRenderer.visualBounds(node.id, context);
+      const transform = T.normalizeTransform(node.transform);
+      const pivot = {
+        x: visual.x + visual.w / 2 - (transform.translateX || 0),
+        y: visual.y + visual.h / 2 - (transform.translateY || 0),
+        w: 0,
+        h: 0,
+      };
+      const matrix = T.nodeTransformMatrix(node, pivot);
       const source = type === 'line' ? [{ x: node.x1, y: node.y1 }, { x: node.x2, y: node.y2 }] : node.points;
       const expected = source.map(point => T.transformPoint(matrix, point));
       const actual = [...editor.overlay.querySelectorAll('rect.selection-handle')].map(el => ({
