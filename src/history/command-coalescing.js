@@ -25,7 +25,10 @@ function diffLeafPaths(before, after, prefix = '') {
   const afterObject = after && typeof after === 'object';
   const beforeArray = Array.isArray(before);
   const afterArray = Array.isArray(after);
-  if (!beforeObject || !afterObject || beforeArray || afterArray) return prefix ? [prefix] : [];
+  if (beforeArray || afterArray) {
+    return JSON.stringify(before) === JSON.stringify(after) ? [] : (prefix ? [prefix] : []);
+  }
+  if (!beforeObject || !afterObject) return prefix ? [prefix] : [];
 
   const paths = [];
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
