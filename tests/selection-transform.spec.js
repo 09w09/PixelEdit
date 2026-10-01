@@ -35,12 +35,12 @@ test('multi-selection rotation uses union center and is one undoable command', a
   expect(result.changed).toBe(true);
   expect(result.afterCursor - result.beforeCursor).toBe(1);
   expect(result.after).toEqual([
-    { x: 20, y: 0, transform: { rotation: 90, flipX: false, flipY: false } },
-    { x: 20, y: 20, transform: { rotation: 90, flipX: false, flipY: false } },
+    { x: 10, y: 10, transform: { rotation: 90, flipX: false, flipY: false, translateX: 10, translateY: -10 } },
+    { x: 30, y: 10, transform: { rotation: 90, flipX: false, flipY: false, translateX: -10, translateY: 10 } },
   ]);
   expect(result.undone).toEqual([
-    { x: 10, y: 10, transform: { rotation: 0, flipX: false, flipY: false } },
-    { x: 30, y: 10, transform: { rotation: 0, flipX: false, flipY: false } },
+    { x: 10, y: 10, transform: { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 } },
+    { x: 30, y: 10, transform: { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 } },
   ]);
 });
 
@@ -70,6 +70,7 @@ test('group flip reflects transformed visual centers and composes orientation', 
       const node = M.nodeById(editor.activePage(), id);
       const bounds = R.FramebufferRenderer.visualBounds(id, afterContext);
       return {
+        source: { x: node.x, y: node.y },
         center: { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 },
         transform: structuredClone(node.transform),
       };
@@ -81,10 +82,17 @@ test('group flip reflects transformed visual centers and composes orientation', 
     expect(item.center.x).toBeCloseTo(result.pivotX * 2 - result.beforeCenters[index].x, 8);
     expect(item.center.y).toBeCloseTo(result.beforeCenters[index].y, 8);
   });
-  expect(result.after.map(item => item.transform)).toEqual([
-    { rotation: -30, flipX: true, flipY: true },
-    { rotation: 20, flipX: false, flipY: false },
-  ]);
+  expect(result.after.map(item => item.source)).toEqual([{ x: 10, y: 20 }, { x: 30, y: 20 }]);
+  expect(result.after[0].transform.rotation).toBe(-30);
+  expect(result.after[0].transform.flipX).toBe(true);
+  expect(result.after[0].transform.flipY).toBe(true);
+  expect(result.after[1].transform.rotation).toBe(20);
+  expect(result.after[1].transform.flipX).toBe(false);
+  expect(result.after[1].transform.flipY).toBe(false);
+  for (const item of result.after) {
+    expect(Number.isFinite(item.transform.translateX)).toBe(true);
+    expect(Number.isFinite(item.transform.translateY)).toBe(true);
+  }
 });
 
 test('locked selected nodes remain selected but are skipped by transforms', async ({ page }) => {
@@ -115,7 +123,11 @@ test('locked selected nodes remain selected but are skipped by transforms', asyn
   expect(result.open.transform.rotation).toBe(45);
   expect(result.open.x).toBe(10);
   expect(result.open.y).toBe(10);
-  expect(result.locked).toEqual({ x: 50, y: 10, transform: { rotation: 0, flipX: false, flipY: false } });
+  expect(result.locked).toEqual({
+    x: 50,
+    y: 10,
+    transform: { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 },
+  });
 });
 
 test('align and distribute operate on transformed visual bounds', async ({ page }) => {
