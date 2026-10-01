@@ -10,18 +10,34 @@ function normalizeRotation(value) {
   return Object.is(angle, -0) ? 0 : angle;
 }
 
+function normalizeTranslation(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || Math.abs(number) < 1e-9) return 0;
+  const rounded = Math.round(number);
+  return Math.abs(number - rounded) < 1e-9 ? rounded : number;
+}
+
 function normalizeTransform(value = {}) {
   const source = value && typeof value === 'object' ? value : {};
-  return {
+  const result = {
     rotation: normalizeRotation(source.rotation),
     flipX: source.flipX === true,
     flipY: source.flipY === true,
   };
+  const translateX = normalizeTranslation(source.translateX);
+  const translateY = normalizeTranslation(source.translateY);
+  if (translateX !== 0) result.translateX = translateX;
+  if (translateY !== 0) result.translateY = translateY;
+  return result;
 }
 
 function isIdentityTransform(value) {
   const transform = normalizeTransform(value);
-  return transform.rotation === 0 && !transform.flipX && !transform.flipY;
+  return transform.rotation === 0
+    && !transform.flipX
+    && !transform.flipY
+    && !transform.translateX
+    && !transform.translateY;
 }
 
 function boundsFromPoints(points) {
@@ -67,15 +83,16 @@ function nodeTransformMatrix(node, bounds = null) {
   const sin = Math.sin(radians);
   const sx = transform.flipX ? -1 : 1;
   const sy = transform.flipY ? -1 : 1;
-  // Rotation after local flips, all about the same visual center.
   const a = cos * sx;
   const b = sin * sx;
   const c = -sin * sy;
   const d = cos * sy;
   const cx = box.x + box.w / 2;
   const cy = box.y + box.h / 2;
-  const e = cx - a * cx - c * cy;
-  const f = cy - b * cx - d * cy;
+  const tx = transform.translateX || 0;
+  const ty = transform.translateY || 0;
+  const e = cx + tx - a * cx - c * cy;
+  const f = cy + ty - b * cx - d * cy;
   return { a, b, c, d, e, f };
 }
 
@@ -215,7 +232,11 @@ function installTransformModelRuntime(target = globalThis) {
       if (!VISUAL_TYPES.has(node.type)) continue;
       if (!node.transform) throw new Error('V17 可视元素缺少 transform');
       const normalized = normalizeTransform(node.transform);
-      if (normalized.rotation !== node.transform.rotation || normalized.flipX !== node.transform.flipX || normalized.flipY !== node.transform.flipY) {
+      if (normalized.rotation !== node.transform.rotation
+        || normalized.flipX !== node.transform.flipX
+        || normalized.flipY !== node.transform.flipY
+        || normalized.translateX !== node.transform.translateX
+        || normalized.translateY !== node.transform.translateY) {
         throw new Error('V17 transform 数据无效');
       }
     }
@@ -281,12 +302,17 @@ function installTransformModelRuntime(target = globalThis) {
     return { project: clone, assets: proxy };
   }
 
-  framebuffer.visualBounds = function visualTransformBounds(nodeId, context) {
+  function rawVisualBounds(nodeId, context) {
     const page = M.pageById(context.project, context.pageId);
     const node = M.nodeById(page, nodeId);
-    if (!node || !VISUAL_TYPES.has(node.type) || isIdentityTransform(node.transform)) return baseVisualBounds(nodeId, context);
+    if (!node) return { x: 0, y: 0, w: 0, h: 0 };
+    if (!VISUAL_TYPES.has(node.type) || isIdentityTransform(node.transform)) return baseVisualBounds(nodeId, context);
     const sourceBounds = baseVisualBounds(nodeId, context);
     return transformedBounds(node, { baseBounds: () => sourceBounds });
+  }
+
+  framebuffer.visualBounds = function visualTransformBounds(nodeId, context) {
+    return rawVisualBounds(nodeId, context);
   };
 
   framebuffer.visualSubtreeBounds = function visualTransformSubtreeBounds(nodeId, context) {
@@ -296,7 +322,8 @@ function installTransformModelRuntime(target = globalThis) {
     const visit = id => {
       const node = tree.node(id);
       if (!node || node.visible === false) return;
-      bounds.push(framebuffer.visualBounds(id, context));
+      const visible = framebuffer.visualBounds(id, context);
+      if (visible.w > 0 && visible.h > 0) bounds.push(visible);
       for (const child of tree.childrenOf(id)) visit(child.id);
     };
     visit(nodeId);
@@ -320,6 +347,7 @@ function installTransformModelRuntime(target = globalThis) {
     VISUAL_TYPES,
     IDENTITY_TRANSFORM: { ...IDENTITY_TRANSFORM },
     normalizeRotation,
+    normalizeTranslation,
     normalizeTransform,
     isIdentityTransform,
     nodeLocalBounds,
@@ -330,6 +358,7 @@ function installTransformModelRuntime(target = globalThis) {
     transformedBounds,
     unionBounds,
     moveNodeGeometry,
+    rawVisualBounds,
     validateTransformProject,
   };
 }
@@ -338,6 +367,7 @@ export {
   VISUAL_TYPES,
   IDENTITY_TRANSFORM,
   normalizeRotation,
+  normalizeTranslation,
   normalizeTransform,
   isIdentityTransform,
   nodeLocalBounds,

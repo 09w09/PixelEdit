@@ -74,7 +74,7 @@ test('font removal participates in undo and redo without losing the asset needed
   expect(result.afterRedo).toEqual({ family: 'sans-serif', fonts: 0 });
 });
 
-test('default fonts cannot be removed and imported fonts expose a remove action in text properties', async ({ page }) => {
+test('default fonts cannot be removed and imported fonts expose remove only in text tool options', async ({ page }) => {
   await openEditor(page);
   const seeded = await page.evaluate(seedFontAndTextScript);
   const result = await page.evaluate(({ family, secondId, text2Id }) => {
@@ -83,18 +83,24 @@ test('default fonts cannot be removed and imported fonts expose a remove action 
     editor.state.selection.replace([text2Id]);
     editor.pageSelectedId = null;
     editor.properties.render();
-    const importedButton = Boolean(document.querySelector('#removeFontBtn'));
+    editor.setToolDefault('text', 'fontFamily', family);
+    editor.setTool('text');
+    const importedToolButton = Boolean(document.querySelector('#toolOptionsBar #removeFontBtn'));
+    const propertyButton = Boolean(document.querySelector('#properties #removeFontBtn'));
+    const propertyImport = Boolean(document.querySelector('#properties #importFontBtn'));
     const defaultRejected = editor.removeImportedFont?.('sans-serif') === false;
-    const node = window.PixelEditor.model.nodeById(editor.activePage(), text2Id);
-    node.fontFamily = 'sans-serif';
-    node.fixedFontSize = null;
-    editor.properties.render();
-    const defaultButton = Boolean(document.querySelector('#removeFontBtn'));
-    return { family, importedButton, defaultRejected, defaultButton };
+    editor.setToolDefault('text', 'fontFamily', 'sans-serif');
+    editor.setTool('text');
+    const defaultToolButton = Boolean(document.querySelector('#toolOptionsBar #removeFontBtn'));
+    return { importedToolButton, propertyButton, propertyImport, defaultRejected, defaultToolButton };
   }, seeded);
-  expect(result.importedButton).toBe(true);
-  expect(result.defaultRejected).toBe(true);
-  expect(result.defaultButton).toBe(false);
+  expect(result).toEqual({
+    importedToolButton: true,
+    propertyButton: false,
+    propertyImport: false,
+    defaultRejected: true,
+    defaultToolButton: false,
+  });
 });
 
 test('serialized project after font removal contains no dangling font asset', async ({ page }) => {

@@ -46,8 +46,22 @@ function installSelectionOverlayRuntime(target = globalThis) {
     return null;
   };
 
-  function outlineMarkup(node, dx = 0, dy = 0) {
-    const geometry = G.selectionGeometry(node);
+  function sourcePivotBounds(editor, node) {
+    if (!editor || !node) return null;
+    const context = {
+      project: editor.state.project,
+      pageId: editor.activePage().id,
+      assets: editor.state.assets,
+    };
+    const visual = R.FramebufferRenderer.visualBounds(node.id, context);
+    const transform = T.normalizeTransform(node.transform);
+    const centerX = visual.x + visual.w / 2 - (transform.translateX || 0);
+    const centerY = visual.y + visual.h / 2 - (transform.translateY || 0);
+    return { x: centerX, y: centerY, w: 0, h: 0 };
+  }
+
+  function outlineMarkup(node, dx = 0, dy = 0, pivotBounds = null) {
+    const geometry = G.selectionGeometry(node, pivotBounds);
     if (!geometry) return '';
     if (node.type === 'line') {
       const [a, b] = geometry.controlPoints.map(point => translated(point, dx, dy));
@@ -76,7 +90,7 @@ function installSelectionOverlayRuntime(target = globalThis) {
     const node = M.nodeById(page, ids[0]);
     const tree = new M.TreeModel(page);
     if (!node || tree.isEffectivelyLocked(node.id)) return null;
-    return G.hitHandle(node, point, this.zoom);
+    return G.hitHandle(node, point, this.zoom, sourcePivotBounds(this, node));
   };
 
   Workspace.prototype.renderOverlay = function renderOverlay() {
@@ -91,12 +105,12 @@ function installSelectionOverlayRuntime(target = globalThis) {
 
     for (const id of ids) {
       const node = M.nodeById(page, id);
-      if (node) html += outlineMarkup(node, dx, dy);
+      if (node) html += outlineMarkup(node, dx, dy, sourcePivotBounds(this, node));
     }
 
     if (ids.length === 1) {
       const node = M.nodeById(page, ids[0]);
-      const geometry = node ? G.selectionGeometry(node) : null;
+      const geometry = node ? G.selectionGeometry(node, sourcePivotBounds(this, node)) : null;
       let handles = [];
       if (geometry && BOX_TYPES.has(node.type)) handles = ['nw', 'ne', 'sw', 'se'].map(corner => geometry.handles[corner]);
       else if (geometry) handles = geometry.controlPoints;
@@ -156,6 +170,7 @@ function installSelectionOverlayRuntime(target = globalThis) {
     handleVisualSize,
     handleHitTolerance,
     sourceGeometryBounds: G.sourceGeometryBounds,
+    sourcePivotBounds,
     selectionGeometry: G.selectionGeometry,
     outlineMarkup,
   };

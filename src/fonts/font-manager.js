@@ -53,7 +53,6 @@ function installFontManagerRuntime(target = globalThis) {
   const M = PE?.model;
   const C = PE?.commands;
   const Workspace = PE?.ui?.Workspace;
-  const Properties = PE?.ui?.Properties;
   if (!M || !C || !Workspace) throw new Error('PixelEditor is not initialized');
   if (PE.fontManagerInstalled) return;
   PE.fontManagerInstalled = true;
@@ -108,19 +107,6 @@ function installFontManagerRuntime(target = globalThis) {
     }
     return ok;
   };
-
-  if (Properties) {
-    const originalBind = Properties.prototype.bind;
-    Properties.prototype.bind = function bind(nodes, locked) {
-      const result = originalBind.call(this, nodes, locked);
-      const button = this.el.querySelector('#removeFontBtn');
-      if (button && !button.disabled && nodes[0]?.type === 'text') {
-        const family = nodes[0].fontFamily;
-        button.onclick = () => this.editor.removeImportedFont(family);
-      }
-      return result;
-    };
-  }
 
   PE.fonts = { FontManager, isImportedFamily, RemoveImportedFontCommand };
 }

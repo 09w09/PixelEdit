@@ -48,24 +48,24 @@ function sourceHandles(bounds) {
 }
 
 function createSelectionGeometry(transformModel) {
-  function matrixFor(node) {
-    return transformModel.nodeTransformMatrix(node, sourceGeometryBounds(node));
+  function matrixFor(node, pivotBounds = null) {
+    return transformModel.nodeTransformMatrix(node, pivotBounds || sourceGeometryBounds(node));
   }
 
-  function localToWorld(node, point) {
+  function localToWorld(node, point, pivotBounds = null) {
     if (!node) return { x: Number(point?.x) || 0, y: Number(point?.y) || 0 };
-    return transformModel.transformPoint(matrixFor(node), point);
+    return transformModel.transformPoint(matrixFor(node, pivotBounds), point);
   }
 
-  function worldToLocal(node, point) {
+  function worldToLocal(node, point, pivotBounds = null) {
     if (!node) return { x: Number(point?.x) || 0, y: Number(point?.y) || 0 };
-    return transformModel.inverseTransformPoint(matrixFor(node), point);
+    return transformModel.inverseTransformPoint(matrixFor(node, pivotBounds), point);
   }
 
-  function selectionGeometry(node) {
+  function selectionGeometry(node, pivotBounds = null) {
     if (!node) return null;
     const bounds = sourceGeometryBounds(node);
-    const matrix = matrixFor(node);
+    const matrix = matrixFor(node, pivotBounds);
     const map = point => transformModel.transformPoint(matrix, point);
 
     if (BOX_TYPES.has(node.type)) {
@@ -93,8 +93,8 @@ function createSelectionGeometry(transformModel) {
     return { outline: [], handles: null, controlPoints: [], visualBounds: bounds, sourceBounds: bounds };
   }
 
-  function hitHandle(node, worldPoint, zoom) {
-    const geometry = selectionGeometry(node);
+  function hitHandle(node, worldPoint, zoom, pivotBounds = null) {
+    const geometry = selectionGeometry(node, pivotBounds);
     if (!geometry) return null;
     const tolerance = 8 / safeZoom(zoom);
     if (BOX_TYPES.has(node.type)) {

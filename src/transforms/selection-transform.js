@@ -90,6 +90,8 @@ function composeRotate(transform, degrees, TransformModel) {
     rotation: TransformModel.normalizeRotation(current.rotation + degrees),
     flipX: current.flipX,
     flipY: current.flipY,
+    translateX: current.translateX,
+    translateY: current.translateY,
   };
 }
 
@@ -100,13 +102,38 @@ function composeFlip(transform, axis, TransformModel) {
       rotation: TransformModel.normalizeRotation(-current.rotation),
       flipX: !current.flipX,
       flipY: current.flipY,
+      translateX: current.translateX,
+      translateY: current.translateY,
     };
   }
   return {
     rotation: TransformModel.normalizeRotation(-current.rotation),
     flipX: current.flipX,
     flipY: !current.flipY,
+    translateX: current.translateX,
+    translateY: current.translateY,
   };
+}
+
+function transformedSourceCenter(node, context, TransformModel) {
+  return centerOf(TransformModel.rawVisualBounds(node.id, context));
+}
+
+function sourceCenter(node, context, TransformModel) {
+  const center = transformedSourceCenter(node, context, TransformModel);
+  const transform = TransformModel.normalizeTransform(node.transform);
+  return {
+    x: center.x - (transform.translateX || 0),
+    y: center.y - (transform.translateY || 0),
+  };
+}
+
+function placeTransformAtCenter(transform, center, source, TransformModel) {
+  return TransformModel.normalizeTransform({
+    ...transform,
+    translateX: TransformModel.normalizeTranslation(center.x - source.x),
+    translateY: TransformModel.normalizeTranslation(center.y - source.y),
+  });
 }
 
 function rasterSourceBounds(node) {
@@ -193,7 +220,7 @@ function installSelectionTransformRuntime(target = globalThis) {
     execute(state) {
       const { page, roots, nodes } = affectedNodes(state, this.ids, this.pageId);
       if (!page || !roots.length || !nodes.length) return false;
-      let mode = this.action;
+      const mode = this.action;
       let angle = Number(this.value) || 0;
       if (mode === 'rotate-cw-90') angle = 90;
       else if (mode === 'rotate-ccw-90') angle = -90;
@@ -205,12 +232,13 @@ function installSelectionTransformRuntime(target = globalThis) {
       const tree = new M.TreeModel(page);
       const visible = nodes.filter(node => tree.isEffectivelyVisible(node.id));
       const pivotNodes = visible.length ? visible : nodes;
-      const groupBounds = unionBounds(pivotNodes.map(node => R.FramebufferRenderer.visualBounds(node.id, context)));
+      const groupBounds = unionBounds(pivotNodes.map(node => T.rawVisualBounds(node.id, context)));
       if (!groupBounds) return false;
       const pivot = centerOf(groupBounds);
       const before = nodes.map(node => ({
         node,
-        center: centerOf(R.FramebufferRenderer.visualBounds(node.id, context)),
+        sourceCenter: sourceCenter(node, context, T),
+        center: transformedSourceCenter(node, context, T),
         transform: T.normalizeTransform(node.transform),
       }));
 
@@ -218,10 +246,10 @@ function installSelectionTransformRuntime(target = globalThis) {
         const nextCenter = mode.startsWith('rotate')
           ? rotatePointAround(item.center, pivot, angle)
           : reflectPointAround(item.center, pivot, mode === 'flip-horizontal' ? 'horizontal' : 'vertical');
-        T.moveNodeGeometry(item.node, nextCenter.x - item.center.x, nextCenter.y - item.center.y);
-        item.node.transform = mode.startsWith('rotate')
+        const orientation = mode.startsWith('rotate')
           ? composeRotate(item.transform, angle, T)
           : composeFlip(item.transform, mode === 'flip-horizontal' ? 'horizontal' : 'vertical', T);
+        item.node.transform = placeTransformAtCenter(orientation, nextCenter, item.sourceCenter, T);
       }
       return true;
     }
@@ -352,6 +380,8 @@ function installSelectionTransformRuntime(target = globalThis) {
     selectionVisualBounds: (editor, nodes) => selectionVisualBounds(editor, nodes, R, M),
     composeRotate: (transform, degrees) => composeRotate(transform, degrees, T),
     composeFlip: (transform, axis) => composeFlip(transform, axis, T),
+    sourceCenter: (node, context) => sourceCenter(node, context, T),
+    transformedSourceCenter: (node, context) => transformedSourceCenter(node, context, T),
     screenPointToRasterPixel: (node, point) => screenPointToRasterPixel(node, point, T),
     rasterPixelToScreenPoint: (node, pixel) => rasterPixelToScreenPoint(node, pixel, T),
     rasterPixelCornersToScreen: (node, pixel) => rasterPixelCornersToScreen(node, pixel, T),
