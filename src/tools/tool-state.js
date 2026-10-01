@@ -66,11 +66,17 @@ function installToolStateRuntime(target = globalThis) {
 
     if (!['line', 'rectangle', 'circle', 'polygon'].includes(tool)) return result;
     const settings = this.getToolDefaults(tool);
-    node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || {
+    node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || PE.schemaV17?.normalizeStroke?.(settings) || {
       width: settings.width || 1,
       color: settings.color === 0 ? 0 : 1,
       style: settings.style || 'solid',
     };
+    if (tool !== 'line') {
+      node.fill = PE.schemaV17?.normalizeFill?.(settings.fill) || {
+        mode: settings.fill?.mode === 'solid' ? 'solid' : 'transparent',
+        color: Number(settings.fill?.color) === 0 ? 0 : 1,
+      };
+    }
     delete node.lineWidth;
     delete node.strokeColor;
     delete node.strokeStyle;
