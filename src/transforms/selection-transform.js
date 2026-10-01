@@ -115,14 +115,17 @@ function composeFlip(transform, axis, TransformModel) {
   };
 }
 
-function sourceCenter(node, TransformModel) {
-  return centerOf(TransformModel.nodeLocalBounds(node));
+function transformedSourceCenter(node, context, TransformModel) {
+  return centerOf(TransformModel.rawVisualBounds(node.id, context));
 }
 
-function transformedSourceCenter(node, TransformModel) {
-  const bounds = TransformModel.nodeLocalBounds(node);
-  const source = centerOf(bounds);
-  return TransformModel.transformPoint(TransformModel.nodeTransformMatrix(node, bounds), source);
+function sourceCenter(node, context, TransformModel) {
+  const center = transformedSourceCenter(node, context, TransformModel);
+  const transform = TransformModel.normalizeTransform(node.transform);
+  return {
+    x: center.x - (transform.translateX || 0),
+    y: center.y - (transform.translateY || 0),
+  };
 }
 
 function placeTransformAtCenter(transform, center, source, TransformModel) {
@@ -234,8 +237,8 @@ function installSelectionTransformRuntime(target = globalThis) {
       const pivot = centerOf(groupBounds);
       const before = nodes.map(node => ({
         node,
-        sourceCenter: sourceCenter(node, T),
-        center: transformedSourceCenter(node, T),
+        sourceCenter: sourceCenter(node, context, T),
+        center: transformedSourceCenter(node, context, T),
         transform: T.normalizeTransform(node.transform),
       }));
 
@@ -377,8 +380,8 @@ function installSelectionTransformRuntime(target = globalThis) {
     selectionVisualBounds: (editor, nodes) => selectionVisualBounds(editor, nodes, R, M),
     composeRotate: (transform, degrees) => composeRotate(transform, degrees, T),
     composeFlip: (transform, axis) => composeFlip(transform, axis, T),
-    sourceCenter: node => sourceCenter(node, T),
-    transformedSourceCenter: node => transformedSourceCenter(node, T),
+    sourceCenter: (node, context) => sourceCenter(node, context, T),
+    transformedSourceCenter: (node, context) => transformedSourceCenter(node, context, T),
     screenPointToRasterPixel: (node, point) => screenPointToRasterPixel(node, point, T),
     rasterPixelToScreenPoint: (node, pixel) => rasterPixelToScreenPoint(node, pixel, T),
     rasterPixelCornersToScreen: (node, pixel) => rasterPixelCornersToScreen(node, pixel, T),
