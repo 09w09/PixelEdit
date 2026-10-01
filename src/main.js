@@ -11,12 +11,13 @@ import { installEditorPreferencesRuntime } from './preferences/editor-preference
 import { installTextFontActionsRuntime } from './properties/text-font-actions.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
-import { installSelectionGeometryRuntime } from './selection/selection-geometry.js';
+import { installBinaryImageRuntime } from './rendering/binary-image.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
 import { installStrokeStyleRuntime } from './rendering/stroke-style.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
 import { installTransparencyOverlayRuntime } from './rendering/transparency-overlay.js';
+import { installSelectionGeometryRuntime } from './selection/selection-geometry.js';
 import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
 import { installTextToolOptionsRuntime } from './tools/text-tool-options.js';
@@ -34,6 +35,7 @@ function installRuntimeModules() {
   installTextToolOptionsRuntime(globalThis);
   installToolOptionsRuntime(globalThis);
   installImageRuntime(globalThis);
+  installBinaryImageRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
   installStrokeStyleRuntime(globalThis);
   installTriStateRasterRuntime(globalThis);
