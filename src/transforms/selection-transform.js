@@ -115,24 +115,35 @@ function composeFlip(transform, axis, TransformModel) {
   };
 }
 
-function transformedSourceCenter(node, context, TransformModel) {
-  return centerOf(TransformModel.rawVisualBounds(node.id, context));
+// Transform composition uses canonical mathematical geometry. Rendered pixel
+// bounds can shift by half a pixel after rotation; feeding those bounds back
+// into later transforms creates cumulative position drift.
+function canonicalSourceBounds(node, TransformModel) {
+  return TransformModel.nodeLocalBounds(node);
 }
 
-function sourceCenter(node, context, TransformModel) {
-  const center = transformedSourceCenter(node, context, TransformModel);
+function canonicalSourceCenter(node, TransformModel) {
+  return centerOf(canonicalSourceBounds(node, TransformModel));
+}
+
+function transformedSourceCenter(node, TransformModel) {
+  const source = canonicalSourceCenter(node, TransformModel);
   const transform = TransformModel.normalizeTransform(node.transform);
   return {
-    x: center.x - (transform.translateX || 0),
-    y: center.y - (transform.translateY || 0),
+    x: source.x + (transform.translateX || 0),
+    y: source.y + (transform.translateY || 0),
   };
+}
+
+function canonicalTransformedBounds(node, TransformModel) {
+  return TransformModel.transformedBounds(node);
 }
 
 function placeTransformAtCenter(transform, center, source, TransformModel) {
   return TransformModel.normalizeTransform({
     ...transform,
-    translateX: TransformModel.normalizeTranslation(center.x - source.x),
-    translateY: TransformModel.normalizeTranslation(center.y - source.y),
+    translateX: center.x - source.x,
+    translateY: center.y - source.y,
   });
 }
 
@@ -228,17 +239,16 @@ function installSelectionTransformRuntime(target = globalThis) {
       if (mode.startsWith('rotate') && angle === 0) return false;
       if (!['rotate-cw-90', 'rotate-ccw-90', 'rotate-angle', 'flip-horizontal', 'flip-vertical'].includes(mode)) return false;
 
-      const context = { project: state.project, pageId: page.id, assets: this.assets || state.assets };
       const tree = new M.TreeModel(page);
       const visible = nodes.filter(node => tree.isEffectivelyVisible(node.id));
       const pivotNodes = visible.length ? visible : nodes;
-      const groupBounds = unionBounds(pivotNodes.map(node => T.rawVisualBounds(node.id, context)));
+      const groupBounds = unionBounds(pivotNodes.map(node => canonicalTransformedBounds(node, T)));
       if (!groupBounds) return false;
       const pivot = centerOf(groupBounds);
       const before = nodes.map(node => ({
         node,
-        sourceCenter: sourceCenter(node, context, T),
-        center: transformedSourceCenter(node, context, T),
+        sourceCenter: canonicalSourceCenter(node, T),
+        center: transformedSourceCenter(node, T),
         transform: T.normalizeTransform(node.transform),
       }));
 
@@ -356,10 +366,10 @@ function installSelectionTransformRuntime(target = globalThis) {
     if (gesture?.targetKind !== 'raster') return previousApplyPaintSegment.call(this, gesture, a, b);
     const node = M.nodeById(this.activePage(), gesture.nodeId);
     if (!node || node.type !== 'raster') return false;
-    const localA = screenPointToRasterPixel(node, a, T);
-    const localB = screenPointToRasterPixel(node, b, T);
-    if (!localA || !localB) return false;
-    const localPath = this.linePoints(localA, localB);
+    const localPath = this.linePoints(a, b)
+      .map(point => screenPointToRasterPixel(node, point, T))
+      .filter(Boolean)
+      .map(point => ({ x: point.x, y: point.y }));
     const localPoints = PE.paintBrush?.expandBrushPoints
       ? PE.paintBrush.expandBrushPoints(localPath, gesture.brushWidth)
       : localPath;
@@ -378,10 +388,11 @@ function installSelectionTransformRuntime(target = globalThis) {
     modifiableSelectionRoots: (page, selection) => modifiableSelectionRoots(page, selection, M),
     collectModifiableSubtree: (page, roots) => collectModifiableSubtree(page, roots, M),
     selectionVisualBounds: (editor, nodes) => selectionVisualBounds(editor, nodes, R, M),
+    canonicalSourceBounds: node => canonicalSourceBounds(node, T),
+    canonicalSourceCenter: node => canonicalSourceCenter(node, T),
+    canonicalTransformedBounds: node => canonicalTransformedBounds(node, T),
     composeRotate: (transform, degrees) => composeRotate(transform, degrees, T),
     composeFlip: (transform, axis) => composeFlip(transform, axis, T),
-    sourceCenter: (node, context) => sourceCenter(node, context, T),
-    transformedSourceCenter: (node, context) => transformedSourceCenter(node, context, T),
     screenPointToRasterPixel: (node, point) => screenPointToRasterPixel(node, point, T),
     rasterPixelToScreenPoint: (node, pixel) => rasterPixelToScreenPoint(node, pixel, T),
     rasterPixelCornersToScreen: (node, pixel) => rasterPixelCornersToScreen(node, pixel, T),
@@ -399,6 +410,9 @@ export {
   modifiableSelectionRoots,
   collectModifiableSubtree,
   selectionVisualBounds,
+  canonicalSourceBounds,
+  canonicalSourceCenter,
+  canonicalTransformedBounds,
   composeRotate,
   composeFlip,
   screenPointToRasterPixel,

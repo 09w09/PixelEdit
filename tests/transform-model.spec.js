@@ -70,7 +70,7 @@ test('arbitrary rotation updates hit testing beyond the untransformed box', asyn
   expect(result.hitId).toBeTruthy();
 });
 
-test('transform is serialized as artwork state and remains editable', async ({ page }) => {
+test('transform is serialized as integer-pixel artwork state and remains editable', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -92,7 +92,7 @@ test('transform is serialized as artwork state and remains editable', async ({ p
     rotation: -37,
     flipX: true,
     flipY: true,
-    translateX: 12.5,
-    translateY: -7.25,
+    translateX: 13,
+    translateY: -7,
   });
 });

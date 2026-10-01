@@ -7,6 +7,7 @@ import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
+import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
 import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
 import { installPageFillPropertiesRuntime } from './properties/page-fill-properties.js';
@@ -57,6 +58,7 @@ function installRuntimeModules() {
   installTransformModelRuntime(globalThis);
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
+  installIntegerGeometryRuntime(globalThis);
   installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
   installContextMenuBoundaryRuntime(globalThis);

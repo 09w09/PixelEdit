@@ -44,7 +44,7 @@ test('multi-selection rotation uses union center and is one undoable command', a
   ]);
 });
 
-test('group flip reflects transformed visual centers and composes orientation', async ({ page }) => {
+test('group flip reflects transformed visual centers to the nearest pixel and composes orientation', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -79,8 +79,8 @@ test('group flip reflects transformed visual centers and composes orientation', 
   });
 
   result.after.forEach((item, index) => {
-    expect(item.center.x).toBeCloseTo(result.pivotX * 2 - result.beforeCenters[index].x, 8);
-    expect(item.center.y).toBeCloseTo(result.beforeCenters[index].y, 8);
+    expect(Math.abs(item.center.x - (result.pivotX * 2 - result.beforeCenters[index].x))).toBeLessThanOrEqual(0.500001);
+    expect(Math.abs(item.center.y - result.beforeCenters[index].y)).toBeLessThanOrEqual(0.500001);
   });
   expect(result.after.map(item => item.source)).toEqual([{ x: 10, y: 20 }, { x: 30, y: 20 }]);
   expect(result.after[0].transform.rotation).toBe(-30);
@@ -90,8 +90,8 @@ test('group flip reflects transformed visual centers and composes orientation', 
   expect(result.after[1].transform.flipX).toBe(false);
   expect(result.after[1].transform.flipY).toBe(false);
   for (const item of result.after) {
-    expect(Number.isFinite(item.transform.translateX || 0)).toBe(true);
-    expect(Number.isFinite(item.transform.translateY || 0)).toBe(true);
+    expect(Number.isInteger(item.transform.translateX || 0)).toBe(true);
+    expect(Number.isInteger(item.transform.translateY || 0)).toBe(true);
   }
 });
 
@@ -130,7 +130,7 @@ test('locked selected nodes remain selected but are skipped by transforms', asyn
   });
 });
 
-test('align and distribute operate on transformed visual bounds', async ({ page }) => {
+test('align and distribute keep source geometry on integer pixels while approximating transformed visual bounds', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -151,11 +151,18 @@ test('align and distribute operate on transformed visual bounds', async ({ page 
     editor.distribute('horizontal');
     const bounds = nodes.map(node => R.FramebufferRenderer.visualBounds(node.id, { project: editor.state.project, pageId: p.id, assets: editor.state.assets })).sort((a, b) => a.x - b.x);
     const gaps = [bounds[1].x - (bounds[0].x + bounds[0].w), bounds[2].x - (bounds[1].x + bounds[1].w)];
-    return { tops, gaps };
+    const source = nodes.map(node => {
+      const current = M.nodeById(p, node.id);
+      return { x: current.x, y: current.y, w: current.w, h: current.h };
+    });
+    return { tops, gaps, source };
   });
 
-  expect(Math.max(...result.tops) - Math.min(...result.tops)).toBeLessThan(1e-5);
-  expect(Math.abs(result.gaps[0] - result.gaps[1])).toBeLessThanOrEqual(1e-5);
+  for (const geometry of result.source) {
+    for (const value of Object.values(geometry)) expect(Number.isInteger(value)).toBe(true);
+  }
+  expect(Math.max(...result.tops) - Math.min(...result.tops)).toBeLessThanOrEqual(1);
+  expect(Math.abs(result.gaps[0] - result.gaps[1])).toBeLessThanOrEqual(1);
 });
 
 test('zero-angle and empty selection transforms do not create history entries', async ({ page }) => {

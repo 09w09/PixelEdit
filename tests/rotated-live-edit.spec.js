@@ -5,9 +5,9 @@ async function openEditor(page) {
   await page.waitForFunction(() => Boolean(window.PixelEditorTest?.editor));
 }
 
-function expectPointClose(actual, expected, precision = 5) {
-  expect(actual.x).toBeCloseTo(expected.x, precision);
-  expect(actual.y).toBeCloseTo(expected.y, precision);
+function expectPointClose(actual, expected, tolerance = 0.500001) {
+  expect(Math.abs(actual.x - expected.x)).toBeLessThanOrEqual(tolerance);
+  expect(Math.abs(actual.y - expected.y)).toBeLessThanOrEqual(tolerance);
 }
 
 test('rotated box resize keeps the opposite world corner fixed and the dragged handle under the pointer after commit', async ({ page }) => {
