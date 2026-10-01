@@ -27,7 +27,10 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          ROLLUP_VERSION="$(node -p "require('./node_modules/rollup/package.json').version")"
+          npm install --no-save "@rollup/rollup-linux-x64-gnu@${ROLLUP_VERSION}"
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -59,3 +62,14 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify deployed revision
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          DEPLOYED="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "${PAGE_URL%/}/build-info.json?revision=${EXPECTED_SHA}")"
+          if ! printf '%s' "$DEPLOYED" | grep -F "\"sha\":\"${EXPECTED_SHA}\"" >/dev/null; then
+            echo "Expected deployed revision ${EXPECTED_SHA}, got: ${DEPLOYED}"
+            exit 1
+          fi
