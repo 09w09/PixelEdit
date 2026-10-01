@@ -1,7 +1,6 @@
+import { renderShapeToolOptions, SHAPE_TOOLS } from './shape-style-options.js';
 import { renderTextToolOptions } from './text-tool-options.js';
 import { ICONS, iconButton, setIconButton } from '../ui/icon-toolbar.js';
-
-const SHAPE_TOOLS = new Set(['line', 'rectangle', 'circle', 'polygon']);
 
 const SELECTION_ACTIONS = [
   { action: 'align-left', title: '左对齐', icon: ICONS.alignLeft, run: editor => editor.align('left') },
@@ -134,31 +133,17 @@ class ToolOptionsBar {
     });
   }
 
-  renderCreationTools(tool) {
+  renderPaintTool(tool) {
     const settings = this.editor.getToolDefaults(tool);
     const controls = [];
     const width = numberInput('toolOptionWidth', settings.width ?? 1, 1, 100);
     this.bindDefault(width, 'width', value => Math.max(1, Math.min(100, Math.round(Number(value) || 1))));
-    controls.push(fieldLabel(tool === 'pencil' || tool === 'eraser' ? '宽度' : '线宽', width));
-
+    controls.push(fieldLabel('宽度', width));
     if (tool !== 'eraser') {
       const color = selectInput('toolOptionColor', [[1, '黑'], [0, '白']], settings.color ?? 1);
       this.bindDefault(color, 'color', value => Number(value) === 0 ? 0 : 1);
       controls.push(fieldLabel('颜色', color));
     }
-
-    if (SHAPE_TOOLS.has(tool)) {
-      const style = selectInput('toolOptionStyle', [
-        ['solid', '实线'],
-        ['short-dash', '短虚线'],
-        ['long-dash', '长虚线'],
-        ['dot', '点线'],
-        ['dash-dot', '点划线'],
-      ], settings.style || 'solid');
-      this.bindDefault(style, 'style');
-      controls.push(fieldLabel('样式', style));
-    }
-
     this.element.replaceChildren(group(...controls));
   }
 
@@ -167,7 +152,8 @@ class ToolOptionsBar {
     const tool = this.editor.tool;
     if (tool === 'pointer' || tool === 'select') this.renderSelectionTools();
     else if (tool === 'text') renderTextToolOptions(this.editor, this.element);
-    else if (tool === 'pencil' || tool === 'eraser' || SHAPE_TOOLS.has(tool)) this.renderCreationTools(tool);
+    else if (SHAPE_TOOLS.has(tool)) renderShapeToolOptions(this.editor, this.element, tool);
+    else if (tool === 'pencil' || tool === 'eraser') this.renderPaintTool(tool);
     else this.element.replaceChildren();
   }
 
