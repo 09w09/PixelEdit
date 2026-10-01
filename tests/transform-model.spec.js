@@ -15,7 +15,13 @@ test('normal visual nodes carry editable transform state', async ({ page }) => {
       return { type, transform: node.transform };
     });
   });
-  for (const item of result) expect(item.transform).toEqual({ rotation: 23, flipX: true, flipY: false });
+  for (const item of result) expect(item.transform).toEqual({
+    rotation: 23,
+    flipX: true,
+    flipY: false,
+    translateX: 0,
+    translateY: 0,
+  });
 });
 
 test('rotated visual bounds and render output share the same canonical transform', async ({ page }) => {
@@ -78,11 +84,21 @@ test('transform is serialized as artwork state and remains editable', async ({ p
     const P = window.PixelEditor.persistence;
     editor.newProject({ force: true });
     const p = editor.activePage();
-    const node = M.createNode('circle', { parentId: p.id, x: 20, y: 30, w: 12, h: 8, transform: { rotation: -37, flipX: true, flipY: true } });
+    const node = M.createNode('circle', {
+      parentId: p.id,
+      x: 20, y: 30, w: 12, h: 8,
+      transform: { rotation: -37, flipX: true, flipY: true, translateX: 12.5, translateY: -7.25 },
+    });
     p.nodes.push(node);
     const raw = P.ProjectSerializer.serialize(editor.state.project, editor.state.assets);
     const restored = P.ProjectSerializer.deserialize(raw).project.pages[0].nodes[0];
     return restored.transform;
   });
-  expect(result).toEqual({ rotation: -37, flipX: true, flipY: true });
+  expect(result).toEqual({
+    rotation: -37,
+    flipX: true,
+    flipY: true,
+    translateX: 12.5,
+    translateY: -7.25,
+  });
 });
