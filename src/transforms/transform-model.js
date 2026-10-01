@@ -1,11 +1,5 @@
 const VISUAL_TYPES = new Set(['rectangle', 'circle', 'line', 'polygon', 'text', 'image', 'raster']);
-const IDENTITY_TRANSFORM = Object.freeze({
-  rotation: 0,
-  flipX: false,
-  flipY: false,
-  translateX: 0,
-  translateY: 0,
-});
+const IDENTITY_TRANSFORM = Object.freeze({ rotation: 0, flipX: false, flipY: false });
 
 function normalizeRotation(value) {
   let angle = Number(value);
@@ -25,13 +19,16 @@ function normalizeTranslation(value) {
 
 function normalizeTransform(value = {}) {
   const source = value && typeof value === 'object' ? value : {};
-  return {
+  const result = {
     rotation: normalizeRotation(source.rotation),
     flipX: source.flipX === true,
     flipY: source.flipY === true,
-    translateX: normalizeTranslation(source.translateX),
-    translateY: normalizeTranslation(source.translateY),
   };
+  const translateX = normalizeTranslation(source.translateX);
+  const translateY = normalizeTranslation(source.translateY);
+  if (translateX !== 0) result.translateX = translateX;
+  if (translateY !== 0) result.translateY = translateY;
+  return result;
 }
 
 function isIdentityTransform(value) {
@@ -39,8 +36,8 @@ function isIdentityTransform(value) {
   return transform.rotation === 0
     && !transform.flipX
     && !transform.flipY
-    && transform.translateX === 0
-    && transform.translateY === 0;
+    && !transform.translateX
+    && !transform.translateY;
 }
 
 function boundsFromPoints(points) {
@@ -86,16 +83,16 @@ function nodeTransformMatrix(node, bounds = null) {
   const sin = Math.sin(radians);
   const sx = transform.flipX ? -1 : 1;
   const sy = transform.flipY ? -1 : 1;
-  // Local flips first, then rotation, then world-space translation.
-  // All orientation changes use the immutable source geometry center.
   const a = cos * sx;
   const b = sin * sx;
   const c = -sin * sy;
   const d = cos * sy;
   const cx = box.x + box.w / 2;
   const cy = box.y + box.h / 2;
-  const e = cx + transform.translateX - a * cx - c * cy;
-  const f = cy + transform.translateY - b * cx - d * cy;
+  const tx = transform.translateX || 0;
+  const ty = transform.translateY || 0;
+  const e = cx + tx - a * cx - c * cy;
+  const f = cy + ty - b * cx - d * cy;
   return { a, b, c, d, e, f };
 }
 
@@ -315,10 +312,7 @@ function installTransformModelRuntime(target = globalThis) {
   }
 
   framebuffer.visualBounds = function visualTransformBounds(nodeId, context) {
-    const raw = rawVisualBounds(nodeId, context);
-    const clipping = PE.hierarchyClip;
-    if (!clipping?.clippedVisualBounds) return raw;
-    return clipping.clippedVisualBounds(nodeId, context, raw, id => rawVisualBounds(id, context));
+    return rawVisualBounds(nodeId, context);
   };
 
   framebuffer.visualSubtreeBounds = function visualTransformSubtreeBounds(nodeId, context) {
