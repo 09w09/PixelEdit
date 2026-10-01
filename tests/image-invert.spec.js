@@ -84,10 +84,11 @@ test('contain padding and transparent source remain uncovered after inversion', 
   expect(result.width).toBe(4);
   expect(result.height).toBe(4);
   const covered = result.alpha.map((value, index) => value ? index : -1).filter(index => index >= 0);
-  expect(covered).toEqual([4, 8]);
+  expect(covered).toEqual([4, 5, 8, 9]);
   expect(result.bits[4]).toBe(0);
-  expect(result.alpha[5]).toBe(0);
-  expect(result.alpha[9]).toBe(0);
+  expect(result.bits[5]).toBe(0);
+  expect(result.alpha[6]).toBe(0);
+  expect(result.alpha[10]).toBe(0);
 });
 
 test('binary image result matches framebuffer and PNG export pixels', async ({ page }) => {
