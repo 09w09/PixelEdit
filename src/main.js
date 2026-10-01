@@ -9,6 +9,7 @@ import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
+import { installShapeStylePropertiesRuntime } from './properties/shape-style-properties.js';
 import { installTextFontActionsRuntime } from './properties/text-font-actions.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
@@ -40,6 +41,7 @@ function installRuntimeModules() {
   installBinaryImageRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
   installStrokeStyleRuntime(globalThis);
+  installShapeStylePropertiesRuntime(globalThis);
   installTriStateRasterRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
   installPaintBrushRuntime(globalThis);
