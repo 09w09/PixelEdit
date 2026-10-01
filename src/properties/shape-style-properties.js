@@ -1,8 +1,9 @@
+import { STROKE_COLOR_OPTIONS, normalizeStrokeWidth, normalizeStrokeColor } from '../model/stroke-values.js';
+
 const SHAPE_TYPES = new Set(['line', 'rectangle', 'circle', 'polygon']);
 const FILLABLE_SHAPES = new Set(['rectangle', 'circle', 'polygon']);
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[char]);
@@ -29,7 +30,7 @@ function strokeMarkup(nodes, locked, normalizeStroke) {
   const width = common(nodes, node => normalizeStroke(node.stroke).width);
   const color = common(nodes, node => normalizeStroke(node.stroke).color);
   const style = common(nodes, node => normalizeStroke(node.stroke).style);
-  return section('描边', `${field('propStrokeWidth', '线宽', width ?? '', { min: 1, max: 100, disabled: locked, mixed: width == null })}<div class="row">${select('propStrokeColor', '颜色', [[1, '黑'], [0, '白']], color, { disabled: locked, mixed: color == null })}${select('propStrokeStyle', '样式', [['solid', '实线'], ['short-dash', '短虚线'], ['long-dash', '长虚线'], ['dot', '点线'], ['dash-dot', '点划线']], style, { disabled: locked, mixed: style == null })}</div>`);
+  return section('描边', `${field('propStrokeWidth', '线宽', width ?? '', { min: 0, max: 100, disabled: locked, mixed: width == null })}<div class="row">${select('propStrokeColor', '颜色', STROKE_COLOR_OPTIONS, color, { disabled: locked, mixed: color == null })}${select('propStrokeStyle', '样式', [['solid', '实线'], ['short-dash', '短虚线'], ['long-dash', '长虚线'], ['dot', '点线'], ['dash-dot', '点划线']], style, { disabled: locked, mixed: style == null })}</div>`);
 }
 
 function fillMarkup(properties, nodes, locked, normalizeFill) {
@@ -106,8 +107,8 @@ function installShapeStylePropertiesRuntime(target = globalThis) {
     const width = this.el.querySelector('#propStrokeWidth');
     const color = this.el.querySelector('#propStrokeColor');
     const style = this.el.querySelector('#propStrokeStyle');
-    if (width) width.onchange = () => updateStroke({ width: clamp(Math.round(Number(width.value) || 1), 1, 100) }, '修改线宽', 'stroke.width');
-    if (color) color.onchange = () => updateStroke({ color: Number(color.value) === 0 ? 0 : 1 }, '修改描边颜色', 'stroke.color');
+    if (width) width.onchange = () => updateStroke({ width: normalizeStrokeWidth(width.value, 1) }, '修改线宽', 'stroke.width');
+    if (color) color.onchange = () => updateStroke({ color: normalizeStrokeColor(color.value) }, '修改描边颜色', 'stroke.color');
     if (style) style.onchange = () => updateStroke({ style: STROKE_STYLES.has(style.value) ? style.value : 'solid' }, '修改描边样式', 'stroke.style');
 
     if (FILLABLE_SHAPES.has(nodes[0].type)) {

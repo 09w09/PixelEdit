@@ -1,8 +1,11 @@
+import { normalizeStrokeWidth, normalizeStrokeColor } from '../model/stroke-values.js';
+
 const PREFERENCE_KEY = 'pixeledit:v17:preferences';
 const AUTOSAVE_KEY = 'pixel-editor-v17-autosave';
 const DEFAULT_FILENAME = 'pixel-project-v17.pix';
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
 const TOOL_FILL_MODES = new Set(['transparent', 'solid']);
+const SHAPE_TOOLS = new Set(['line', 'rectangle', 'circle', 'polygon']);
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const integer = (value, fallback, min = -Infinity, max = Infinity) => {
@@ -33,8 +36,16 @@ function defaultEditorPreferences() {
 function normalizeTool(tool, input, fallback) {
   const source = input && typeof input === 'object' ? input : {};
   const out = structuredClone(fallback);
-  if ('width' in fallback) out.width = integer(source.width, fallback.width, 1, 100);
-  if ('color' in fallback) out.color = Number(source.color) === 0 ? 0 : 1;
+  if ('width' in fallback) {
+    out.width = SHAPE_TOOLS.has(tool)
+      ? normalizeStrokeWidth(source.width, fallback.width)
+      : integer(source.width, fallback.width, 1, 100);
+  }
+  if ('color' in fallback) {
+    out.color = SHAPE_TOOLS.has(tool)
+      ? normalizeStrokeColor(source.color)
+      : (Number(source.color) === 0 ? 0 : 1);
+  }
   if ('style' in fallback) out.style = STROKE_STYLES.has(source.style) ? source.style : fallback.style;
   if ('fill' in fallback) {
     const fill = source.fill && typeof source.fill === 'object' ? source.fill : {};

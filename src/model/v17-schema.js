@@ -1,3 +1,5 @@
+import { normalizeStrokeWidth, normalizeStrokeColor } from './stroke-values.js';
+
 const PROJECT_VERSION = 17;
 const WIDTH = 400;
 const HEIGHT = 300;
@@ -19,8 +21,8 @@ function integer(value, fallback = 0) {
 
 function normalizeStroke(input = {}) {
   const source = input && typeof input === 'object' ? input : {};
-  const width = clamp(Math.round(Number(source.width) || 1), 1, 100);
-  const color = Number(source.color) === 0 ? 0 : 1;
+  const width = normalizeStrokeWidth(source.width, 1);
+  const color = normalizeStrokeColor(source.color);
   const style = STROKE_STYLES.has(source.style) ? source.style : 'solid';
   return { width, color, style };
 }

@@ -1,3 +1,5 @@
+import { normalizeStrokeWidth, normalizeStrokeColor, isStrokeVisible } from '../model/stroke-values.js';
+
 const SHAPE_TYPES = new Set(['line', 'rectangle', 'circle', 'polygon']);
 const CLOSED_SHAPE_TYPES = new Set(['rectangle', 'circle', 'polygon']);
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
@@ -12,8 +14,8 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 function normalizeStroke(stroke = {}) {
   const source = stroke && typeof stroke === 'object' ? stroke : {};
-  const width = clamp(Math.round(Number(source.width) || 1), 1, 100);
-  const color = Number(source.color) === 0 ? 0 : 1;
+  const width = normalizeStrokeWidth(source.width, 1);
+  const color = normalizeStrokeColor(source.color);
   const style = STROKE_STYLES.has(source.style) ? source.style : 'solid';
   return { width, color, style };
 }
@@ -165,6 +167,7 @@ function exactSolidPixels(node, stroke, R, forEachStrokePixel) {
 
 function styledStrokePixels(node, R, pixelRuntime) {
   const stroke = normalizeStroke(node.stroke);
+  if (!isStrokeVisible(stroke)) return [];
   if (stroke.style === 'solid') return exactSolidPixels(node, stroke, R, pixelRuntime.forEachStrokePixel);
   const points = pathForNode(node, pixelRuntime.rasterThinLine);
   const pixels = new Map();
@@ -196,10 +199,28 @@ function styledStrokePixels(node, R, pixelRuntime) {
   return [...pixels.values()];
 }
 
+function sourceShapeBounds(node) {
+  if (node.type === 'rectangle' || node.type === 'circle') {
+    return { x: node.x || 0, y: node.y || 0, w: node.w || 0, h: node.h || 0 };
+  }
+  if (node.type === 'line') {
+    const x1 = Number(node.x1) || 0, x2 = Number(node.x2) || 0;
+    const y1 = Number(node.y1) || 0, y2 = Number(node.y2) || 0;
+    return { x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1) + 1, h: Math.abs(y2 - y1) + 1 };
+  }
+  const points = node.points || [];
+  if (!points.length) return { x: 0, y: 0, w: 0, h: 0 };
+  const minX = Math.min(...points.map(point => point.x));
+  const minY = Math.min(...points.map(point => point.y));
+  const maxX = Math.max(...points.map(point => point.x));
+  const maxY = Math.max(...points.map(point => point.y));
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
 function strokeBounds(node, R, pixelRuntime) {
-  if (node.type === 'rectangle' || node.type === 'circle') return { x: node.x || 0, y: node.y || 0, w: node.w || 0, h: node.h || 0 };
+  if (node.type === 'rectangle' || node.type === 'circle') return sourceShapeBounds(node);
   const pixels = styledStrokePixels(node, R, pixelRuntime);
-  if (!pixels.length) return { x: 0, y: 0, w: 0, h: 0 };
+  if (!pixels.length) return sourceShapeBounds(node);
   const minX = Math.min(...pixels.map(point => point.x));
   const minY = Math.min(...pixels.map(point => point.y));
   const maxX = Math.max(...pixels.map(point => point.x));
