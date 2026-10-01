@@ -114,26 +114,27 @@ test('undo and redo restore composed transform exactly while source geometry rem
     const R = window.PixelEditor.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
-    const a = M.createNode('rectangle', { parentId: p.id, x: 14, y: 16, w: 11, h: 7 });
-    const b = M.createNode('rectangle', { parentId: p.id, x: 41, y: 27, w: 8, h: 14 });
-    editor.exec(new C.AddNodesCommand([a, b], p.id));
+    const pageId = p.id;
+    const a = M.createNode('rectangle', { parentId: pageId, x: 14, y: 16, w: 11, h: 7 });
+    const b = M.createNode('rectangle', { parentId: pageId, x: 41, y: 27, w: 8, h: 14 });
+    editor.exec(new C.AddNodesCommand([a, b], pageId));
     editor.state.selection.replace([a.id, b.id]);
     const source = [a, b].map(node => ({ id: node.id, x: node.x, y: node.y, w: node.w, h: node.h }));
     editor.runSelectionTransform('rotate-angle', 27);
     const transformed = [a.id, b.id].map(id => ({
-      transform: structuredClone(M.nodeById(p, id).transform),
-      bounds: R.FramebufferRenderer.visualBounds(id, { project: editor.state.project, pageId: p.id, assets: editor.state.assets }),
+      transform: structuredClone(M.nodeById(editor.activePage(), id).transform),
+      bounds: R.FramebufferRenderer.visualBounds(id, { project: editor.state.project, pageId, assets: editor.state.assets }),
     }));
 
     editor.bus.undo();
     const undone = [a.id, b.id].map(id => {
-      const node = M.nodeById(p, id);
+      const node = M.nodeById(editor.activePage(), id);
       return { source: { id: node.id, x: node.x, y: node.y, w: node.w, h: node.h }, transform: structuredClone(node.transform) };
     });
     editor.bus.redo();
     const redone = [a.id, b.id].map(id => ({
-      transform: structuredClone(M.nodeById(p, id).transform),
-      bounds: R.FramebufferRenderer.visualBounds(id, { project: editor.state.project, pageId: p.id, assets: editor.state.assets }),
+      transform: structuredClone(M.nodeById(editor.activePage(), id).transform),
+      bounds: R.FramebufferRenderer.visualBounds(id, { project: editor.state.project, pageId, assets: editor.state.assets }),
     }));
     return { source, transformed, undone, redone };
   });
