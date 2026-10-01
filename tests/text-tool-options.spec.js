@@ -77,7 +77,7 @@ test('fixed-size imported font disables size and scalable fallback restores last
   expect(result.scalable).toEqual({ family: 'sans-serif', size: 31, last: 31, disabled: false });
 });
 
-test('text properties use one font action row and exact import copy', async ({ page }) => {
+test('font actions render in text tool options and are absent from element properties', async ({ page }) => {
   await openEditor(page);
   const seeded = await seedImportedFont(page, { family: 'Imported_scalable', fixedSize: null });
   const result = await page.evaluate(({ family }) => {
@@ -90,19 +90,25 @@ test('text properties use one font action row and exact import copy', async ({ p
     editor.state.selection.replace([node.id]);
     editor.pageSelectedId = null;
     editor.properties.render();
-    const importBtn = document.querySelector('#importFontBtn');
-    const removeBtn = document.querySelector('#removeFontBtn');
+    editor.setToolDefault('text', 'fontFamily', family);
+    editor.setTool('text');
+    const importBtn = document.querySelector('#toolOptionsBar #importFontBtn');
+    const removeBtn = document.querySelector('#toolOptionsBar #removeFontBtn');
     return {
       importCopy: importBtn?.textContent?.trim(),
       bothExist: Boolean(importBtn && removeBtn),
       sameRow: Boolean(importBtn && removeBtn && importBtn.parentElement === removeBtn.parentElement),
       rowClass: importBtn?.parentElement?.className || '',
+      propertyImport: Boolean(document.querySelector('#properties #importFontBtn')),
+      propertyRemove: Boolean(document.querySelector('#properties #removeFontBtn')),
     };
   }, seeded);
   expect(result.importCopy).toBe('导入字体');
   expect(result.bothExist).toBe(true);
   expect(result.sameRow).toBe(true);
   expect(result.rowClass).toContain('font-actions');
+  expect(result.propertyImport).toBe(false);
+  expect(result.propertyRemove).toBe(false);
 });
 
 test('removing font selected by text tool falls back without mutating unrelated text', async ({ page }) => {
