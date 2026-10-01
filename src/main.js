@@ -16,6 +16,7 @@ import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
 import { installBinaryImagePreviewRuntime } from './rendering/binary-image-preview.js';
 import { installBinaryImageRuntime } from './rendering/binary-image.js';
+import { installHierarchyClippingRuntime } from './rendering/hierarchy-clipping.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
 import { installStrokeStyleRuntime } from './rendering/stroke-style.js';
@@ -51,6 +52,7 @@ function installRuntimeModules() {
   installPaintBrushRuntime(globalThis);
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
+  installHierarchyClippingRuntime(globalThis);
   installTransformModelRuntime(globalThis);
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
