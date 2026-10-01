@@ -1,3 +1,5 @@
+import { STROKE_COLOR_OPTIONS, normalizeStrokeWidth, normalizeStrokeColor } from '../model/stroke-values.js';
+
 const SHAPE_TOOLS = new Set(['line', 'rectangle', 'circle', 'polygon']);
 const CLOSED_SHAPE_TOOLS = new Set(['rectangle', 'circle', 'polygon']);
 const STROKE_STYLES = [
@@ -7,8 +9,6 @@ const STROKE_STYLES = [
   ['dot', '点线'],
   ['dash-dot', '点划线'],
 ];
-
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 function numberInput(id, value, min = 1, max = 100) {
   const input = document.createElement('input');
@@ -64,16 +64,16 @@ function renderShapeToolOptions(editor, container, tool) {
   const settings = editor.getToolDefaults(tool);
   const controls = [];
 
-  const width = numberInput('toolOptionWidth', settings.width ?? 1, 1, 100);
+  const width = numberInput('toolOptionWidth', settings.width ?? 1, 0, 100);
   width.addEventListener('change', () => editor.setToolDefault(
     tool,
     'width',
-    clamp(Math.round(Number(width.value) || 1), 1, 100),
+    normalizeStrokeWidth(width.value, 1),
   ));
   controls.push(fieldLabel('线宽', width));
 
-  const color = selectInput('toolOptionColor', [[1, '黑'], [0, '白']], settings.color ?? 1);
-  color.addEventListener('change', () => editor.setToolDefault(tool, 'color', Number(color.value) === 0 ? 0 : 1));
+  const color = selectInput('toolOptionColor', STROKE_COLOR_OPTIONS, settings.color ?? 1);
+  color.addEventListener('change', () => editor.setToolDefault(tool, 'color', normalizeStrokeColor(color.value)));
   controls.push(fieldLabel('颜色', color));
 
   const style = selectInput('toolOptionStyle', STROKE_STYLES, settings.style || 'solid');

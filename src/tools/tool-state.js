@@ -1,3 +1,5 @@
+import { normalizeStrokeWidth, normalizeStrokeColor } from '../model/stroke-values.js';
+
 function clone(value) {
   return structuredClone(value);
 }
@@ -67,8 +69,8 @@ function installToolStateRuntime(target = globalThis) {
     if (!['line', 'rectangle', 'circle', 'polygon'].includes(tool)) return result;
     const settings = this.getToolDefaults(tool);
     node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || PE.schemaV17?.normalizeStroke?.(settings) || {
-      width: settings.width || 1,
-      color: settings.color === 0 ? 0 : 1,
+      width: normalizeStrokeWidth(settings.width, 1),
+      color: normalizeStrokeColor(settings.color),
       style: settings.style || 'solid',
     };
     if (tool !== 'line') {
