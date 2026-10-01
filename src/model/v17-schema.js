@@ -6,9 +6,15 @@ const FILLABLE_TYPES = new Set(['rectangle', 'circle', 'polygon', 'text']);
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
 const FILL_MODES = new Set(['transparent', 'solid', 'dither', 'pattern']);
 const BACKGROUND_FILL_MODES = new Set(['solid', 'dither', 'pattern']);
+const LABELS = Object.freeze({ rectangle: '矩形', circle: '圆', polygon: '多边形', line: '直线', text: '文字', image: '图片' });
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function integer(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(number) : fallback;
 }
 
 function normalizeStroke(input = {}) {
@@ -29,12 +35,12 @@ function normalizeFill(input = {}, { background = false } = {}) {
 }
 
 function sameRecord(actual, expected) {
-  const a = actual && typeof actual === 'object' ? actual : null;
-  if (!a) return false;
-  const keys = Object.keys(a);
+  const value = actual && typeof actual === 'object' ? actual : null;
+  if (!value) return false;
+  const keys = Object.keys(value);
   const expectedKeys = Object.keys(expected);
   if (keys.length !== expectedKeys.length) return false;
-  return expectedKeys.every(key => Object.hasOwn(a, key) && a[key] === expected[key]);
+  return expectedKeys.every(key => Object.hasOwn(value, key) && value[key] === expected[key]);
 }
 
 function referencedAssetIds(project) {
@@ -50,36 +56,147 @@ function installV17SchemaRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
   const P = PE?.persistence;
-  if (!M?.createPage || !M?.createNode || !M?.TreeModel || !M?.AssetStore || !P) {
+  if (!M?.nextId || !M?.defaultDither || !M?.defaultPattern || !M?.TreeModel || !M?.AssetStore || !P) {
     throw new Error('PixelEditor model/persistence is not initialized');
   }
   if (PE.schemaV17Installed) return;
   PE.schemaV17Installed = true;
   PE.version = PROJECT_VERSION;
 
-  const originalCreatePage = M.createPage;
-  const originalCreateNode = M.createNode;
-
   M.createPage = function createV17Page(name = '页面') {
-    const page = originalCreatePage(name);
-    page.width = WIDTH;
-    page.height = HEIGHT;
-    page.fill = { mode: 'solid', color: 0 };
-    return page;
+    return {
+      id: M.nextId('page'),
+      name,
+      width: WIDTH,
+      height: HEIGHT,
+      locked: false,
+      fill: { mode: 'solid', color: 0 },
+      dither: M.defaultDither(),
+      pattern: M.defaultPattern(),
+      overlay: {},
+      nodes: [],
+    };
   };
 
   M.createNode = function createV17Node(type, props = {}) {
-    const node = originalCreateNode(type, props);
-    if (SHAPE_TYPES.has(type)) {
-      node.stroke = normalizeStroke(props.stroke ?? node.stroke);
-      delete node.lineWidth;
-      delete node.strokeColor;
-      delete node.strokeStyle;
+    const base = {
+      id: props.id || M.nextId(type),
+      type,
+      name: props.name || LABELS[type] || type,
+      parentId: props.parentId ?? null,
+      visible: props.visible !== false,
+      locked: Boolean(props.locked),
+    };
+
+    if (type === 'line') {
+      return {
+        ...base,
+        x1: integer(props.x1),
+        y1: integer(props.y1),
+        x2: integer(props.x2, 20),
+        y2: integer(props.y2, 20),
+        stroke: normalizeStroke(props.stroke),
+        overlay: structuredClone(props.overlay || {}),
+      };
     }
-    if (FILLABLE_TYPES.has(type) || node.fill) {
-      node.fill = normalizeFill(props.fill ?? node.fill);
+
+    if (type === 'polygon') {
+      return {
+        ...base,
+        points: (props.points || [{ x: 0, y: 20 }, { x: 20, y: 0 }, { x: 40, y: 20 }])
+          .map(point => ({ x: integer(point.x), y: integer(point.y) }))
+          .slice(0, 24),
+        stroke: normalizeStroke(props.stroke),
+        fill: normalizeFill(props.fill),
+        dither: structuredClone(props.dither || M.defaultDither()),
+        pattern: structuredClone(props.pattern || M.defaultPattern()),
+        overlay: structuredClone(props.overlay || {}),
+      };
     }
-    return node;
+
+    const common = {
+      ...base,
+      x: integer(props.x),
+      y: integer(props.y),
+      w: Math.max(1, integer(props.w, 40)),
+      h: Math.max(1, integer(props.h, 30)),
+      aspectLocked: Boolean(props.aspectLocked),
+      overlay: structuredClone(props.overlay || {}),
+    };
+
+    if (type === 'rectangle') {
+      return {
+        ...common,
+        rTL: Math.max(0, integer(props.rTL)),
+        rTR: Math.max(0, integer(props.rTR)),
+        rBL: Math.max(0, integer(props.rBL)),
+        rBR: Math.max(0, integer(props.rBR)),
+        stroke: normalizeStroke(props.stroke),
+        fill: normalizeFill(props.fill),
+        dither: structuredClone(props.dither || M.defaultDither()),
+        pattern: structuredClone(props.pattern || M.defaultPattern()),
+      };
+    }
+
+    if (type === 'circle') {
+      return {
+        ...common,
+        stroke: normalizeStroke(props.stroke),
+        fill: normalizeFill(props.fill),
+        dither: structuredClone(props.dither || M.defaultDither()),
+        pattern: structuredClone(props.pattern || M.defaultPattern()),
+      };
+    }
+
+    if (type === 'text') {
+      return {
+        ...common,
+        text: props.text ?? '文字',
+        fontFamily: props.fontFamily || 'sans-serif',
+        fontSize: Math.max(1, integer(props.fontSize, 16)),
+        fixedFontSize: props.fixedFontSize ?? null,
+        letterSpacing: integer(props.letterSpacing),
+        lineSpacing: integer(props.lineSpacing),
+        alignH: props.alignH || 'left',
+        alignV: props.alignV || 'top',
+        wrap: props.wrap !== false,
+        bold: Boolean(props.bold),
+        invert: Boolean(props.invert),
+        fill: normalizeFill(props.fill || { mode: 'solid', color: 1 }),
+        dither: structuredClone(props.dither || M.defaultDither()),
+        pattern: structuredClone(props.pattern || M.defaultPattern()),
+      };
+    }
+
+    if (type === 'image') {
+      const sourceWidth = Math.max(1, integer(props.sourceWidth, common.w));
+      const sourceHeight = Math.max(1, integer(props.sourceHeight, common.h));
+      return {
+        ...common,
+        assetId: props.assetId || null,
+        sourceWidth,
+        sourceHeight,
+        sourceType: props.sourceType || 'bitmap',
+        sourceName: props.sourceName || '',
+        svgViewBox: props.svgViewBox || null,
+        image: {
+          fit: 'stretch',
+          interpolation: 'nearest',
+          cropX: 0,
+          cropY: 0,
+          cropW: sourceWidth,
+          cropH: sourceHeight,
+          bwMode: 'threshold',
+          threshold: 128,
+          invert: false,
+          ditherAlgorithm: 'bayer',
+          bayerMatrix: 4,
+          ...(props.image || {}),
+        },
+      };
+    }
+
+    throw new Error(`unknown node type: ${type}`);
   };
 
   M.createProject = function createV17Project(name = '未命名工程') {
