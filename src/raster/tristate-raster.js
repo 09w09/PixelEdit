@@ -65,7 +65,7 @@ function createTriStateRaster(width, height, pixels = null, defaultValue = RASTE
 function pixelsFromRasterNode(node) {
   const w = Math.max(1, Math.round(Number(node?.w) || 1));
   const h = Math.max(1, Math.round(Number(node?.h) || 1));
-  if (!node?.raster || node.raster.encoding !== RASTER_ENCODING) throw new Error('V16 栅格数据格式无效');
+  if (!node?.raster || node.raster.encoding !== RASTER_ENCODING) throw new Error('V17 栅格数据格式无效');
   return decodeTriStatePixels(node.raster.data, w, h);
 }
 
