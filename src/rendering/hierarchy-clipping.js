@@ -45,8 +45,9 @@ function installHierarchyClippingRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
   const R = PE?.renderer;
+  const HitTest = PE?.interaction?.HitTest;
   const framebuffer = R?.FramebufferRenderer;
-  if (!M?.TreeModel || !framebuffer?._drawNode || !framebuffer?._drawPageBackground || !framebuffer?._bounds) {
+  if (!M?.TreeModel || !framebuffer?._drawNode || !framebuffer?._drawPageBackground || !framebuffer?._bounds || !HitTest) {
     throw new Error('PixelEditor hierarchy clipping dependencies are not initialized');
   }
   if (PE.hierarchyClippingInstalled) return;
@@ -123,6 +124,21 @@ function installHierarchyClippingRuntime(target = globalThis) {
     return intersectBounds(rawBounds, ancestorClip(tree, nodeId, getBounds));
   }
 
+  function visibleHitBounds(hitTest, nodeId) {
+    const context = {
+      project: hitTest.project,
+      pageId: hitTest.pageId,
+      assets: hitTest.assets,
+    };
+    const raw = framebuffer.visualBounds(nodeId, context);
+    return clippedVisualBounds(
+      nodeId,
+      context,
+      raw,
+      ancestorId => framebuffer.visualBounds(ancestorId, context),
+    );
+  }
+
   function visualSubtreeBounds(nodeId, context) {
     const page = M.pageById(context.project, context.pageId);
     if (!page) return { x: 0, y: 0, w: 0, h: 0 };
@@ -172,6 +188,12 @@ function installHierarchyClippingRuntime(target = globalThis) {
   framebuffer.visualSubtreeBounds = visualSubtreeBounds;
   framebuffer.subtreeRgba = subtreeRgba;
 
+  // Interaction sees only the actually visible part of a child. Geometry APIs stay
+  // un-clipped so selection overlays, transform pivots and off-canvas editing remain stable.
+  HitTest.prototype.bounds = function hierarchyClippedHitBounds(nodeId) {
+    return visibleHitBounds(this, nodeId);
+  };
+
   PE.hierarchyClip = {
     CANVAS_BOUNDS: { ...CANVAS_BOUNDS },
     intersectBounds,
@@ -179,6 +201,7 @@ function installHierarchyClippingRuntime(target = globalThis) {
     containsPixel,
     ancestorClip,
     clippedVisualBounds,
+    visibleHitBounds,
     rawBoundsForNode,
   };
 
