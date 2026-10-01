@@ -39,8 +39,8 @@ test('multi-selection rotation uses union center and is one undoable command', a
     { x: 30, y: 10, transform: { rotation: 90, flipX: false, flipY: false, translateX: -10, translateY: 10 } },
   ]);
   expect(result.undone).toEqual([
-    { x: 10, y: 10, transform: { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 } },
-    { x: 30, y: 10, transform: { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 } },
+    { x: 10, y: 10, transform: { rotation: 0, flipX: false, flipY: false } },
+    { x: 30, y: 10, transform: { rotation: 0, flipX: false, flipY: false } },
   ]);
 });
 
@@ -90,8 +90,8 @@ test('group flip reflects transformed visual centers and composes orientation', 
   expect(result.after[1].transform.flipX).toBe(false);
   expect(result.after[1].transform.flipY).toBe(false);
   for (const item of result.after) {
-    expect(Number.isFinite(item.transform.translateX)).toBe(true);
-    expect(Number.isFinite(item.transform.translateY)).toBe(true);
+    expect(Number.isFinite(item.transform.translateX || 0)).toBe(true);
+    expect(Number.isFinite(item.transform.translateY || 0)).toBe(true);
   }
 });
 
@@ -126,7 +126,7 @@ test('locked selected nodes remain selected but are skipped by transforms', asyn
   expect(result.locked).toEqual({
     x: 50,
     y: 10,
-    transform: { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 },
+    transform: { rotation: 0, flipX: false, flipY: false },
   });
 });
 
