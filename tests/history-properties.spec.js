@@ -9,7 +9,6 @@ test('history renders newest first while data indices remain chronological', asy
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
     const snapshot = () => [...document.querySelectorAll('#historyDock .history-item')].map(button => ({
       label: button.textContent.trim(),
       index: Number(button.dataset.historyIndex),
@@ -17,9 +16,18 @@ test('history renders newest first while data indices remain chronological', asy
     }));
     editor.newProject({ force: true });
     const id = editor.activePage().id;
-    editor.exec(new C.UpdatePageCommand(id, { name: 'A' }, '第一步'));
-    editor.exec(new C.UpdatePageCommand(id, { name: 'B' }, '第二步'));
-    editor.exec(new C.UpdatePageCommand(id, { name: 'C' }, '第三步'));
+    const step = (name, label) => editor.exec({
+      label,
+      execute(state) {
+        const target = state.project.pages.find(pageItem => pageItem.id === id);
+        if (!target || target.name === name) return false;
+        target.name = name;
+        return true;
+      },
+    });
+    step('A', '第一步');
+    step('B', '第二步');
+    step('C', '第三步');
     editor.history.render();
     return {
       cursor: editor.bus.cursor,
@@ -39,7 +47,6 @@ test('undo redo and branch history keep reversed display mapped to real cursor',
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
     const snapshot = () => [...document.querySelectorAll('#historyDock .history-item')].map(button => ({
       label: button.textContent.trim(),
       index: Number(button.dataset.historyIndex),
@@ -47,16 +54,25 @@ test('undo redo and branch history keep reversed display mapped to real cursor',
     }));
     editor.newProject({ force: true });
     const id = editor.activePage().id;
-    editor.exec(new C.UpdatePageCommand(id, { name: 'A' }, '第一步'));
-    editor.exec(new C.UpdatePageCommand(id, { name: 'B' }, '第二步'));
-    editor.exec(new C.UpdatePageCommand(id, { name: 'C' }, '第三步'));
+    const step = (name, label) => editor.exec({
+      label,
+      execute(state) {
+        const target = state.project.pages.find(pageItem => pageItem.id === id);
+        if (!target || target.name === name) return false;
+        target.name = name;
+        return true;
+      },
+    });
+    step('A', '第一步');
+    step('B', '第二步');
+    step('C', '第三步');
 
     editor.bus.undo(); editor.renderAll();
     const afterUndo = { cursor: editor.bus.cursor, items: snapshot() };
     editor.bus.redo(); editor.renderAll();
     const afterRedo = { cursor: editor.bus.cursor, items: snapshot() };
     editor.bus.undo(); editor.renderAll();
-    editor.exec(new C.UpdatePageCommand(id, { name: 'BRANCH' }, '分支步骤'));
+    step('BRANCH', '分支步骤');
     const afterBranch = { cursor: editor.bus.cursor, entries: editor.bus.entries.map(entry => entry.label), items: snapshot() };
     return { afterUndo, afterRedo, afterBranch };
   });
@@ -75,12 +91,20 @@ test('clicking a reversed history row jumps to its chronological command index',
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
     editor.newProject({ force: true });
     const id = editor.activePage().id;
-    editor.exec(new C.UpdatePageCommand(id, { name: 'A' }, '第一步'));
-    editor.exec(new C.UpdatePageCommand(id, { name: 'B' }, '第二步'));
-    editor.exec(new C.UpdatePageCommand(id, { name: 'C' }, '第三步'));
+    const step = (name, label) => editor.exec({
+      label,
+      execute(state) {
+        const targetPage = state.project.pages.find(pageItem => pageItem.id === id);
+        if (!targetPage || targetPage.name === name) return false;
+        targetPage.name = name;
+        return true;
+      },
+    });
+    step('A', '第一步');
+    step('B', '第二步');
+    step('C', '第三步');
     editor.history.render();
     const target = document.querySelector('#historyDock [data-history-index="1"]');
     target?.click();
