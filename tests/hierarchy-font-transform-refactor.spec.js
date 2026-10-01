@@ -221,10 +221,12 @@ test('selection overlay follows composed transforms without rewriting source con
       x: Number(el.getAttribute('x')) + Number(el.getAttribute('width')) / 2,
       y: Number(el.getAttribute('y')) + Number(el.getAttribute('height')) / 2,
     }));
-    const expected = window.PixelEditor.selectionGeometry.selectionGeometry(M.nodeById(p, poly.id)).controlPoints;
+    const current = M.nodeById(p, poly.id);
+    const pivotBounds = window.PixelEditor.selectionOverlay.sourcePivotBounds(editor, current);
+    const expected = window.PixelEditor.selectionGeometry.selectionGeometry(current, pivotBounds).controlPoints;
     return {
       originalPoints,
-      currentPoints: structuredClone(M.nodeById(p, poly.id).points),
+      currentPoints: structuredClone(current.points),
       handles,
       expected,
     };
