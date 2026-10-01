@@ -77,9 +77,6 @@ function installToolStateRuntime(target = globalThis) {
         color: Number(settings.fill?.color) === 0 ? 0 : 1,
       };
     }
-    delete node.lineWidth;
-    delete node.strokeColor;
-    delete node.strokeStyle;
     this.renderCanvas?.();
     return result;
   };
