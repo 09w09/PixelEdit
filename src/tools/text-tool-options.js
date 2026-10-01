@@ -75,13 +75,41 @@ function labeled(text, control) {
   return label;
 }
 
+function actionButton(id, label, onClick, { danger = false } = {}) {
+  const button = document.createElement('button');
+  button.id = id;
+  button.type = 'button';
+  button.textContent = label;
+  if (danger) button.classList.add('danger');
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+function fontActionGroup(editor, resolved) {
+  const group = document.createElement('div');
+  group.className = 'tool-option-group font-actions';
+  const importButton = actionButton('importFontBtn', '导入字体', () => {
+    document.querySelector('#fileFont')?.click();
+  });
+  group.appendChild(importButton);
+
+  const record = fontRecordForFamily(editor.state.project, resolved.fontFamily);
+  if (record) {
+    const removeButton = actionButton('removeFontBtn', '移除当前字体', () => {
+      editor.removeImportedFont?.(resolved.fontFamily);
+    }, { danger: true });
+    group.appendChild(removeButton);
+  }
+  return group;
+}
+
 function renderTextToolOptions(editor, container) {
   const settings = editor.getToolDefaults('text');
   const resolved = resolveTextToolSelection(settings, editor.state.project, settings.fontFamily);
-  const group = document.createElement('div');
-  group.className = 'tool-option-group';
-  group.append(labeled('字体', optionSelect(editor, resolved)), labeled('字号', sizeInput(editor, resolved)));
-  container.replaceChildren(group);
+  const fields = document.createElement('div');
+  fields.className = 'tool-option-group';
+  fields.append(labeled('字体', optionSelect(editor, resolved)), labeled('字号', sizeInput(editor, resolved)));
+  container.replaceChildren(fields, fontActionGroup(editor, resolved));
   return resolved;
 }
 
