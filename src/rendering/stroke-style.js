@@ -1,4 +1,5 @@
 const SHAPE_TYPES = new Set(['line', 'rectangle', 'circle', 'polygon']);
+const CLOSED_SHAPE_TYPES = new Set(['rectangle', 'circle', 'polygon']);
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
 const PATTERNS = Object.freeze({
   'short-dash': [4, 2],
@@ -15,6 +16,13 @@ function normalizeStroke(stroke = {}) {
   const color = Number(source.color) === 0 ? 0 : 1;
   const style = STROKE_STYLES.has(source.style) ? source.style : 'solid';
   return { width, color, style };
+}
+
+function normalizeFill(fill = {}) {
+  const source = fill && typeof fill === 'object' ? fill : {};
+  const mode = ['transparent', 'solid', 'dither', 'pattern'].includes(source.mode) ? source.mode : 'transparent';
+  const color = Number(source.color) === 0 ? 0 : 1;
+  return { mode, color };
 }
 
 function strokePattern(style) {
@@ -192,10 +200,10 @@ function strokeBounds(node, R, pixelRuntime) {
   if (node.type === 'rectangle' || node.type === 'circle') return { x: node.x || 0, y: node.y || 0, w: node.w || 0, h: node.h || 0 };
   const pixels = styledStrokePixels(node, R, pixelRuntime);
   if (!pixels.length) return { x: 0, y: 0, w: 0, h: 0 };
-  const minX = Math.min(...pixels.map(p => p.x));
-  const minY = Math.min(...pixels.map(p => p.y));
-  const maxX = Math.max(...pixels.map(p => p.x));
-  const maxY = Math.max(...pixels.map(p => p.y));
+  const minX = Math.min(...pixels.map(point => point.x));
+  const minY = Math.min(...pixels.map(point => point.y));
+  const maxX = Math.max(...pixels.map(point => point.x));
+  const maxY = Math.max(...pixels.map(point => point.y));
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
 }
 
@@ -209,9 +217,58 @@ function unionBounds(bounds) {
   return { x, y, w: right - x, h: bottom - y };
 }
 
-function addStrokeOverlay(node, R, pixelRuntime) {
+function fillValue(node, R, ax, ay, lx, ly) {
+  const fill = normalizeFill(node.fill);
+  if (fill.mode === 'transparent') return null;
+  if (fill.mode === 'solid') return fill.color;
+  if (fill.mode === 'dither') return R.graphicDitherPixel(node.dither, ax, ay, lx, ly);
+  if (fill.mode === 'pattern') return R.patternPixel(node.pattern, ax, ay, lx, ly);
+  return null;
+}
+
+function shapeFillOverlay(node, R) {
+  const overlay = {};
+  if (!CLOSED_SHAPE_TYPES.has(node.type) || normalizeFill(node.fill).mode === 'transparent') return overlay;
+  const put = (keyX, keyY, ax, ay, lx, ly) => {
+    const value = fillValue(node, R, ax, ay, lx, ly);
+    if (value != null) overlay[pixelKey(keyX, keyY)] = value;
+  };
+
+  if (node.type === 'rectangle') {
+    const w = Math.max(1, Math.round(node.w || 1));
+    const h = Math.max(1, Math.round(node.h || 1));
+    const radii = R.normalizeRadii(node, w, h);
+    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) {
+      if (R.pointInRoundedRectLocal(x, y, w, h, radii)) put(x, y, Math.round(node.x || 0) + x, Math.round(node.y || 0) + y, x, y);
+    }
+    return overlay;
+  }
+
+  if (node.type === 'circle') {
+    const w = Math.max(1, Math.round(node.w || 1));
+    const h = Math.max(1, Math.round(node.h || 1));
+    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) {
+      if (R.ellipseInside(x, y, w, h, 0)) put(x, y, Math.round(node.x || 0) + x, Math.round(node.y || 0) + y, x, y);
+    }
+    return overlay;
+  }
+
+  const points = node.points || [];
+  if (points.length < 3) return overlay;
+  const minX = Math.floor(Math.min(...points.map(point => point.x)));
+  const maxX = Math.ceil(Math.max(...points.map(point => point.x)));
+  const minY = Math.floor(Math.min(...points.map(point => point.y)));
+  const maxY = Math.ceil(Math.max(...points.map(point => point.y)));
+  for (let y = minY; y <= maxY; y += 1) for (let x = minX; x <= maxX; x += 1) {
+    if (R.pointInPolygon(points, x + 0.5, y + 0.5)) put(x, y, x, y, x - minX, y - minY);
+  }
+  return overlay;
+}
+
+function addCanonicalShapeOverlay(node, R, pixelRuntime) {
   const stroke = normalizeStroke(node.stroke);
   const existing = structuredClone(node.overlay || {});
+  const fillOverlay = shapeFillOverlay(node, R);
   const strokeOverlay = {};
   for (const pixel of styledStrokePixels(node, R, pixelRuntime)) {
     const local = node.type === 'rectangle' || node.type === 'circle';
@@ -219,22 +276,30 @@ function addStrokeOverlay(node, R, pixelRuntime) {
     const y = local ? pixel.y - Math.round(node.y || 0) : pixel.y;
     strokeOverlay[pixelKey(x, y)] = stroke.color;
   }
-  node.overlay = { ...strokeOverlay, ...existing };
-  node.lineWidth = 0;
+  node.overlay = { ...fillOverlay, ...strokeOverlay, ...existing };
+  if (CLOSED_SHAPE_TYPES.has(node.type)) node.fill = { ...normalizeFill(node.fill), mode: 'transparent' };
 }
 
 function adaptProject(project, R, pixelRuntime) {
   const clone = structuredClone(project);
-  for (const page of clone.pages || []) for (const node of page.nodes || []) if (SHAPE_TYPES.has(node.type)) addStrokeOverlay(node, R, pixelRuntime);
+  for (const page of clone.pages || []) {
+    if (page.fill?.mode === 'solid') {
+      if (Number(page.fill.color) === 1) {
+        page.fill = { mode: 'pattern', color: 1 };
+        page.pattern = { type: 'horizontal', lineWidth: 1, gap: 0, align: 'global', offsetX: 0, offsetY: 0 };
+      } else page.fill = { mode: 'solid', color: 0 };
+    }
+    for (const node of page.nodes || []) if (SHAPE_TYPES.has(node.type)) addCanonicalShapeOverlay(node, R, pixelRuntime);
+  }
   return clone;
 }
 
 function validateStrokeProject(project) {
   for (const page of project.pages || []) for (const node of page.nodes || []) {
     if (!SHAPE_TYPES.has(node.type)) continue;
-    if (Object.hasOwn(node, 'lineWidth')) throw new Error('V16 图形不得包含 lineWidth');
+    if (Object.hasOwn(node, 'lineWidth')) throw new Error('V17 图形不得包含 lineWidth');
     const normalized = normalizeStroke(node.stroke);
-    if (!node.stroke || normalized.width !== node.stroke.width || normalized.color !== node.stroke.color || normalized.style !== node.stroke.style) throw new Error('V16 描边数据无效');
+    if (!node.stroke || normalized.width !== node.stroke.width || normalized.color !== node.stroke.color || normalized.style !== node.stroke.style) throw new Error('V17 描边数据无效');
   }
   return project;
 }
@@ -244,18 +309,16 @@ function installStrokeStyleRuntime(target = globalThis) {
   const M = PE?.model;
   const R = PE?.renderer;
   const P = PE?.persistence;
-  const C = PE?.commands;
-  const Properties = PE?.ui?.Properties;
   const pixelRuntime = PE?.pixelStrokeRuntime;
   if (!M?.createNode || !R?.FramebufferRenderer || !P?.ProjectSerializer || !pixelRuntime) throw new Error('PixelEditor stroke dependencies are not initialized');
   if (PE.strokeStyleInstalled) return;
   PE.strokeStyleInstalled = true;
 
   const originalCreateNode = M.createNode;
-  M.createNode = function createV16StrokeNode(type, props = {}) {
+  M.createNode = function createV17StrokeNode(type, props = {}) {
     const node = originalCreateNode(type, props);
     if (SHAPE_TYPES.has(type)) {
-      node.stroke = normalizeStroke(props.stroke);
+      node.stroke = normalizeStroke(props.stroke ?? node.stroke);
       delete node.lineWidth;
       delete node.strokeColor;
       delete node.strokeStyle;
@@ -299,7 +362,7 @@ function installStrokeStyleRuntime(target = globalThis) {
   framebuffer.visualSubtreeBounds = visualSubtreeBounds;
   framebuffer._bounds = function boundsWithStroke(node) {
     if (SHAPE_TYPES.has(node?.type)) return strokeBounds(node, R, pixelRuntime);
-    return originalVisualBounds ? (node ? { x: node.x || 0, y: node.y || 0, w: node.w || 0, h: node.h || 0 } : { x: 0, y: 0, w: 0, h: 0 }) : { x: 0, y: 0, w: 0, h: 0 };
+    return node ? { x: node.x || 0, y: node.y || 0, w: node.w || 0, h: node.h || 0 } : { x: 0, y: 0, w: 0, h: 0 };
   };
   framebuffer.subtreeRgba = function subtreeRgbaWithStroke(project, pageId, nodeId, assets) {
     const bounds = visualSubtreeBounds(nodeId, { project, pageId, assets });
@@ -339,40 +402,15 @@ function installStrokeStyleRuntime(target = globalThis) {
     return result;
   };
 
-  if (Properties) {
-    const originalTypeFields = Properties.prototype.typeFields;
-    const originalBind = Properties.prototype.bind;
-    const shapeOptions = '<div class="property-section"><h4>描边样式</h4><div class="row"><div class="field"><label for="propStrokeColor">颜色</label><select id="propStrokeColor"><option value="1">黑</option><option value="0">白</option></select></div><div class="field"><label for="propStrokeStyle">样式</label><select id="propStrokeStyle"><option value="solid">实线</option><option value="short-dash">短虚线</option><option value="long-dash">长虚线</option><option value="dot">点线</option><option value="dash-dot">点划线</option></select></div></div></div>';
-    Properties.prototype.typeFields = function strokeTypeFields(nodes, locked) {
-      if (!nodes.length || !nodes.every(node => SHAPE_TYPES.has(node.type))) return originalTypeFields.call(this, nodes, locked);
-      const clones = nodes.map(node => ({ ...structuredClone(node), lineWidth: normalizeStroke(node.stroke).width }));
-      let html = originalTypeFields.call(this, clones, locked).replaceAll('id="propLineWidth"', 'id="propStrokeWidth"').replaceAll('for="propLineWidth"', 'for="propStrokeWidth"');
-      html += shapeOptions;
-      queueMicrotask(() => {
-        const color = this.el.querySelector('#propStrokeColor');
-        const style = this.el.querySelector('#propStrokeStyle');
-        if (color) color.value = String(nodes.every(node => normalizeStroke(node.stroke).color === normalizeStroke(nodes[0].stroke).color) ? normalizeStroke(nodes[0].stroke).color : '');
-        if (style) style.value = nodes.every(node => normalizeStroke(node.stroke).style === normalizeStroke(nodes[0].stroke).style) ? normalizeStroke(nodes[0].stroke).style : '';
-        if (locked) { if (color) color.disabled = true; if (style) style.disabled = true; }
-      });
-      return html;
-    };
-    Properties.prototype.bind = function bindStrokeProperties(nodes, locked) {
-      originalBind.call(this, nodes, locked);
-      if (locked || !nodes.length || !nodes.every(node => SHAPE_TYPES.has(node.type))) return;
-      const ids = nodes.map(node => node.id);
-      const page = this.editor.activePage();
-      const update = (patch, label) => this.editor.exec(new C.UpdateNodesCommand(ids, node => ({ stroke: { ...normalizeStroke(node.stroke), ...patch } }), page.id, label));
-      const width = this.el.querySelector('#propStrokeWidth');
-      const color = this.el.querySelector('#propStrokeColor');
-      const style = this.el.querySelector('#propStrokeStyle');
-      if (width) width.onchange = () => update({ width: clamp(Math.round(Number(width.value) || 1), 1, 100) }, '修改线宽');
-      if (color) color.onchange = () => update({ color: Number(color.value) === 0 ? 0 : 1 }, '修改描边颜色');
-      if (style) style.onchange = () => update({ style: STROKE_STYLES.has(style.value) ? style.value : 'solid' }, '修改描边样式');
-    };
-  }
-
-  PE.strokeStyle = { normalizeStroke, strokePattern, forEachStyledPathPoint, styledStrokePixels, validateStrokeProject };
+  PE.strokeStyle = {
+    normalizeStroke,
+    normalizeFill,
+    strokePattern,
+    forEachStyledPathPoint,
+    styledStrokePixels,
+    shapeFillOverlay,
+    validateStrokeProject,
+  };
 }
 
 export { normalizeStroke, strokePattern, forEachStyledPathPoint, styledStrokePixels, installStrokeStyleRuntime };
