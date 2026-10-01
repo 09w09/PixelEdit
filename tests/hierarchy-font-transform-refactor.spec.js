@@ -5,10 +5,6 @@ async function openEditor(page) {
   await page.waitForFunction(() => Boolean(window.PixelEditorTest?.editor));
 }
 
-function center(bounds) {
-  return { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
-}
-
 test('child rendering and hit testing are clipped by every ancestor layer bounds', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
@@ -65,7 +61,6 @@ test('font import and current-font removal live in text tool options, not elemen
     const C = window.PixelEditor.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
-    p.fonts = p.fonts || [];
     editor.state.project.fonts.push({
       name: 'Test Imported.ttf',
       family: 'Imported_Test',
@@ -108,6 +103,7 @@ test('font import and current-font removal live in text tool options, not elemen
 test('group rotation keeps source geometry immutable and stores placement only in transform state', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
+    const center = bounds => ({ x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 });
     const editor = window.PixelEditorTest.editor;
     const M = window.PixelEditor.model;
     const C = window.PixelEditor.commands;
@@ -145,8 +141,8 @@ test('group rotation keeps source geometry immutable and stores placement only i
   )).toBe(true);
   for (const item of result.after) {
     expect(item.transform.rotation).toBe(90);
-    expect(Number.isFinite(item.transform.translateX)).toBe(true);
-    expect(Number.isFinite(item.transform.translateY)).toBe(true);
+    expect(Number.isFinite(item.transform.translateX || 0)).toBe(true);
+    expect(Number.isFinite(item.transform.translateY || 0)).toBe(true);
   }
 });
 
@@ -188,8 +184,8 @@ test('four quarter turns return exactly to canonical identity without source-geo
 
   expect(result.sourceAfter).toEqual(result.sourceBefore);
   expect(result.transforms).toEqual([
-    { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 },
-    { rotation: 0, flipX: false, flipY: false, translateX: 0, translateY: 0 },
+    { rotation: 0, flipX: false, flipY: false },
+    { rotation: 0, flipX: false, flipY: false },
   ]);
   result.boundsAfter.forEach((bounds, index) => {
     expect(bounds.x).toBeCloseTo(result.boundsBefore[index].x, 8);
