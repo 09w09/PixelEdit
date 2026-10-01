@@ -211,7 +211,7 @@ function installBinaryImageRuntime(target = globalThis) {
     return baseSubtreeRgba(adapted.project, pageId, nodeId, adapted.assets);
   };
 
-  // Keep existing call sites deterministic while ownership moves to the canonical pipeline.
+  // Legacy framebuffer helpers delegate to the canonical binary pipeline; they do not own inversion semantics.
   R.thresholdRgba = function thresholdRgba(r, g, b, a = 255, threshold = 128, invert = false) {
     const result = pipeline.applyFinalBinaryInvert(
       thresholdToBinary(new Uint8ClampedArray([r, g, b, a]), 1, 1, threshold),
@@ -225,38 +225,6 @@ function installBinaryImageRuntime(target = globalThis) {
       options.invert === true,
     ).bits;
   };
-
-  const Properties = PE.ui?.Properties;
-  const originalRenderPreviews = Properties?.prototype?.renderPreviews;
-  if (typeof originalRenderPreviews === 'function') {
-    Properties.prototype.renderPreviews = function renderBinaryImagePreviews(nodes) {
-      originalRenderPreviews.call(this, nodes);
-      if (nodes?.length !== 1 || nodes[0].type !== 'image') return;
-      const canvas = this.el?.querySelector?.('#imageDitherPreview');
-      if (!canvas) return;
-      const result = pipeline.binaryImageForNode(nodes[0], this.editor.state.assets);
-      if (!result) return;
-      const source = document.createElement('canvas');
-      source.width = result.width;
-      source.height = result.height;
-      const sourceContext = source.getContext('2d');
-      const imageData = sourceContext.createImageData(result.width, result.height);
-      for (let index = 0; index < result.bits.length; index += 1) {
-        const value = result.alpha[index] && result.bits[index] ? 0 : 255;
-        const offset = index * 4;
-        imageData.data[offset] = value;
-        imageData.data[offset + 1] = value;
-        imageData.data[offset + 2] = value;
-        imageData.data[offset + 3] = 255;
-      }
-      sourceContext.putImageData(imageData, 0, 0);
-      const context = canvas.getContext('2d');
-      context.imageSmoothingEnabled = false;
-      context.fillStyle = '#fff';
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(source, 0, 0, canvas.width, canvas.height);
-    };
-  }
 }
 
 export {
