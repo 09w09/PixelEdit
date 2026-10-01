@@ -4,25 +4,6 @@ function safeZoom(zoom) {
   return Math.max(0.01, Number(zoom) || 1);
 }
 
-function boxEdges(bounds) {
-  return {
-    left: Number(bounds.x) || 0,
-    top: Number(bounds.y) || 0,
-    right: (Number(bounds.x) || 0) + Math.max(0, Number(bounds.w) || 0),
-    bottom: (Number(bounds.y) || 0) + Math.max(0, Number(bounds.h) || 0),
-  };
-}
-
-function boxHandlePoints(bounds) {
-  const edge = boxEdges(bounds);
-  return [
-    { x: edge.left, y: edge.top, corner: 'nw' },
-    { x: edge.right, y: edge.top, corner: 'ne' },
-    { x: edge.left, y: edge.bottom, corner: 'sw' },
-    { x: edge.right, y: edge.bottom, corner: 'se' },
-  ];
-}
-
 function handleVisualSize(zoom, cssPx = 10) {
   return cssPx / safeZoom(zoom);
 }
@@ -31,12 +12,8 @@ function handleHitTolerance(zoom, cssPx = 8) {
   return cssPx / safeZoom(zoom);
 }
 
-function hitBoxHandle(bounds, point, zoom) {
-  const tolerance = handleHitTolerance(zoom);
-  for (const handle of boxHandlePoints(bounds)) {
-    if (Math.hypot(handle.x - point.x, handle.y - point.y) <= tolerance) return handle;
-  }
-  return null;
+function translated(point, dx = 0, dy = 0) {
+  return { ...point, x: point.x + dx, y: point.y + dy };
 }
 
 function handleRect(point, zoom) {
@@ -45,89 +22,52 @@ function handleRect(point, zoom) {
   return `<rect class="selection-handle" x="${point.x - half}" y="${point.y - half}" width="${size}" height="${size}"/>`;
 }
 
-function pointBounds(points) {
-  if (!points?.length) return { x: 0, y: 0, w: 0, h: 0 };
-  const xs = points.map(point => point.x);
-  const ys = points.map(point => point.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
-}
-
-function sourceGeometryBounds(node) {
-  if (node.type === 'line') {
-    return {
-      x: Math.min(node.x1, node.x2),
-      y: Math.min(node.y1, node.y2),
-      w: Math.abs(node.x2 - node.x1),
-      h: Math.abs(node.y2 - node.y1),
-    };
-  }
-  if (node.type === 'polygon') return pointBounds(node.points || []);
-  return {
-    x: Number(node.x) || 0,
-    y: Number(node.y) || 0,
-    w: Math.max(0, Number(node.w) || 0),
-    h: Math.max(0, Number(node.h) || 0),
-  };
-}
-
-function translated(point, dx = 0, dy = 0) {
-  return { ...point, x: point.x + dx, y: point.y + dy };
-}
-
-function transformedSourcePoints(node, points, transformModel) {
-  if (!transformModel || transformModel.isIdentityTransform(node.transform)) return points.map(point => ({ ...point }));
-  const matrix = transformModel.nodeTransformMatrix(node, sourceGeometryBounds(node));
-  return points.map(point => transformModel.transformPoint(matrix, point));
-}
-
-function boxOutlinePoints(node, transformModel) {
-  const bounds = sourceGeometryBounds(node);
-  const source = boxHandlePoints(bounds);
-  if (!transformModel || transformModel.isIdentityTransform(node.transform)) return source;
-  const matrix = transformModel.nodeTransformMatrix(node, bounds);
-  return source.map(point => ({ ...transformModel.transformPoint(matrix, point), corner: point.corner }));
-}
-
-function lineControlPoints(node, transformModel) {
-  return transformedSourcePoints(node, [{ x: node.x1, y: node.y1 }, { x: node.x2, y: node.y2 }], transformModel);
-}
-
-function polygonControlPoints(node, transformModel) {
-  return transformedSourcePoints(node, node.points || [], transformModel);
-}
-
-function outlineMarkup(node, transformModel, dx = 0, dy = 0) {
-  if (node.type === 'line') {
-    const points = lineControlPoints(node, transformModel).map(point => translated(point, dx, dy));
-    if (points.length < 2) return '';
-    return `<line class="selection-box" vector-effect="non-scaling-stroke" x1="${points[0].x}" y1="${points[0].y}" x2="${points[1].x}" y2="${points[1].y}"/>`;
-  }
-  if (node.type === 'polygon') {
-    const points = polygonControlPoints(node, transformModel).map(point => translated(point, dx, dy));
-    return `<polygon class="selection-box" vector-effect="non-scaling-stroke" points="${points.map(point => `${point.x},${point.y}`).join(' ')}"/>`;
-  }
-  if (BOX_TYPES.has(node.type)) {
-    const bounds = sourceGeometryBounds(node);
-    if (!transformModel || transformModel.isIdentityTransform(node.transform)) {
-      return `<rect class="selection-box" vector-effect="non-scaling-stroke" x="${bounds.x + dx}" y="${bounds.y + dy}" width="${bounds.w}" height="${bounds.h}"/>`;
-    }
-    const points = boxOutlinePoints(node, transformModel).map(point => translated(point, dx, dy));
-    return `<polygon class="selection-box" vector-effect="non-scaling-stroke" points="${points.map(point => `${point.x},${point.y}`).join(' ')}"/>`;
-  }
-  return '';
-}
-
 function installSelectionOverlayRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
   const R = PE?.renderer;
   const Workspace = PE?.ui?.Workspace;
   const T = PE?.transformModel;
-  if (!M || !R?.FramebufferRenderer || !Workspace) throw new Error('PixelEditor is not initialized');
+  const G = PE?.selectionGeometry;
+  if (!M || !R?.FramebufferRenderer || !Workspace || !T || !G) throw new Error('PixelEditor selection geometry is not initialized');
   if (PE.selectionOverlayInstalled) return;
   PE.selectionOverlayInstalled = true;
+
+  const boxHandlePoints = bounds => {
+    const handles = G.sourceHandles(bounds);
+    return ['nw', 'ne', 'sw', 'se'].map(corner => ({ ...handles[corner], corner }));
+  };
+
+  const hitBoxHandle = (bounds, point, zoom) => {
+    const tolerance = handleHitTolerance(zoom);
+    for (const handle of boxHandlePoints(bounds)) {
+      if (Math.hypot(handle.x - point.x, handle.y - point.y) <= tolerance) return handle;
+    }
+    return null;
+  };
+
+  function outlineMarkup(node, dx = 0, dy = 0) {
+    const geometry = G.selectionGeometry(node);
+    if (!geometry) return '';
+    if (node.type === 'line') {
+      const [a, b] = geometry.controlPoints.map(point => translated(point, dx, dy));
+      if (!a || !b) return '';
+      return `<line class="selection-box" vector-effect="non-scaling-stroke" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
+    }
+    if (node.type === 'polygon') {
+      const points = geometry.outline.map(point => translated(point, dx, dy));
+      return `<polygon class="selection-box" vector-effect="non-scaling-stroke" points="${points.map(point => `${point.x},${point.y}`).join(' ')}"/>`;
+    }
+    if (BOX_TYPES.has(node.type)) {
+      if (T.isIdentityTransform(node.transform)) {
+        const b = geometry.sourceBounds;
+        return `<rect class="selection-box" vector-effect="non-scaling-stroke" x="${b.x + dx}" y="${b.y + dy}" width="${b.w}" height="${b.h}"/>`;
+      }
+      const points = geometry.outline.map(point => translated(point, dx, dy));
+      return `<polygon class="selection-box" vector-effect="non-scaling-stroke" points="${points.map(point => `${point.x},${point.y}`).join(' ')}"/>`;
+    }
+    return '';
+  }
 
   Workspace.prototype.selectionHandleAt = function selectionHandleAt(point) {
     const ids = this.state.selection.ids;
@@ -136,33 +76,7 @@ function installSelectionOverlayRuntime(target = globalThis) {
     const node = M.nodeById(page, ids[0]);
     const tree = new M.TreeModel(page);
     if (!node || tree.isEffectivelyLocked(node.id)) return null;
-    const tolerance = handleHitTolerance(this.zoom);
-    if (node.type === 'polygon') {
-      const points = polygonControlPoints(node, T);
-      for (let index = 0; index < points.length; index += 1) {
-        const p = points[index];
-        if (Math.hypot(p.x - point.x, p.y - point.y) <= tolerance) return { type: 'polygon-point', index, node };
-      }
-      return null;
-    }
-    if (node.type === 'line') {
-      const points = lineControlPoints(node, T);
-      for (let index = 0; index < points.length; index += 1) {
-        const p = points[index];
-        if (Math.hypot(p.x - point.x, p.y - point.y) <= tolerance) return { type: 'line-point', index, node };
-      }
-      return null;
-    }
-    if (BOX_TYPES.has(node.type)) {
-      const bounds = sourceGeometryBounds(node);
-      const handles = boxOutlinePoints(node, T);
-      for (const handle of handles) {
-        if (Math.hypot(handle.x - point.x, handle.y - point.y) <= tolerance) {
-          return { type: 'resize', corner: handle.corner, node, startBounds: { ...bounds } };
-        }
-      }
-    }
-    return null;
+    return G.hitHandle(node, point, this.zoom);
   };
 
   Workspace.prototype.renderOverlay = function renderOverlay() {
@@ -177,15 +91,15 @@ function installSelectionOverlayRuntime(target = globalThis) {
 
     for (const id of ids) {
       const node = M.nodeById(page, id);
-      if (node) html += outlineMarkup(node, T, dx, dy);
+      if (node) html += outlineMarkup(node, dx, dy);
     }
 
     if (ids.length === 1) {
       const node = M.nodeById(page, ids[0]);
+      const geometry = node ? G.selectionGeometry(node) : null;
       let handles = [];
-      if (node?.type === 'line') handles = lineControlPoints(node, T);
-      else if (node?.type === 'polygon') handles = polygonControlPoints(node, T);
-      else if (node && BOX_TYPES.has(node.type)) handles = boxOutlinePoints(node, T);
+      if (geometry && BOX_TYPES.has(node.type)) handles = ['nw', 'ne', 'sw', 'se'].map(corner => geometry.handles[corner]);
+      else if (geometry) handles = geometry.controlPoints;
       for (const point of handles) html += handleRect(translated(point, dx, dy), this.zoom);
     }
 
@@ -209,11 +123,8 @@ function installSelectionOverlayRuntime(target = globalThis) {
     const north = gesture.corner.includes('n');
     const anchorX = west ? right : left;
     const anchorY = north ? bottom : top;
-    let localPoint = point;
-    if (T && !T.isIdentityTransform(node.transform)) {
-      const matrix = T.nodeTransformMatrix(gesture.original || node, b);
-      localPoint = T.inverseTransformPoint(matrix, point);
-    }
+    const mappingNode = gesture.original || node;
+    const localPoint = G.worldToLocal(mappingNode, point);
     let w = Math.max(1, Math.abs(localPoint.x - anchorX));
     let h = Math.max(1, Math.abs(localPoint.y - anchorY));
     if (node.aspectLocked) {
@@ -240,31 +151,14 @@ function installSelectionOverlayRuntime(target = globalThis) {
   };
 
   PE.selectionOverlay = {
-    boxEdges,
     boxHandlePoints,
+    hitBoxHandle,
     handleVisualSize,
     handleHitTolerance,
-    hitBoxHandle,
-    sourceGeometryBounds,
-    transformedSourcePoints,
-    boxOutlinePoints,
-    lineControlPoints,
-    polygonControlPoints,
+    sourceGeometryBounds: G.sourceGeometryBounds,
+    selectionGeometry: G.selectionGeometry,
     outlineMarkup,
   };
 }
 
-export {
-  boxEdges,
-  boxHandlePoints,
-  handleVisualSize,
-  handleHitTolerance,
-  hitBoxHandle,
-  sourceGeometryBounds,
-  transformedSourcePoints,
-  boxOutlinePoints,
-  lineControlPoints,
-  polygonControlPoints,
-  outlineMarkup,
-  installSelectionOverlayRuntime,
-};
+export { handleVisualSize, handleHitTolerance, installSelectionOverlayRuntime };

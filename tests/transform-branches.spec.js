@@ -20,7 +20,7 @@ function expectPointsClose(actual, expected) {
   });
 }
 
-test('90-degree box selection uses an oriented polygon and transformed corner handles', async ({ page }) => {
+test('90-degree box selection uses perimeter outline and semantic corner handles', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -30,7 +30,7 @@ test('90-degree box selection uses an oriented polygon and transformed corner ha
     const p = editor.activePage();
     const node = M.createNode('rectangle', {
       parentId: p.id, x: 100, y: 100, w: 20, h: 10,
-      stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'transparent' },
+      stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'transparent', color: 1 },
       transform: { rotation: 90, flipX: false, flipY: false },
     });
     editor.exec(new C.AddNodesCommand([node], p.id));
@@ -44,12 +44,15 @@ test('90-degree box selection uses an oriented polygon and transformed corner ha
     return { points: polygon?.getAttribute('points') || '', handles, rectCount: editor.overlay.querySelectorAll('rect.selection-box').length };
   });
   const points = parsePoints(result.points);
-  const expected = [
+  const outlineExpected = [
+    { x: 115, y: 95 }, { x: 115, y: 115 }, { x: 105, y: 115 }, { x: 105, y: 95 },
+  ];
+  const handlesExpected = [
     { x: 115, y: 95 }, { x: 115, y: 115 }, { x: 105, y: 95 }, { x: 105, y: 115 },
   ];
   expect(result.rectCount).toBe(0);
-  expectPointsClose(points, expected);
-  expectPointsClose(result.handles, expected);
+  expectPointsClose(points, outlineExpected);
+  expectPointsClose(result.handles, handlesExpected);
 });
 
 test('line and polygon control handles follow their canonical transform', async ({ page }) => {
@@ -68,7 +71,7 @@ test('line and polygon control handles follow their canonical transform', async 
     ]) {
       const node = M.createNode(type, {
         parentId: p.id, ...props,
-        stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'transparent' },
+        stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'transparent', color: 1 },
         transform: { rotation: 90, flipX: true, flipY: false },
       });
       editor.exec(new C.AddNodesCommand([node], p.id));
@@ -136,7 +139,7 @@ test('transformed bounds remain outside canvas while rendering clips and propert
     const p = editor.activePage();
     const node = M.createNode('rectangle', {
       parentId: p.id, x: -8, y: -6, w: 20, h: 10,
-      stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'solid' },
+      stroke: { width: 1, color: 1, style: 'solid' }, fill: { mode: 'solid', color: 1 },
       transform: { rotation: 45, flipX: false, flipY: false },
     });
     editor.exec(new C.AddNodesCommand([node], p.id));

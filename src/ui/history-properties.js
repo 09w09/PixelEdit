@@ -60,11 +60,12 @@ function installHistoryPropertiesRuntime(target = globalThis) {
 
     const node = nodes[0];
     const page = this.editor.activePage();
-    const updateTransform = (patch, label) => this.editor.exec(new C.UpdateNodesCommand(
+    const updateTransform = (patch, label, channel) => this.editor.exec(new C.UpdateNodesCommand(
       [node.id],
       current => ({ transform: T.normalizeTransform({ ...current.transform, ...patch }) }),
       page.id,
       label,
+      { historyChannel: channel },
     ));
 
     const rotation = this.el.querySelector('#propRotation');
@@ -74,10 +75,10 @@ function installHistoryPropertiesRuntime(target = globalThis) {
     if (rotation) rotation.onchange = () => {
       const value = Number(rotation.value);
       if (!Number.isFinite(value)) return;
-      updateTransform({ rotation: T.normalizeRotation(value) }, '旋转元素');
+      updateTransform({ rotation: T.normalizeRotation(value) }, '旋转元素', 'transform.rotation');
     };
-    if (flipX) flipX.onchange = () => updateTransform({ flipX: flipX.checked }, '水平翻转元素');
-    if (flipY) flipY.onchange = () => updateTransform({ flipY: flipY.checked }, '垂直翻转元素');
+    if (flipX) flipX.onchange = () => updateTransform({ flipX: flipX.checked }, '水平翻转元素', 'transform.flipX');
+    if (flipY) flipY.onchange = () => updateTransform({ flipY: flipY.checked }, '垂直翻转元素', 'transform.flipY');
   };
 
   PE.historyProperties = {

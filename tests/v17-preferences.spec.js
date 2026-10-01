@@ -5,7 +5,7 @@ async function openEditor(page) {
   await page.waitForFunction(() => Boolean(window.PixelEditorTest?.editor));
 }
 
-test('new projects serialize as V16 without workspace layout', async ({ page }) => {
+test('new projects serialize as V17 without workspace layout', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -20,13 +20,13 @@ test('new projects serialize as V16 without workspace layout', async ({ page }) 
       apiVersion: window.PixelEditorTest.version,
     };
   });
-  expect(result.version).toBe(16);
+  expect(result.version).toBe(17);
   expect(result.hasWorkspaceLayout).toBe(false);
-  expect(result.apiVersion).toBe(16);
-  expect(result.title).toContain('V16');
+  expect(result.apiVersion).toBe(17);
+  expect(result.title).toContain('V17');
 });
 
-test('serializer rejects V15 and accepts exact V16', async ({ page }) => {
+test('serializer rejects V16 and accepts exact V17', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const P = window.PixelEditor.persistence;
@@ -35,7 +35,7 @@ test('serializer rejects V15 and accepts exact V16', async ({ page }) => {
     editor.newProject({ force: true });
     const good = JSON.parse(P.ProjectSerializer.serialize(editor.state.project, editor.state.assets));
     const bad = structuredClone(good);
-    bad.version = 15;
+    bad.version = 16;
     let badMessage = '';
     try { P.ProjectSerializer.deserialize(JSON.stringify(bad)); } catch (error) { badMessage = error.message; }
     const restored = P.ProjectSerializer.deserialize(JSON.stringify(good));
@@ -45,27 +45,31 @@ test('serializer rejects V15 and accepts exact V16', async ({ page }) => {
       hierarchyValid: new M.TreeModel(restored.project.pages[0]).validateHierarchy(),
     };
   });
-  expect(result.badMessage).toContain('V16');
-  expect(result.restoredVersion).toBe(16);
+  expect(result.badMessage).toContain('V17');
+  expect(result.restoredVersion).toBe(17);
   expect(result.hierarchyValid).toBe(true);
 });
 
-test('V16 local preferences clamp malformed values and ignore V15 keys', async ({ page }) => {
+test('V17 local preferences clamp malformed values and ignore V16 keys', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const prefs = window.PixelEditor.preferences;
-    localStorage.setItem('pixel-editor-v15-preferences', JSON.stringify({ workspace: { leftWidth: 499 } }));
+    localStorage.setItem('pixeledit:v16:preferences', JSON.stringify({ workspace: { leftWidth: 499 } }));
     localStorage.setItem(prefs.PREFERENCE_KEY, '{broken');
     const malformed = prefs.loadEditorPreferences(localStorage);
     localStorage.setItem(prefs.PREFERENCE_KEY, JSON.stringify({
       workspace: { leftWidth: -50, rightWidth: 9999, leftSplit: -1, rightSplit: 2 },
-      tools: { line: { width: 3, color: 0, style: 'dot' } },
+      tools: {
+        line: { width: 3, color: 0, style: 'dot' },
+        rectangle: { width: 4, color: 1, style: 'solid', fill: { mode: 'solid', color: 0 } },
+        text: { fontFamily: 'serif', fontSize: 24, lastScalableFontSize: 22 },
+      },
       transparencyPreview: true,
     }));
     const clamped = prefs.loadEditorPreferences(localStorage);
     return { malformed, clamped, key: prefs.PREFERENCE_KEY };
   });
-  expect(result.key).toBe('pixeledit:v16:preferences');
+  expect(result.key).toBe('pixeledit:v17:preferences');
   expect(result.malformed.workspace).toEqual({ leftWidth: 260, rightWidth: 320, leftSplit: 0.5, rightSplit: 0.5 });
   expect(result.clamped.workspace.leftWidth).toBe(170);
   expect(result.clamped.workspace.rightWidth).toBe(520);
@@ -74,6 +78,8 @@ test('V16 local preferences clamp malformed values and ignore V15 keys', async (
   expect(result.clamped.workspace.rightSplit).toBeGreaterThan(0);
   expect(result.clamped.workspace.rightSplit).toBeLessThan(1);
   expect(result.clamped.tools.line).toEqual({ width: 3, color: 0, style: 'dot' });
+  expect(result.clamped.tools.rectangle).toEqual({ width: 4, color: 1, style: 'solid', fill: { mode: 'solid', color: 0 } });
+  expect(result.clamped.tools.text).toEqual({ fontFamily: 'serif', fontSize: 24, lastScalableFontSize: 22 });
   expect(result.clamped.transparencyPreview).toBe(true);
 });
 
@@ -88,7 +94,7 @@ test('workspace preference updates persist locally without dirtying project', as
       dirty: editor.state.dirty,
       leftWidth: editor.editorPreferences.workspace.leftWidth,
       rightSplit: editor.editorPreferences.workspace.rightSplit,
-      stored: JSON.parse(localStorage.getItem('pixeledit:v16:preferences')),
+      stored: JSON.parse(localStorage.getItem('pixeledit:v17:preferences')),
       projectHasWorkspace: Object.hasOwn(editor.state.project, 'workspaceLayout'),
     };
   });

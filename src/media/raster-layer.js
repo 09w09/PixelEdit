@@ -67,7 +67,7 @@ function validateRasterProject(project) {
   for (const page of project.pages || []) {
     for (const node of page.nodes || []) {
       if (node.type !== 'raster') continue;
-      if (!node.raster || node.raster.encoding !== RASTER_ENCODING) throw new Error('V16 栅格数据格式无效');
+      if (!node.raster || node.raster.encoding !== RASTER_ENCODING) throw new Error('V17 栅格数据格式无效');
       decodeTriStatePixels(node.raster.data, node.w, node.h);
     }
   }
@@ -93,7 +93,7 @@ function installRasterLayerRuntime(target = globalThis) {
     const h = Math.max(1, Math.round(Number(props.h) || 30));
     let raster;
     if (props.raster) {
-      if (props.raster.encoding !== RASTER_ENCODING) throw new Error('V16 栅格数据格式无效');
+      if (props.raster.encoding !== RASTER_ENCODING) throw new Error('V17 栅格数据格式无效');
       raster = structuredClone(props.raster);
       decodeTriStatePixels(raster.data, w, h);
     } else {
@@ -119,11 +119,11 @@ function installRasterLayerRuntime(target = globalThis) {
   if (P?.ProjectSerializer) {
     const originalSerialize = P.ProjectSerializer.serialize.bind(P.ProjectSerializer);
     const originalDeserialize = P.ProjectSerializer.deserialize.bind(P.ProjectSerializer);
-    P.ProjectSerializer.serialize = function serializeRasterV16(project, assets) {
+    P.ProjectSerializer.serialize = function serializeRasterV17(project, assets) {
       validateRasterProject(project);
       return originalSerialize(project, assets);
     };
-    P.ProjectSerializer.deserialize = function deserializeRasterV16(raw) {
+    P.ProjectSerializer.deserialize = function deserializeRasterV17(raw) {
       const result = originalDeserialize(raw);
       validateRasterProject(result.project);
       return result;

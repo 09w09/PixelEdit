@@ -47,18 +47,36 @@ function installToolStateRuntime(target = globalThis) {
   Workspace.prototype.beginLiveDraw = function beginLiveDrawWithDefaults(tool, point) {
     const result = originalBeginLiveDraw.call(this, tool, point);
     if (!result && !this.customGesture) return result;
-    if (!['line', 'rectangle', 'circle', 'polygon'].includes(tool)) return result;
     const node = PE.model.nodeById(this.activePage(), this.customGesture?.nodeId);
     if (!node) return result;
+
+    if (tool === 'text') {
+      const settings = this.getToolDefaults('text');
+      const resolved = PE.fontOptions?.resolveTextToolSelection?.(settings, this.state.project, settings.fontFamily) || {
+        fontFamily: settings.fontFamily || 'sans-serif',
+        fontSize: settings.fontSize || 16,
+        fixed: false,
+      };
+      node.fontFamily = resolved.fontFamily;
+      node.fontSize = resolved.fontSize;
+      node.fixedFontSize = resolved.fixed ? resolved.fontSize : null;
+      this.renderCanvas?.();
+      return result;
+    }
+
+    if (!['line', 'rectangle', 'circle', 'polygon'].includes(tool)) return result;
     const settings = this.getToolDefaults(tool);
-    node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || {
+    node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || PE.schemaV17?.normalizeStroke?.(settings) || {
       width: settings.width || 1,
       color: settings.color === 0 ? 0 : 1,
       style: settings.style || 'solid',
     };
-    delete node.lineWidth;
-    delete node.strokeColor;
-    delete node.strokeStyle;
+    if (tool !== 'line') {
+      node.fill = PE.schemaV17?.normalizeFill?.(settings.fill) || {
+        mode: settings.fill?.mode === 'solid' ? 'solid' : 'transparent',
+        color: Number(settings.fill?.color) === 0 ? 0 : 1,
+      };
+    }
     this.renderCanvas?.();
     return result;
   };

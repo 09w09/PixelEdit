@@ -213,10 +213,10 @@ function installTransformModelRuntime(target = globalThis) {
   function validateTransformProject(project) {
     for (const page of project.pages || []) for (const node of page.nodes || []) {
       if (!VISUAL_TYPES.has(node.type)) continue;
-      if (!node.transform) throw new Error('V16 可视元素缺少 transform');
+      if (!node.transform) throw new Error('V17 可视元素缺少 transform');
       const normalized = normalizeTransform(node.transform);
       if (normalized.rotation !== node.transform.rotation || normalized.flipX !== node.transform.flipX || normalized.flipY !== node.transform.flipY) {
-        throw new Error('V16 transform 数据无效');
+        throw new Error('V17 transform 数据无效');
       }
     }
     return project;
