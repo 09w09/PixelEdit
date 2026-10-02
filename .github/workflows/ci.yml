@@ -25,30 +25,8 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run v17 bootstrap diagnostic
-        shell: bash
-        run: |
-          set +e
-          npx playwright test tests/bootstrap-diagnostic.spec.js --reporter=json > playwright-report.json
-          echo "$?" > playwright-exit-code
-          exit 0
-
-      - name: Upload browser regression report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-json-report
-          path: playwright-report.json
-          retention-days: 1
-
-      - name: Enforce browser regression result
-        shell: bash
-        run: |
-          code="$(cat playwright-exit-code)"
-          if [ "$code" -ne 0 ]; then
-            echo "Browser regression tests failed with exit code $code"
-            exit "$code"
-          fi
+      - name: Run browser regression tests
+        run: npm test
 
       - name: Build production bundle
         run: npm run build
