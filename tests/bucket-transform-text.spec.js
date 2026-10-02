@@ -76,6 +76,7 @@ test('bucket flood fill respects raster boundaries, patterns, transparency and h
     const raster = M.createNode('raster', { parentId: p.id, x: 20, y: 30, w, h, pixels });
     editor.exec(new C.AddNodesCommand([raster], p.id));
     editor.state.selection.replace([raster.id]);
+    const currentPixels = () => [...T.pixelsFromRasterNode(M.nodeById(editor.activePage(), raster.id))];
 
     editor.setToolDefault('bucket', 'fill', { mode: 'pattern', color: 1 });
     editor.setToolDefault('bucket', 'pattern', {
@@ -83,20 +84,20 @@ test('bucket flood fill respects raster boundaries, patterns, transparency and h
     });
     editor.setTool('bucket');
     const patternChanged = editor.bucketFillAt({ x: 21, y: 31 });
-    const patterned = [...T.pixelsFromRasterNode(M.nodeById(p, raster.id))];
+    const patterned = currentPixels();
 
-    editor.undo();
-    const undone = [...T.pixelsFromRasterNode(M.nodeById(p, raster.id))];
-    editor.redo();
-    const redone = [...T.pixelsFromRasterNode(M.nodeById(p, raster.id))];
+    editor.bus.undo();
+    const undone = currentPixels();
+    editor.bus.redo();
+    const redone = currentPixels();
 
-    editor.undo();
+    editor.bus.undo();
     editor.state.selection.replace([raster.id]);
     editor.pageSelectedId = null;
     editor.setToolDefault('bucket', 'fill', { mode: 'transparent', color: 1 });
     editor.setTool('bucket');
     const transparentChanged = editor.bucketFillAt({ x: 21, y: 31 });
-    const transparent = [...T.pixelsFromRasterNode(M.nodeById(p, raster.id))];
+    const transparent = currentPixels();
     return { patternChanged, transparentChanged, patterned, undone, redone, transparent, w, h };
   });
 
