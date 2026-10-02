@@ -210,6 +210,8 @@ function installTransformModelRuntime(target = globalThis) {
   PE.transformModelInstalled = true;
 
   const framebuffer = R.FramebufferRenderer;
+  const strokeStyle = PE.strokeStyle;
+  const pixelStroke = PE.pixelStrokeRuntime;
   const baseVisualBounds = framebuffer.visualBounds.bind(framebuffer);
   const baseRenderPage = framebuffer.renderPage.bind(framebuffer);
   const baseRenderSubtree = framebuffer.renderSubtree.bind(framebuffer);
@@ -255,9 +257,84 @@ function installTransformModelRuntime(target = globalThis) {
     return result;
   };
 
-  function sourceCut(project, pageId, node, assets) {
-    const isolated = isolateNodeProject(project, pageId, node, pageId);
+  function vectorRectangleStroke(node) {
+    if (node?.type !== 'rectangle' || !strokeStyle || !pixelStroke) return null;
+    const stroke = strokeStyle.normalizeStroke?.(node.stroke);
+    if (!stroke || stroke.width !== 1 || stroke.style !== 'solid' || stroke.color === 'transparent') return null;
+    const radii = R.normalizeRadii?.(node, node.w, node.h) || {};
+    if (Object.values(radii).some(value => Number(value) !== 0)) return null;
+    return stroke;
+  }
+
+  function sourceCut(project, pageId, node, assets, stripStroke = false) {
+    const source = stripStroke ? structuredClone(node) : node;
+    if (stripStroke) source.stroke = { ...(source.stroke || {}), width: 0 };
+    const isolated = isolateNodeProject(project, pageId, source, pageId);
     return baseSubtreeRgba(isolated, pageId, node.id, assets);
+  }
+
+  function rectangleWorldStrokePixels(node, sourceBounds) {
+    const matrix = nodeTransformMatrix(node, sourceBounds);
+    const x0 = Math.round(Number(node.x) || 0);
+    const y0 = Math.round(Number(node.y) || 0);
+    const x1 = x0 + Math.max(1, Math.round(Number(node.w) || 1)) - 1;
+    const y1 = y0 + Math.max(1, Math.round(Number(node.h) || 1)) - 1;
+    const sourceCorners = [
+      { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
+    ];
+    const corners = sourceCorners.map(point => transformPoint(matrix, point));
+    const pixels = new Map();
+    const put = (x, y) => {
+      x = Math.round(x); y = Math.round(y);
+      pixels.set(`${x},${y}`, { x, y });
+    };
+    for (let index = 0; index < corners.length; index += 1) {
+      const a = corners[index];
+      const b = corners[(index + 1) % corners.length];
+      pixelStroke.rasterThinLine(a.x, a.y, b.x, b.y, put);
+    }
+    return [...pixels.values()];
+  }
+
+  function expandTransformedToPixels(transformed, pixels) {
+    if (!pixels.length) return transformed;
+    const minX = Math.min(transformed.x, ...pixels.map(point => point.x));
+    const minY = Math.min(transformed.y, ...pixels.map(point => point.y));
+    const maxX = Math.max(transformed.x + transformed.width - 1, ...pixels.map(point => point.x));
+    const maxY = Math.max(transformed.y + transformed.height - 1, ...pixels.map(point => point.y));
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
+    if (minX === transformed.x && minY === transformed.y && width === transformed.width && height === transformed.height) return transformed;
+    const data = new Uint8ClampedArray(width * height * 4);
+    const dx = transformed.x - minX;
+    const dy = transformed.y - minY;
+    for (let y = 0; y < transformed.height; y += 1) {
+      const sourceStart = y * transformed.width * 4;
+      const targetStart = ((y + dy) * width + dx) * 4;
+      data.set(transformed.data.subarray(sourceStart, sourceStart + transformed.width * 4), targetStart);
+    }
+    transformed.x = minX;
+    transformed.y = minY;
+    transformed.width = width;
+    transformed.height = height;
+    transformed.data = data;
+    return transformed;
+  }
+
+  function overlayRectangleStroke(transformed, node, sourceBounds, stroke) {
+    const pixels = rectangleWorldStrokePixels(node, sourceBounds);
+    expandTransformedToPixels(transformed, pixels);
+    const channel = stroke.color === 0 ? 255 : 0;
+    for (const pixel of pixels) {
+      const x = pixel.x - transformed.x;
+      const y = pixel.y - transformed.y;
+      const index = (y * transformed.width + x) * 4;
+      transformed.data[index] = channel;
+      transformed.data[index + 1] = channel;
+      transformed.data[index + 2] = channel;
+      transformed.data[index + 3] = 255;
+    }
+    return transformed;
   }
 
   function adaptProject(project, pageId, assets) {
@@ -269,8 +346,10 @@ function installTransformModelRuntime(target = globalThis) {
       const source = M.nodeById(M.pageById(project, pageId), node.id);
       if (!source || !VISUAL_TYPES.has(source.type) || isIdentityTransform(source.transform)) continue;
       const sourceBounds = baseBoundsForNode(source, project, pageId, assets);
-      const cut = sourceCut(project, pageId, source, assets);
+      const stroke = vectorRectangleStroke(source);
+      const cut = sourceCut(project, pageId, source, assets, Boolean(stroke));
       const transformed = transformRgbaCut(cut, source, sourceBounds);
+      if (stroke) overlayRectangleStroke(transformed, source, sourceBounds, stroke);
       const assetId = `__pixeledit_transform__${node.id}`;
       runtimes.set(assetId, { width: transformed.width, height: transformed.height, data: transformed.data });
       node.type = 'image';
