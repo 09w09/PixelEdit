@@ -126,8 +126,13 @@ function expectExactOnePixelPerimeter(result) {
   const expected = new Set(result.expected);
   const actual = new Set(result.actual);
   const diff = comparePixelSets(actual, expected);
-  expect(diff.missing, `missing transformed stroke pixels: ${diff.missing.slice(0, 30).join(' ')}`).toEqual([]);
-  expect(diff.extra, `unexpected thick stroke pixels: ${diff.extra.slice(0, 30).join(' ')}`).toEqual([]);
+  const diagnostic = [
+    `node=${JSON.stringify(result.node)}`,
+    `expected=${expected.size} actual=${actual.size}`,
+    `missing(${diff.missing.length})=${diff.missing.slice(0, 20).join(' ')}`,
+    `extra(${diff.extra.length})=${diff.extra.slice(0, 20).join(' ')}`,
+  ].join(' | ');
+  expect(diff.missing.length + diff.extra.length, diagnostic).toBe(0);
 }
 
 test('rotate -90, resize, move, resize keeps the rectangle stroke complete and 1px', async ({ page }) => {
