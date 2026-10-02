@@ -79,7 +79,9 @@ test('V17 local preferences clamp malformed values and ignore V16 keys', async (
   expect(result.clamped.workspace.rightSplit).toBeLessThan(1);
   expect(result.clamped.tools.line).toEqual({ width: 3, color: 0, style: 'dot' });
   expect(result.clamped.tools.rectangle).toEqual({ width: 4, color: 1, style: 'solid', fill: { mode: 'solid', color: 0 } });
-  expect(result.clamped.tools.text).toEqual({ fontFamily: 'serif', fontSize: 24, lastScalableFontSize: 22 });
+  expect(result.clamped.tools.text).toEqual({
+    fontFamily: 'serif', fontSize: 24, lastScalableFontSize: 22, alignH: 'left', alignV: 'top',
+  });
   expect(result.clamped.transparencyPreview).toBe(true);
 });
 

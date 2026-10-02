@@ -16,7 +16,7 @@ async function logicalToClient(page, point) {
 }
 
 async function handleCenters(page) {
-  return page.locator('#overlaySvg').evaluate(svg => [...svg.querySelectorAll('rect.selection-handle')].map(el => ({
+  return page.locator('#overlaySvg').evaluate(svg => [...svg.querySelectorAll('rect.selection-handle:not(.selection-edge-handle)')].map(el => ({
     x: Number(el.getAttribute('x')) + Number(el.getAttribute('width')) / 2,
     y: Number(el.getAttribute('y')) + Number(el.getAttribute('height')) / 2,
   })));

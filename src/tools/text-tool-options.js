@@ -1,6 +1,8 @@
 import { fontOptions, fontRecordForFamily, resolveTextToolSelection } from '../fonts/font-options.js';
 
 const clampSize = value => Math.max(1, Math.min(200, Math.round(Number(value) || 16)));
+const ALIGN_H = new Set(['left', 'center', 'right']);
+const ALIGN_V = new Set(['top', 'middle', 'bottom']);
 
 function saveTextPreferences(editor, patch) {
   const preferences = globalThis.PixelEditor?.preferences;
@@ -27,6 +29,12 @@ function applyTextToolSize(editor, value) {
   if (fontRecordForFamily(editor.state.project, current.fontFamily)?.fixedSize) return current;
   const size = clampSize(value);
   return saveTextPreferences(editor, { fontSize: size, lastScalableFontSize: size });
+}
+
+function applyTextToolAlignment(editor, key, value) {
+  if (key === 'alignH') return saveTextPreferences(editor, { alignH: ALIGN_H.has(value) ? value : 'left' });
+  if (key === 'alignV') return saveTextPreferences(editor, { alignV: ALIGN_V.has(value) ? value : 'top' });
+  return editor.getToolDefaults('text');
 }
 
 function fallbackRemovedFamily(editor, family) {
@@ -64,6 +72,21 @@ function sizeInput(editor, resolved) {
   input.setAttribute('aria-label', '字号');
   input.addEventListener('change', () => applyTextToolSize(editor, input.value));
   return input;
+}
+
+function selectInput(id, options, value, ariaLabel, onChange) {
+  const select = document.createElement('select');
+  select.id = id;
+  select.setAttribute('aria-label', ariaLabel);
+  for (const [optionValue, label] of options) {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    option.textContent = label;
+    select.appendChild(option);
+  }
+  select.value = value;
+  select.addEventListener('change', () => onChange(select.value));
+  return select;
 }
 
 function labeled(text, control) {
@@ -109,7 +132,26 @@ function renderTextToolOptions(editor, container) {
   const fields = document.createElement('div');
   fields.className = 'tool-option-group';
   fields.append(labeled('字体', optionSelect(editor, resolved)), labeled('字号', sizeInput(editor, resolved)));
-  container.replaceChildren(fields, fontActionGroup(editor, resolved));
+
+  const alignment = document.createElement('div');
+  alignment.className = 'tool-option-group';
+  const alignH = selectInput(
+    'toolOptionAlignH',
+    [['left', '左'], ['center', '居中'], ['right', '右']],
+    ALIGN_H.has(settings.alignH) ? settings.alignH : 'left',
+    '水平对齐',
+    value => applyTextToolAlignment(editor, 'alignH', value),
+  );
+  const alignV = selectInput(
+    'toolOptionAlignV',
+    [['top', '上'], ['middle', '居中'], ['bottom', '下']],
+    ALIGN_V.has(settings.alignV) ? settings.alignV : 'top',
+    '垂直对齐',
+    value => applyTextToolAlignment(editor, 'alignV', value),
+  );
+  alignment.append(labeled('水平', alignH), labeled('垂直', alignV));
+
+  container.replaceChildren(fields, alignment, fontActionGroup(editor, resolved));
   return resolved;
 }
 
@@ -122,6 +164,7 @@ function installTextToolOptionsRuntime(target = globalThis) {
     renderTextToolOptions,
     applyTextToolFamily,
     applyTextToolSize,
+    applyTextToolAlignment,
     fallbackRemovedFamily,
   };
 }
@@ -130,6 +173,7 @@ export {
   renderTextToolOptions,
   applyTextToolFamily,
   applyTextToolSize,
+  applyTextToolAlignment,
   fallbackRemovedFamily,
   installTextToolOptionsRuntime,
 };

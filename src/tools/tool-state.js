@@ -62,6 +62,8 @@ function installToolStateRuntime(target = globalThis) {
       node.fontFamily = resolved.fontFamily;
       node.fontSize = resolved.fontSize;
       node.fixedFontSize = resolved.fixed ? resolved.fontSize : null;
+      node.alignH = ['left', 'center', 'right'].includes(settings.alignH) ? settings.alignH : 'left';
+      node.alignV = ['top', 'middle', 'bottom'].includes(settings.alignV) ? settings.alignV : 'top';
       this.renderCanvas?.();
       return result;
     }

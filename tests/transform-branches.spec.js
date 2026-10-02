@@ -37,7 +37,7 @@ test('90-degree box selection uses perimeter outline and semantic corner handles
     editor.state.selection.replace([node.id]);
     editor.renderOverlay();
     const polygon = editor.overlay.querySelector('polygon.selection-box');
-    const handles = [...editor.overlay.querySelectorAll('rect.selection-handle')].map(el => ({
+    const handles = [...editor.overlay.querySelectorAll('rect.selection-handle:not(.selection-edge-handle)')].map(el => ({
       x: Number(el.getAttribute('x')) + Number(el.getAttribute('width')) / 2,
       y: Number(el.getAttribute('y')) + Number(el.getAttribute('height')) / 2,
     }));

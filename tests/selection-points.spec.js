@@ -47,6 +47,9 @@ test('a one-pixel object at bottom-right uses canvas outer edge 400 by 300', asy
   });
   expect(result).toEqual({
     x: 399, y: 299, w: 1, h: 1,
-    handles: [{ x: 399, y: 299 }, { x: 400, y: 299 }, { x: 399, y: 300 }, { x: 400, y: 300 }],
+    handles: [
+      { x: 399, y: 299 }, { x: 400, y: 299 }, { x: 399, y: 300 }, { x: 400, y: 300 },
+      { x: 399.5, y: 299 }, { x: 400, y: 299.5 }, { x: 399.5, y: 300 }, { x: 399, y: 299.5 },
+    ],
   });
 });
