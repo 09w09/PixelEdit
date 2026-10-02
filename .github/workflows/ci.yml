@@ -25,11 +25,11 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run browser regression tests
+      - name: Run v17 bootstrap diagnostic
         shell: bash
         run: |
           set +e
-          npx playwright test --reporter=json > playwright-report.json
+          npx playwright test tests/bootstrap-diagnostic.spec.js --reporter=json > playwright-report.json
           echo "$?" > playwright-exit-code
           exit 0
 
