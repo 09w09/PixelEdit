@@ -27,7 +27,7 @@ function installToolStateRuntime(target = globalThis) {
 
   Workspace.prototype.setToolDefault = function setToolDefault(tool, key, value) {
     if (!this.editorPreferences) this.editorPreferences = preferences.loadEditorPreferences();
-    const patch = { tools: { [tool]: { [key]: value } } };
+    const patch = { tools: { [tool]: { [key]: value } };
     this.editorPreferences = preferences.updateEditorPreferences(this.editorPreferences, patch);
     preferences.saveEditorPreferences(this.editorPreferences);
     this.toolOptionsBar?.render?.();
@@ -62,6 +62,8 @@ function installToolStateRuntime(target = globalThis) {
       node.fontFamily = resolved.fontFamily;
       node.fontSize = resolved.fontSize;
       node.fixedFontSize = resolved.fixed ? resolved.fontSize : null;
+      node.alignH = ['left', 'center', 'right'].includes(settings.alignH) ? settings.alignH : 'left';
+      node.alignV = ['top', 'middle', 'bottom'].includes(settings.alignV) ? settings.alignV : 'top';
       this.renderCanvas?.();
       return result;
     }

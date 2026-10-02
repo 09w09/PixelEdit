@@ -1,11 +1,19 @@
 import { normalizeStrokeWidth, normalizeStrokeColor } from '../model/stroke-values.js';
+import {
+  normalizeToolFill,
+  normalizeDither,
+  normalizePattern,
+  defaultToolDither,
+  defaultToolPattern,
+} from '../model/fill-values.js';
 
 const PREFERENCE_KEY = 'pixeledit:v17:preferences';
 const AUTOSAVE_KEY = 'pixel-editor-v17-autosave';
 const DEFAULT_FILENAME = 'pixel-project-v17.pix';
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
-const TOOL_FILL_MODES = new Set(['transparent', 'solid']);
 const SHAPE_TOOLS = new Set(['line', 'rectangle', 'circle', 'polygon']);
+const TEXT_ALIGN_H = new Set(['left', 'center', 'right']);
+const TEXT_ALIGN_V = new Set(['top', 'middle', 'bottom']);
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const integer = (value, fallback, min = -Infinity, max = Infinity) => {
@@ -23,11 +31,22 @@ function defaultEditorPreferences() {
     tools: {
       pencil: { width: 1, color: 1 },
       eraser: { width: 1 },
+      bucket: {
+        fill: { mode: 'solid', color: 1 },
+        dither: defaultToolDither(),
+        pattern: defaultToolPattern(),
+      },
       line: { width: 1, color: 1, style: 'solid' },
       rectangle: { width: 1, color: 1, style: 'solid', fill: { mode: 'transparent', color: 1 } },
       circle: { width: 1, color: 1, style: 'solid', fill: { mode: 'transparent', color: 1 } },
       polygon: { width: 1, color: 1, style: 'solid', fill: { mode: 'transparent', color: 1 } },
-      text: { fontFamily: 'sans-serif', fontSize: 16, lastScalableFontSize: 16 },
+      text: {
+        fontFamily: 'sans-serif',
+        fontSize: 16,
+        lastScalableFontSize: 16,
+        alignH: 'left',
+        alignV: 'top',
+      },
     },
     transparencyPreview: false,
   };
@@ -47,17 +66,15 @@ function normalizeTool(tool, input, fallback) {
       : (Number(source.color) === 0 ? 0 : 1);
   }
   if ('style' in fallback) out.style = STROKE_STYLES.has(source.style) ? source.style : fallback.style;
-  if ('fill' in fallback) {
-    const fill = source.fill && typeof source.fill === 'object' ? source.fill : {};
-    out.fill = {
-      mode: TOOL_FILL_MODES.has(fill.mode) ? fill.mode : fallback.fill.mode,
-      color: Number(fill.color) === 0 ? 0 : 1,
-    };
-  }
+  if ('fill' in fallback) out.fill = normalizeToolFill(source.fill, fallback.fill);
+  if ('dither' in fallback) out.dither = normalizeDither(source.dither, fallback.dither);
+  if ('pattern' in fallback) out.pattern = normalizePattern(source.pattern, fallback.pattern);
   if (tool === 'text') {
     out.fontFamily = typeof source.fontFamily === 'string' && source.fontFamily.trim() ? source.fontFamily : fallback.fontFamily;
     out.fontSize = integer(source.fontSize, fallback.fontSize, 1, 200);
     out.lastScalableFontSize = integer(source.lastScalableFontSize, fallback.lastScalableFontSize, 1, 200);
+    out.alignH = TEXT_ALIGN_H.has(source.alignH) ? source.alignH : fallback.alignH;
+    out.alignV = TEXT_ALIGN_V.has(source.alignV) ? source.alignV : fallback.alignV;
   }
   return out;
 }
