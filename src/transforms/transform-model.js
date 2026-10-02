@@ -1,4 +1,5 @@
 const VISUAL_TYPES = new Set(['rectangle', 'circle', 'line', 'polygon', 'text', 'image', 'raster']);
+const VECTOR_STROKE_TYPES = new Set(['rectangle', 'circle', 'line', 'polygon']);
 const IDENTITY_TRANSFORM = Object.freeze({ rotation: 0, flipX: false, flipY: false });
 
 function normalizeRotation(value) {
@@ -210,6 +211,8 @@ function installTransformModelRuntime(target = globalThis) {
   PE.transformModelInstalled = true;
 
   const framebuffer = R.FramebufferRenderer;
+  const strokeStyle = PE.strokeStyle;
+  const pixelStroke = PE.pixelStrokeRuntime;
   const baseVisualBounds = framebuffer.visualBounds.bind(framebuffer);
   const baseRenderPage = framebuffer.renderPage.bind(framebuffer);
   const baseRenderSubtree = framebuffer.renderSubtree.bind(framebuffer);
@@ -255,9 +258,36 @@ function installTransformModelRuntime(target = globalThis) {
     return result;
   };
 
-  function sourceCut(project, pageId, node, assets) {
-    const isolated = isolateNodeProject(project, pageId, node, pageId);
+  function vectorStroke(node) {
+    if (!VECTOR_STROKE_TYPES.has(node?.type) || !strokeStyle || !pixelStroke) return null;
+    const stroke = strokeStyle.normalizeStroke?.(node.stroke);
+    if (!stroke || stroke.width <= 0 || stroke.color === 'transparent') return null;
+    return stroke;
+  }
+
+  function sourceCut(project, pageId, node, assets, stripStroke = false) {
+    const source = stripStroke ? structuredClone(node) : node;
+    if (stripStroke) source.stroke = { ...(source.stroke || {}), width: 0 };
+    const isolated = isolateNodeProject(project, pageId, source, pageId);
     return baseSubtreeRgba(isolated, pageId, node.id, assets);
+  }
+
+  function overlayVectorStroke(transformed, node, sourceBounds, stroke) {
+    const matrix = nodeTransformMatrix(node, sourceBounds);
+    const pixels = strokeStyle.styledStrokePixels(node, R, pixelStroke);
+    const channel = stroke.color === 0 ? 255 : 0;
+    for (const pixel of pixels) {
+      const world = transformPoint(matrix, pixel);
+      const x = Math.round(world.x) - transformed.x;
+      const y = Math.round(world.y) - transformed.y;
+      if (x < 0 || y < 0 || x >= transformed.width || y >= transformed.height) continue;
+      const index = (y * transformed.width + x) * 4;
+      transformed.data[index] = channel;
+      transformed.data[index + 1] = channel;
+      transformed.data[index + 2] = channel;
+      transformed.data[index + 3] = 255;
+    }
+    return transformed;
   }
 
   function adaptProject(project, pageId, assets) {
@@ -269,8 +299,10 @@ function installTransformModelRuntime(target = globalThis) {
       const source = M.nodeById(M.pageById(project, pageId), node.id);
       if (!source || !VISUAL_TYPES.has(source.type) || isIdentityTransform(source.transform)) continue;
       const sourceBounds = baseBoundsForNode(source, project, pageId, assets);
-      const cut = sourceCut(project, pageId, source, assets);
+      const stroke = vectorStroke(source);
+      const cut = sourceCut(project, pageId, source, assets, Boolean(stroke));
       const transformed = transformRgbaCut(cut, source, sourceBounds);
+      if (stroke) overlayVectorStroke(transformed, source, sourceBounds, stroke);
       const assetId = `__pixeledit_transform__${node.id}`;
       runtimes.set(assetId, { width: transformed.width, height: transformed.height, data: transformed.data });
       node.type = 'image';
