@@ -91,8 +91,9 @@ function installFloodFillRuntime(target = globalThis) {
 
   const originalMount = Workspace.prototype.mount;
   Workspace.prototype.mount = function mountWithBucket() {
-    ensureBucketButton();
     const result = originalMount.call(this);
+    ensureBucketButton();
+    this.toolbar?.mount?.();
     const shortcut = event => {
       const editing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName) || event.target?.isContentEditable;
       if (editing || event.ctrlKey || event.metaKey || event.altKey || event.key?.toLowerCase() !== 'b') return;

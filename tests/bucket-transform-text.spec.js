@@ -91,6 +91,8 @@ test('bucket flood fill respects raster boundaries, patterns, transparency and h
     const redone = [...T.pixelsFromRasterNode(M.nodeById(p, raster.id))];
 
     editor.undo();
+    editor.state.selection.replace([raster.id]);
+    editor.pageSelectedId = null;
     editor.setToolDefault('bucket', 'fill', { mode: 'transparent', color: 1 });
     editor.setTool('bucket');
     const transparentChanged = editor.bucketFillAt({ x: 21, y: 31 });
@@ -175,9 +177,9 @@ test('text tool defaults expose horizontal and vertical alignment and new text s
       v: document.querySelector('#toolOptionAlignV')?.value,
     };
     const h = document.querySelector('#toolOptionAlignH');
-    const v = document.querySelector('#toolOptionAlignV');
     h.value = 'center';
     h.dispatchEvent(new Event('change', { bubbles: true }));
+    const v = document.querySelector('#toolOptionAlignV');
     v.value = 'middle';
     v.dispatchEvent(new Event('change', { bubbles: true }));
     editor.beginLiveDraw('text', { x: 11, y: 13 });
