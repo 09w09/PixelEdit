@@ -55,7 +55,9 @@ function installLivePropertyFeedbackRuntime(target = globalThis) {
       layers: options.layers === true,
     });
     if (this._liveFeedbackFrame) return;
-    const raf = target.requestAnimationFrame || (callback => target.setTimeout(callback, 0));
+    const raf = typeof target.requestAnimationFrame === 'function'
+      ? callback => target.requestAnimationFrame(callback)
+      : callback => target.setTimeout(callback, 0);
     this._liveFeedbackFrame = raf(() => {
       this._liveFeedbackFrame = null;
       const flags = this._liveFeedbackRenderFlags || {};
