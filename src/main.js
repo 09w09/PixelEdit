@@ -26,6 +26,7 @@ import { installStrokeStyleRuntime } from './rendering/stroke-style.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
 import { installTransparencyOverlayRuntime } from './rendering/transparency-overlay.js';
 import { installSelectionGeometryRuntime } from './selection/selection-geometry.js';
+import { installCanvasCursorRuntime } from './tools/canvas-cursor.js';
 import { installFillToolOptionsRuntime } from './tools/fill-tool-options.js';
 import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
@@ -64,6 +65,7 @@ function installRuntimeModules() {
   installSelectionTransformRuntime(globalThis);
   installIntegerGeometryRuntime(globalThis);
   installFloodFillRuntime(globalThis);
+  installCanvasCursorRuntime(globalThis);
   installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
   installContextMenuBoundaryRuntime(globalThis);
