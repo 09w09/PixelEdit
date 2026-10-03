@@ -65,7 +65,6 @@ function installRuntimeModules() {
   installSelectionTransformRuntime(globalThis);
   installIntegerGeometryRuntime(globalThis);
   installFloodFillRuntime(globalThis);
-  installCanvasCursorRuntime(globalThis);
   installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
   installContextMenuBoundaryRuntime(globalThis);
@@ -73,6 +72,7 @@ function installRuntimeModules() {
   installSelectionOverlayRuntime(globalThis);
   installPhotopeaTransformUIRuntime(globalThis);
   installTransparencyOverlayRuntime(globalThis);
+  installCanvasCursorRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
   installFontManagerRuntime(globalThis);
   installTextFontActionsRuntime(globalThis);
