@@ -68,6 +68,23 @@ test('brush frame follows the same odd/even anchor convention as painted pixels'
   expect(attrs).toEqual({ x: 119, y: 79, width: 4, height: 4 });
 });
 
+test('brush frame updates immediately when brush width changes without pointer movement', async ({ page }) => {
+  await openEditor(page);
+  const point = await canvasCenter(page);
+  await page.evaluate(() => {
+    const editor = window.PixelEditorTest.editor;
+    editor.setTool('pencil');
+    editor.setToolDefault('pencil', 'width', 3);
+  });
+  await page.mouse.move(point.x, point.y);
+
+  const frame = page.locator('#overlaySvg [data-canvas-tool-cursor="brush"]');
+  await expect(frame).toHaveAttribute('width', '3');
+  await page.evaluate(() => window.PixelEditorTest.editor.setToolDefault('pencil', 'width', 11));
+  await expect(frame).toHaveAttribute('width', '11');
+  await expect(frame).toHaveAttribute('height', '11');
+});
+
 test('brush frame disappears when leaving the canvas and pointer tool keeps native behavior', async ({ page }) => {
   await openEditor(page);
   const point = await canvasCenter(page);
