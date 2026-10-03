@@ -130,6 +130,20 @@ function installCanvasCursorRuntime(target = globalThis) {
     return result;
   };
 
+  const previousSetToolDefault = Workspace.prototype.setToolDefault;
+  Workspace.prototype.setToolDefault = function setToolDefaultWithCanvasCursor(tool, key, value) {
+    const result = previousSetToolDefault.call(this, tool, key, value);
+    if (
+      key === 'width'
+      && tool === this.tool
+      && cursorModeForTool(tool) === 'brush'
+      && this.canvasCursorInside
+    ) {
+      this.renderOverlay?.();
+    }
+    return result;
+  };
+
   const previousPointerDown = Workspace.prototype.onPointerDown;
   Workspace.prototype.onPointerDown = function onPointerDownWithImageTool(event) {
     if (this.tool === 'image') {
