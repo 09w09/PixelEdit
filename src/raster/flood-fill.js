@@ -112,7 +112,6 @@ function installFloodFillRuntime(target = globalThis) {
     document.querySelectorAll('[data-tool]').forEach(button => {
       button.classList.toggle('active', button.dataset.tool === 'bucket');
     });
-    this.canvas && (this.canvas.style.cursor = 'crosshair');
     this.updateInteraction?.();
     this.toolOptionsBar?.render?.();
     return 'bucket';
@@ -246,13 +245,6 @@ function installFloodFillRuntime(target = globalThis) {
     const point = this.logicalPoint(event);
     this.canvas.setPointerCapture?.(event.pointerId);
     this.bucketFillAt(point);
-  };
-
-  const originalPointerMove = Workspace.prototype.onPointerMove;
-  Workspace.prototype.onPointerMove = function onPointerMoveWithBucket(event) {
-    const result = originalPointerMove.call(this, event);
-    if (this.tool === 'bucket' && !this.customGesture && this.canvas) this.canvas.style.cursor = 'crosshair';
-    return result;
   };
 
   PE.floodFill = {
