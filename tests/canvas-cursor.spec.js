@@ -13,7 +13,7 @@ async function canvasCenter(page) {
 
 test('drawing-style tools use a crosshair cursor over the editable canvas', async ({ page }) => {
   await openEditor(page);
-  const tools = ['select', 'line', 'rectangle', 'circle', 'polygon', 'text', 'bucket'];
+  const tools = ['select', 'line', 'rectangle', 'circle', 'polygon', 'text', 'bucket', 'image'];
   const point = await canvasCenter(page);
 
   for (const tool of tools) {
@@ -46,8 +46,6 @@ test('pencil and eraser hide the native pointer and show an exact brush-size fra
 test('brush frame follows the same odd/even anchor convention as painted pixels', async ({ page }) => {
   await openEditor(page);
   const canvas = page.locator('#screenCanvas');
-  const box = await canvas.boundingBox();
-  if (!box) throw new Error('screenCanvas is not visible');
 
   await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -88,4 +86,21 @@ test('brush frame disappears when leaving the canvas and pointer tool keeps nati
   await page.mouse.move(point.x, point.y);
   await expect(page.locator('#screenCanvas')).not.toHaveCSS('cursor', 'none');
   await expect(page.locator('#screenCanvas')).not.toHaveCSS('cursor', 'crosshair');
+});
+
+test('image tool stays active until the canvas is clicked to choose an image', async ({ page }) => {
+  await openEditor(page);
+  const point = await canvasCenter(page);
+
+  await page.evaluate(() => window.PixelEditorTest.editor.setTool('image'));
+  expect(await page.evaluate(() => window.PixelEditorTest.editor.tool)).toBe('image');
+  await expect(page.locator('[data-tool="image"]')).toHaveClass(/active/);
+  await expect(page.locator('#screenCanvas')).toHaveCSS('cursor', 'crosshair');
+
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.mouse.click(point.x, point.y);
+  const chooser = await chooserPromise;
+  await chooser.setFiles([]);
+
+  await expect.poll(() => page.evaluate(() => window.PixelEditorTest.editor.tool)).toBe('pointer');
 });
