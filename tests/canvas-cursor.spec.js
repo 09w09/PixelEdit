@@ -88,19 +88,25 @@ test('brush frame disappears when leaving the canvas and pointer tool keeps nati
   await expect(page.locator('#screenCanvas')).not.toHaveCSS('cursor', 'crosshair');
 });
 
-test('image tool stays active until the canvas is clicked to choose an image', async ({ page }) => {
+test('image tool stays active until a canvas press requests an image file', async ({ page }) => {
   await openEditor(page);
   const point = await canvasCenter(page);
 
-  await page.evaluate(() => window.PixelEditorTest.editor.setTool('image'));
+  await page.evaluate(() => {
+    window.__imageInputClickCount = 0;
+    const input = document.querySelector('#fileImage');
+    input.addEventListener('click', event => {
+      window.__imageInputClickCount += 1;
+      event.preventDefault();
+    });
+    window.PixelEditorTest.editor.setTool('image');
+  });
+
   expect(await page.evaluate(() => window.PixelEditorTest.editor.tool)).toBe('image');
   await expect(page.locator('[data-tool="image"]')).toHaveClass(/active/);
   await expect(page.locator('#screenCanvas')).toHaveCSS('cursor', 'crosshair');
 
-  const chooserPromise = page.waitForEvent('filechooser');
   await page.mouse.click(point.x, point.y);
-  const chooser = await chooserPromise;
-  await chooser.setFiles([]);
-
-  await expect.poll(() => page.evaluate(() => window.PixelEditorTest.editor.tool)).toBe('pointer');
+  expect(await page.evaluate(() => window.__imageInputClickCount)).toBe(1);
+  expect(await page.evaluate(() => window.PixelEditorTest.editor.tool)).toBe('image');
 });
