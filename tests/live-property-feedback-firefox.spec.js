@@ -32,6 +32,7 @@ test('live property render keeps the Window receiver required by Firefox', async
   await page.evaluate(() => {
     const nativeRaf = window.requestAnimationFrame;
     window.requestAnimationFrame = function requestAnimationFrameWithStrictReceiver(callback) {
+      'use strict';
       if (this !== window) throw new TypeError('Illegal invocation: Window receiver required');
       return nativeRaf.call(window, callback);
     };
