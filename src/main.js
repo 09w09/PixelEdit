@@ -24,10 +24,8 @@ import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
 import { installBinaryImagePreviewRuntime } from './rendering/binary-image-preview.js';
 import { installBinaryImageRuntime } from './rendering/binary-image.js';
-import { installHierarchyClippingRuntime } from './rendering/hierarchy-clipping.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
-import { installStrokeStyleRuntime } from './rendering/stroke-style.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
 import { installTransparencyOverlayRuntime } from './rendering/transparency-overlay.js';
 import { installSelectionGeometryRuntime } from './selection/selection-geometry.js';
@@ -38,7 +36,6 @@ import { installToolStateRuntime } from './tools/tool-state.js';
 import { installTextToolOptionsRuntime } from './tools/text-tool-options.js';
 import { installPhotopeaTransformUIRuntime } from './transforms/photopea-transform-ui.js';
 import { installSelectionTransformRuntime } from './transforms/selection-transform.js';
-import { installTransformModelRuntime } from './transforms/transform-model.js';
 import { installContextMenuRuntime } from './ui/context-menu.js';
 import { installContextMenuBoundaryRuntime } from './ui/context-menu-boundary.js';
 import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
@@ -55,8 +52,6 @@ function installRuntimeModules() {
   installBinaryImageRuntime(globalThis);
   installBinaryImagePreviewRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
-  installHierarchyClippingRuntime(globalThis);
-  installStrokeStyleRuntime(globalThis);
   installShapeStylePropertiesRuntime(globalThis);
   installPageFillPropertiesRuntime(globalThis);
   installTriStateRasterRuntime(globalThis);
@@ -64,7 +59,6 @@ function installRuntimeModules() {
   installPaintBrushRuntime(globalThis);
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
-  installTransformModelRuntime(globalThis);
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
   installIntegerGeometryRuntime(globalThis);
@@ -81,8 +75,6 @@ function installRuntimeModules() {
   installFontManagerRuntime(globalThis);
   installTextFontActionsRuntime(globalThis);
   installFontImportRuntime(globalThis);
-  // Install last so these runtimes take ownership of the final property controls
-  // after all compatibility/property modules have attached their legacy handlers.
   installLivePropertyRuntime(globalThis);
   installLivePositionPropertiesRuntime(globalThis);
   installLiveTextPropertiesRuntime(globalThis);

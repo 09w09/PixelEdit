@@ -19,13 +19,8 @@ function normalizeTranslation(value) {
 
 function normalizeTransform(value = {}) {
   const source = value && typeof value === 'object' ? value : {};
-  const result = {
-    rotation: normalizeRotation(source.rotation),
-    flipX: source.flipX === true,
-    flipY: source.flipY === true,
-  };
-  const translateX = normalizeTranslation(source.translateX);
-  const translateY = normalizeTranslation(source.translateY);
+  const result = { rotation: normalizeRotation(source.rotation), flipX: source.flipX === true, flipY: source.flipY === true };
+  const translateX = normalizeTranslation(source.translateX), translateY = normalizeTranslation(source.translateY);
   if (translateX !== 0) result.translateX = translateX;
   if (translateY !== 0) result.translateY = translateY;
   return result;
@@ -33,21 +28,13 @@ function normalizeTransform(value = {}) {
 
 function isIdentityTransform(value) {
   const transform = normalizeTransform(value);
-  return transform.rotation === 0
-    && !transform.flipX
-    && !transform.flipY
-    && !transform.translateX
-    && !transform.translateY;
+  return transform.rotation === 0 && !transform.flipX && !transform.flipY && !transform.translateX && !transform.translateY;
 }
 
 function boundsFromPoints(points) {
   if (!points?.length) return { x: 0, y: 0, w: 0, h: 0 };
-  const xs = points.map(point => Number(point.x) || 0);
-  const ys = points.map(point => Number(point.y) || 0);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  const right = Math.max(...xs);
-  const bottom = Math.max(...ys);
+  const xs = points.map(point => Number(point.x) || 0), ys = points.map(point => Number(point.y) || 0);
+  const x = Math.min(...xs), y = Math.min(...ys), right = Math.max(...xs), bottom = Math.max(...ys);
   return { x, y, w: right - x, h: bottom - y };
 }
 
@@ -56,406 +43,76 @@ function nodeLocalBounds(node, context = {}) {
   if (typeof context.baseBounds === 'function') return context.baseBounds(node);
   if (node.type === 'line') {
     const half = Math.max(0, (Number(node.stroke?.width) || 1) / 2);
-    const x = Math.min(node.x1, node.x2) - half;
-    const y = Math.min(node.y1, node.y2) - half;
-    const right = Math.max(node.x1, node.x2) + half;
-    const bottom = Math.max(node.y1, node.y2) + half;
+    const x = Math.min(node.x1, node.x2) - half, y = Math.min(node.y1, node.y2) - half;
+    const right = Math.max(node.x1, node.x2) + half, bottom = Math.max(node.y1, node.y2) + half;
     return { x, y, w: right - x, h: bottom - y };
   }
   if (node.type === 'polygon') {
-    const base = boundsFromPoints(node.points || []);
-    const half = Math.max(0, (Number(node.stroke?.width) || 1) / 2);
+    const base = boundsFromPoints(node.points || []), half = Math.max(0, (Number(node.stroke?.width) || 1) / 2);
     return { x: base.x - half, y: base.y - half, w: base.w + half * 2, h: base.h + half * 2 };
   }
-  return {
-    x: Number(node.x) || 0,
-    y: Number(node.y) || 0,
-    w: Math.max(0, Number(node.w) || 0),
-    h: Math.max(0, Number(node.h) || 0),
-  };
+  return { x: Number(node.x) || 0, y: Number(node.y) || 0, w: Math.max(0, Number(node.w) || 0), h: Math.max(0, Number(node.h) || 0) };
 }
 
 function nodeTransformMatrix(node, bounds = null) {
-  const box = bounds || nodeLocalBounds(node);
-  const transform = normalizeTransform(node?.transform);
-  const radians = transform.rotation * Math.PI / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  const sx = transform.flipX ? -1 : 1;
-  const sy = transform.flipY ? -1 : 1;
-  const a = cos * sx;
-  const b = sin * sx;
-  const c = -sin * sy;
-  const d = cos * sy;
-  const cx = box.x + box.w / 2;
-  const cy = box.y + box.h / 2;
-  const tx = transform.translateX || 0;
-  const ty = transform.translateY || 0;
-  const e = cx + tx - a * cx - c * cy;
-  const f = cy + ty - b * cx - d * cy;
-  return { a, b, c, d, e, f };
+  const box = bounds || nodeLocalBounds(node), transform = normalizeTransform(node?.transform);
+  const radians = transform.rotation * Math.PI / 180, cos = Math.cos(radians), sin = Math.sin(radians);
+  const sx = transform.flipX ? -1 : 1, sy = transform.flipY ? -1 : 1;
+  const a = cos * sx, b = sin * sx, c = -sin * sy, d = cos * sy;
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  const tx = transform.translateX || 0, ty = transform.translateY || 0;
+  return { a, b, c, d, e: cx + tx - a * cx - c * cy, f: cy + ty - b * cx - d * cy };
 }
 
-function transformPoint(matrix, point) {
-  return {
-    x: matrix.a * point.x + matrix.c * point.y + matrix.e,
-    y: matrix.b * point.x + matrix.d * point.y + matrix.f,
-  };
-}
+function transformPoint(matrix, point) { return { x: matrix.a * point.x + matrix.c * point.y + matrix.e, y: matrix.b * point.x + matrix.d * point.y + matrix.f }; }
 
 function inverseMatrix(matrix) {
   const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
   if (Math.abs(determinant) < 1e-12) return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
-  const a = matrix.d / determinant;
-  const b = -matrix.b / determinant;
-  const c = -matrix.c / determinant;
-  const d = matrix.a / determinant;
-  const e = -(a * matrix.e + c * matrix.f);
-  const f = -(b * matrix.e + d * matrix.f);
-  return { a, b, c, d, e, f };
+  const a = matrix.d / determinant, b = -matrix.b / determinant, c = -matrix.c / determinant, d = matrix.a / determinant;
+  return { a, b, c, d, e: -(a * matrix.e + c * matrix.f), f: -(b * matrix.e + d * matrix.f) };
 }
 
-function inverseTransformPoint(matrix, point) {
-  return transformPoint(inverseMatrix(matrix), point);
-}
+function inverseTransformPoint(matrix, point) { return transformPoint(inverseMatrix(matrix), point); }
 
 function transformedCorners(node, bounds = null) {
-  const box = bounds || nodeLocalBounds(node);
-  const matrix = nodeTransformMatrix(node, box);
+  const box = bounds || nodeLocalBounds(node), matrix = nodeTransformMatrix(node, box);
   return [
-    transformPoint(matrix, { x: box.x, y: box.y }),
-    transformPoint(matrix, { x: box.x + box.w, y: box.y }),
-    transformPoint(matrix, { x: box.x + box.w, y: box.y + box.h }),
-    transformPoint(matrix, { x: box.x, y: box.y + box.h }),
+    transformPoint(matrix, { x: box.x, y: box.y }), transformPoint(matrix, { x: box.x + box.w, y: box.y }),
+    transformPoint(matrix, { x: box.x + box.w, y: box.y + box.h }), transformPoint(matrix, { x: box.x, y: box.y + box.h }),
   ];
 }
 
 function transformedBounds(node, context = {}) {
   const box = nodeLocalBounds(node, context);
-  if (isIdentityTransform(node?.transform)) return { ...box };
-  return boundsFromPoints(transformedCorners(node, box));
+  return isIdentityTransform(node?.transform) ? { ...box } : boundsFromPoints(transformedCorners(node, box));
 }
 
 function unionBounds(items) {
-  const bounds = (items || []).filter(item => item && item.w >= 0 && item.h >= 0);
-  if (!bounds.length) return { x: 0, y: 0, w: 0, h: 0 };
-  const x = Math.min(...bounds.map(item => item.x));
-  const y = Math.min(...bounds.map(item => item.y));
-  const right = Math.max(...bounds.map(item => item.x + item.w));
-  const bottom = Math.max(...bounds.map(item => item.y + item.h));
+  const list = (items || []).filter(item => item && item.w >= 0 && item.h >= 0);
+  if (!list.length) return { x: 0, y: 0, w: 0, h: 0 };
+  const x = Math.min(...list.map(item => item.x)), y = Math.min(...list.map(item => item.y));
+  const right = Math.max(...list.map(item => item.x + item.w)), bottom = Math.max(...list.map(item => item.y + item.h));
   return { x, y, w: right - x, h: bottom - y };
 }
 
 function moveNodeGeometry(node, dx, dy) {
-  if (node.type === 'line') {
-    node.x1 += dx; node.x2 += dx; node.y1 += dy; node.y2 += dy;
-  } else if (node.type === 'polygon') {
-    for (const point of node.points || []) { point.x += dx; point.y += dy; }
-  } else {
-    node.x = (Number(node.x) || 0) + dx;
-    node.y = (Number(node.y) || 0) + dy;
-  }
+  if (node.type === 'line') { node.x1 += dx; node.x2 += dx; node.y1 += dy; node.y2 += dy; }
+  else if (node.type === 'polygon') for (const point of node.points || []) { point.x += dx; point.y += dy; }
+  else { node.x = (Number(node.x) || 0) + dx; node.y = (Number(node.y) || 0) + dy; }
 }
 
-function isolateNodeProject(project, pageId, node, pageIdFallback) {
-  const clone = structuredClone(project);
-  const page = clone.pages.find(item => item.id === pageId);
-  if (!page) throw new Error('page not found');
-  const isolated = structuredClone(node);
-  isolated.parentId = page.id || pageIdFallback;
-  isolated.transform = { ...IDENTITY_TRANSFORM };
-  page.nodes = [isolated];
-  page.activePageId = page.id;
-  clone.activePageId = page.id;
-  return clone;
+function validateTransformProject(project) {
+  for (const page of project?.pages || []) for (const node of page.nodes || []) {
+    if (!VISUAL_TYPES.has(node.type)) continue;
+    if (!node.transform) throw new Error('V17 可视元素缺少 transform');
+    const expected = normalizeTransform(node.transform);
+    if (JSON.stringify(expected) !== JSON.stringify(node.transform)) throw new Error('V17 transform 数据无效');
+  }
+  return project;
 }
 
-function transformRgbaCut(cut, node, sourceBounds) {
-  const matrix = nodeTransformMatrix(node, sourceBounds);
-  const inverse = inverseMatrix(matrix);
-  const worldBounds = transformedBounds(node, { baseBounds: () => sourceBounds });
-  const x = Math.floor(worldBounds.x + 1e-9);
-  const y = Math.floor(worldBounds.y + 1e-9);
-  const right = Math.ceil(worldBounds.x + worldBounds.w - 1e-9);
-  const bottom = Math.ceil(worldBounds.y + worldBounds.h - 1e-9);
-  const width = Math.max(1, right - x);
-  const height = Math.max(1, bottom - y);
-  const data = new Uint8ClampedArray(width * height * 4);
+const transformModel = { VISUAL_TYPES, IDENTITY_TRANSFORM: { ...IDENTITY_TRANSFORM }, normalizeRotation, normalizeTranslation, normalizeTransform, isIdentityTransform, nodeLocalBounds, nodeTransformMatrix, transformPoint, inverseMatrix, inverseTransformPoint, transformedCorners, transformedBounds, unionBounds, moveNodeGeometry, validateTransformProject };
+if (globalThis.PixelEditor) globalThis.PixelEditor.transformModel = transformModel;
 
-  for (let oy = 0; oy < height; oy += 1) {
-    for (let ox = 0; ox < width; ox += 1) {
-      const world = { x: x + ox + 0.5, y: y + oy + 0.5 };
-      const sourceWorld = transformPoint(inverse, world);
-      const sx = Math.floor(sourceWorld.x - cut.x);
-      const sy = Math.floor(sourceWorld.y - cut.y);
-      if (sx < 0 || sy < 0 || sx >= cut.w || sy >= cut.h) continue;
-      const sourceIndex = (sy * cut.w + sx) * 4;
-      const targetIndex = (oy * width + ox) * 4;
-      data[targetIndex] = cut.data[sourceIndex];
-      data[targetIndex + 1] = cut.data[sourceIndex + 1];
-      data[targetIndex + 2] = cut.data[sourceIndex + 2];
-      data[targetIndex + 3] = cut.data[sourceIndex + 3];
-    }
-  }
-  return { x, y, width, height, data, worldBounds };
-}
-
-function installTransformModelRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const R = PE?.renderer;
-  const P = PE?.persistence;
-  if (!M?.createNode || !R?.FramebufferRenderer || !P?.ProjectSerializer) throw new Error('PixelEditor transform dependencies are not initialized');
-  if (PE.transformModelInstalled) return;
-  PE.transformModelInstalled = true;
-
-  const framebuffer = R.FramebufferRenderer;
-  const strokeStyle = PE.strokeStyle;
-  const pixelStroke = PE.pixelStrokeRuntime;
-  const baseVisualBounds = framebuffer.visualBounds.bind(framebuffer);
-  const baseRenderPage = framebuffer.renderPage.bind(framebuffer);
-  const baseRenderSubtree = framebuffer.renderSubtree.bind(framebuffer);
-  const baseSubtreeRgba = framebuffer.subtreeRgba.bind(framebuffer);
-
-  function baseBoundsForNode(node, project, pageId, assets) {
-    if (!project || !pageId || !node?.id) return nodeLocalBounds(node);
-    return baseVisualBounds(node.id, { project, pageId, assets });
-  }
-
-  const originalCreateNode = M.createNode;
-  M.createNode = function createTransformNode(type, props = {}) {
-    const node = originalCreateNode(type, props);
-    if (VISUAL_TYPES.has(type)) node.transform = normalizeTransform(props.transform || node.transform);
-    return node;
-  };
-
-  function validateTransformProject(project) {
-    for (const page of project.pages || []) for (const node of page.nodes || []) {
-      if (!VISUAL_TYPES.has(node.type)) continue;
-      if (!node.transform) throw new Error('V17 可视元素缺少 transform');
-      const normalized = normalizeTransform(node.transform);
-      if (normalized.rotation !== node.transform.rotation
-        || normalized.flipX !== node.transform.flipX
-        || normalized.flipY !== node.transform.flipY
-        || normalized.translateX !== node.transform.translateX
-        || normalized.translateY !== node.transform.translateY) {
-        throw new Error('V17 transform 数据无效');
-      }
-    }
-    return project;
-  }
-
-  const oldSerialize = P.ProjectSerializer.serialize.bind(P.ProjectSerializer);
-  const oldDeserialize = P.ProjectSerializer.deserialize.bind(P.ProjectSerializer);
-  P.ProjectSerializer.serialize = function serializeTransforms(project, assets) {
-    validateTransformProject(project);
-    return oldSerialize(project, assets);
-  };
-  P.ProjectSerializer.deserialize = function deserializeTransforms(raw) {
-    const result = oldDeserialize(raw);
-    validateTransformProject(result.project);
-    return result;
-  };
-
-  function vectorRectangleStroke(node) {
-    if (node?.type !== 'rectangle' || !strokeStyle || !pixelStroke) return null;
-    const stroke = strokeStyle.normalizeStroke?.(node.stroke);
-    if (!stroke || stroke.width !== 1 || stroke.style !== 'solid' || stroke.color === 'transparent') return null;
-    const radii = R.normalizeRadii?.(node, node.w, node.h) || {};
-    if (Object.values(radii).some(value => Number(value) !== 0)) return null;
-    return stroke;
-  }
-
-  function sourceCut(project, pageId, node, assets, stripStroke = false) {
-    const source = stripStroke ? structuredClone(node) : node;
-    if (stripStroke) source.stroke = { ...(source.stroke || {}), width: 0 };
-    const isolated = isolateNodeProject(project, pageId, source, pageId);
-    return baseSubtreeRgba(isolated, pageId, node.id, assets);
-  }
-
-  function rectangleWorldStrokePixels(node, sourceBounds) {
-    const matrix = nodeTransformMatrix(node, sourceBounds);
-    const x0 = Math.round(Number(node.x) || 0);
-    const y0 = Math.round(Number(node.y) || 0);
-    const x1 = x0 + Math.max(1, Math.round(Number(node.w) || 1)) - 1;
-    const y1 = y0 + Math.max(1, Math.round(Number(node.h) || 1)) - 1;
-    const sourceCorners = [
-      { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
-    ];
-    const corners = sourceCorners.map(point => transformPoint(matrix, point));
-    const pixels = new Map();
-    const put = (x, y) => {
-      x = Math.round(x); y = Math.round(y);
-      pixels.set(`${x},${y}`, { x, y });
-    };
-    for (let index = 0; index < corners.length; index += 1) {
-      const a = corners[index];
-      const b = corners[(index + 1) % corners.length];
-      pixelStroke.rasterThinLine(a.x, a.y, b.x, b.y, put);
-    }
-    return [...pixels.values()];
-  }
-
-  function expandTransformedToPixels(transformed, pixels) {
-    if (!pixels.length) return transformed;
-    const minX = Math.min(transformed.x, ...pixels.map(point => point.x));
-    const minY = Math.min(transformed.y, ...pixels.map(point => point.y));
-    const maxX = Math.max(transformed.x + transformed.width - 1, ...pixels.map(point => point.x));
-    const maxY = Math.max(transformed.y + transformed.height - 1, ...pixels.map(point => point.y));
-    const width = maxX - minX + 1;
-    const height = maxY - minY + 1;
-    if (minX === transformed.x && minY === transformed.y && width === transformed.width && height === transformed.height) return transformed;
-    const data = new Uint8ClampedArray(width * height * 4);
-    const dx = transformed.x - minX;
-    const dy = transformed.y - minY;
-    for (let y = 0; y < transformed.height; y += 1) {
-      const sourceStart = y * transformed.width * 4;
-      const targetStart = ((y + dy) * width + dx) * 4;
-      data.set(transformed.data.subarray(sourceStart, sourceStart + transformed.width * 4), targetStart);
-    }
-    transformed.x = minX;
-    transformed.y = minY;
-    transformed.width = width;
-    transformed.height = height;
-    transformed.data = data;
-    return transformed;
-  }
-
-  function overlayRectangleStroke(transformed, node, sourceBounds, stroke) {
-    const pixels = rectangleWorldStrokePixels(node, sourceBounds);
-    expandTransformedToPixels(transformed, pixels);
-    const channel = stroke.color === 0 ? 255 : 0;
-    for (const pixel of pixels) {
-      const x = pixel.x - transformed.x;
-      const y = pixel.y - transformed.y;
-      const index = (y * transformed.width + x) * 4;
-      transformed.data[index] = channel;
-      transformed.data[index + 1] = channel;
-      transformed.data[index + 2] = channel;
-      transformed.data[index + 3] = 255;
-    }
-    return transformed;
-  }
-
-  function adaptProject(project, pageId, assets) {
-    const clone = structuredClone(project);
-    const page = clone.pages.find(item => item.id === pageId);
-    if (!page) return { project: clone, assets };
-    const runtimes = new Map();
-    for (const node of page.nodes) {
-      const source = M.nodeById(M.pageById(project, pageId), node.id);
-      if (!source || !VISUAL_TYPES.has(source.type) || isIdentityTransform(source.transform)) continue;
-      const sourceBounds = baseBoundsForNode(source, project, pageId, assets);
-      const stroke = vectorRectangleStroke(source);
-      const cut = sourceCut(project, pageId, source, assets, Boolean(stroke));
-      const transformed = transformRgbaCut(cut, source, sourceBounds);
-      if (stroke) overlayRectangleStroke(transformed, source, sourceBounds, stroke);
-      const assetId = `__pixeledit_transform__${node.id}`;
-      runtimes.set(assetId, { width: transformed.width, height: transformed.height, data: transformed.data });
-      node.type = 'image';
-      node.x = transformed.x;
-      node.y = transformed.y;
-      node.w = transformed.width;
-      node.h = transformed.height;
-      node.assetId = assetId;
-      node.sourceWidth = transformed.width;
-      node.sourceHeight = transformed.height;
-      node.sourceType = 'transform-runtime';
-      node.sourceName = '';
-      node.image = {
-        fit: 'stretch', interpolation: 'nearest', cropX: 0, cropY: 0,
-        cropW: transformed.width, cropH: transformed.height,
-        bwMode: 'threshold', threshold: 128, invert: false,
-        ditherAlgorithm: 'bayer', bayerMatrix: 4,
-      };
-      node.transform = { ...IDENTITY_TRANSFORM };
-      node.overlay = {};
-      delete node.stroke;
-      delete node.raster;
-      delete node.points;
-      delete node.x1; delete node.y1; delete node.x2; delete node.y2;
-    }
-    const proxy = Object.create(assets || null);
-    proxy.getRuntime = id => runtimes.get(id) || assets?.getRuntime?.(id) || null;
-    proxy.get = id => assets?.get?.(id) || null;
-    return { project: clone, assets: proxy };
-  }
-
-  function rawVisualBounds(nodeId, context) {
-    const page = M.pageById(context.project, context.pageId);
-    const node = M.nodeById(page, nodeId);
-    if (!node) return { x: 0, y: 0, w: 0, h: 0 };
-    if (!VISUAL_TYPES.has(node.type) || isIdentityTransform(node.transform)) return baseVisualBounds(nodeId, context);
-    const sourceBounds = baseVisualBounds(nodeId, context);
-    return transformedBounds(node, { baseBounds: () => sourceBounds });
-  }
-
-  framebuffer.visualBounds = function visualTransformBounds(nodeId, context) {
-    return rawVisualBounds(nodeId, context);
-  };
-
-  framebuffer.visualSubtreeBounds = function visualTransformSubtreeBounds(nodeId, context) {
-    const page = M.pageById(context.project, context.pageId);
-    const tree = new M.TreeModel(page);
-    const bounds = [];
-    const visit = id => {
-      const node = tree.node(id);
-      if (!node || node.visible === false) return;
-      const visible = framebuffer.visualBounds(id, context);
-      if (visible.w > 0 && visible.h > 0) bounds.push(visible);
-      for (const child of tree.childrenOf(id)) visit(child.id);
-    };
-    visit(nodeId);
-    return unionBounds(bounds);
-  };
-
-  framebuffer.renderPage = function renderTransformedPage(project, pageId, assets) {
-    const adapted = adaptProject(project, pageId, assets);
-    return baseRenderPage(adapted.project, pageId, adapted.assets);
-  };
-  framebuffer.renderSubtree = function renderTransformedSubtree(project, pageId, nodeId, assets, base = 0) {
-    const adapted = adaptProject(project, pageId, assets);
-    return baseRenderSubtree(adapted.project, pageId, nodeId, adapted.assets, base);
-  };
-  framebuffer.subtreeRgba = function transformedSubtreeRgba(project, pageId, nodeId, assets) {
-    const adapted = adaptProject(project, pageId, assets);
-    return baseSubtreeRgba(adapted.project, pageId, nodeId, adapted.assets);
-  };
-
-  PE.transformModel = {
-    VISUAL_TYPES,
-    IDENTITY_TRANSFORM: { ...IDENTITY_TRANSFORM },
-    normalizeRotation,
-    normalizeTranslation,
-    normalizeTransform,
-    isIdentityTransform,
-    nodeLocalBounds,
-    nodeTransformMatrix,
-    transformPoint,
-    inverseTransformPoint,
-    transformedCorners,
-    transformedBounds,
-    unionBounds,
-    moveNodeGeometry,
-    rawVisualBounds,
-    validateTransformProject,
-  };
-}
-
-export {
-  VISUAL_TYPES,
-  IDENTITY_TRANSFORM,
-  normalizeRotation,
-  normalizeTranslation,
-  normalizeTransform,
-  isIdentityTransform,
-  nodeLocalBounds,
-  nodeTransformMatrix,
-  transformPoint,
-  inverseTransformPoint,
-  transformedCorners,
-  transformedBounds,
-  unionBounds,
-  moveNodeGeometry,
-  installTransformModelRuntime,
-};
+export { VISUAL_TYPES, IDENTITY_TRANSFORM, normalizeRotation, normalizeTranslation, normalizeTransform, isIdentityTransform, nodeLocalBounds, nodeTransformMatrix, transformPoint, inverseMatrix, inverseTransformPoint, transformedCorners, transformedBounds, unionBounds, moveNodeGeometry, validateTransformProject, transformModel };
