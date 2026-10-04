@@ -228,34 +228,6 @@ function installElementClipboardRuntime(target = globalThis) {
     return changed;
   };
 
-  const oldSetupKeyboard = Workspace.prototype.setupKeyboard;
-  Workspace.prototype.setupKeyboard = function setupStructuredClipboardKeyboard() {
-    oldSetupKeyboard.call(this);
-    window.addEventListener('keydown', event => {
-      const mod = event.ctrlKey || event.metaKey;
-      if (!mod) return;
-      const editing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName) || event.target?.isContentEditable;
-      if (editing) return;
-      const key = event.key.toLowerCase();
-      if (key === 'a') {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.selectAllOnPage();
-      } else if (key === 'c' && this.state.selection.ids.length) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.copySelection();
-      } else if (key === 'v' && this.clipboard.hasPayload()) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.pasteClipboard();
-      } else if (key === 'd') {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      }
-    }, true);
-  };
-
   PE.elementClipboard = {
     ElementClipboard: RuntimeElementClipboard,
     createClipboardPayload: args => createClipboardPayload(args, M),

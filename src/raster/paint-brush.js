@@ -96,68 +96,6 @@ function installPaintBrushRuntime(target = globalThis) {
   if (PE.paintBrushInstalled) return;
   PE.paintBrushInstalled = true;
 
-  const previousApplyPaintSegment = Workspace.prototype.applyPaintSegment;
-  Workspace.prototype.applyPaintSegment = function applyPaintSegmentWithBrush(gesture, a, b) {
-    if (!gesture || (gesture.targetKind !== 'page' && gesture.targetKind !== 'raster')) {
-      return previousApplyPaintSegment.call(this, gesture, a, b);
-    }
-    const path = this.linePoints(a, b);
-    const points = expandBrushPoints(path, gesture.brushWidth);
-
-    if (gesture.targetKind === 'page') {
-      const page = this.activePage();
-      page.overlay = page.overlay || {};
-      let changed = false;
-      for (const pixel of points) {
-        if (pixel.x < 0 || pixel.y < 0 || pixel.x >= 400 || pixel.y >= 300) continue;
-        const key = `${pixel.x},${pixel.y}`;
-        if (page.overlay[key] === gesture.value) continue;
-        page.overlay[key] = gesture.value;
-        changed = true;
-      }
-      gesture.changed ||= changed;
-      return changed;
-    }
-
-    const node = M.nodeById(this.activePage(), gesture.nodeId);
-    if (!node || node.type !== 'raster') return false;
-    const local = points.map(pixel => ({ x: pixel.x - node.x, y: pixel.y - node.y }));
-    const before = node.raster.data;
-    node.raster = T.paintTriStateRaster(node, local, gesture.value);
-    const changed = node.raster.data !== before;
-    gesture.changed ||= changed;
-    return changed;
-  };
-
-  const previousCommitPaint = Workspace.prototype.commitPaint;
-  Workspace.prototype.commitPaint = function commitPaintWithBrush(gesture) {
-    if (gesture?.targetKind === 'page') {
-      const page = this.activePage();
-      const finalOverlay = structuredClone(page.overlay || {});
-      page.overlay = structuredClone(gesture.originalOverlay || {});
-      if (!gesture.changed) return false;
-      const label = gesture.tool === 'eraser'
-        ? '背景橡皮'
-        : gesture.value === 0 ? '背景白色铅笔' : '背景黑色铅笔';
-      return this.exec(new C.UpdatePageCommand(page.id, { overlay: finalOverlay }, label));
-    }
-
-    if (gesture?.targetKind === 'raster') {
-      const page = this.activePage();
-      const node = M.nodeById(page, gesture.nodeId);
-      if (!node) return false;
-      const finalRaster = structuredClone(node.raster);
-      node.raster = structuredClone(gesture.originalRaster);
-      if (!gesture.changed) return false;
-      const label = gesture.tool === 'eraser'
-        ? '栅格橡皮'
-        : gesture.value === T.RASTER_WHITE ? '栅格白色铅笔' : '栅格黑色铅笔';
-      return this.exec(new C.UpdateNodesCommand([node.id], { raster: finalRaster }, page.id, label));
-    }
-
-    return previousCommitPaint.call(this, gesture);
-  };
-
   PE.paintBrush = { brushWidth, expandBrushPoints, beginPaintWithBrush };
 }
 

@@ -40,56 +40,6 @@ function installRasterLayerRuntime(target = globalThis) {
   if (PE.rasterLayerInstalled) return;
   PE.rasterLayerInstalled = true;
 
-  const originalPaintTarget = Workspace.prototype.paintTarget;
-  Workspace.prototype.paintTarget = function paintTarget() {
-    const page = this.activePage(), id = this.state.selection.primaryId, node = M.nodeById(page, id), tree = new M.TreeModel(page);
-    if (node?.type === 'image') return null;
-    if (node?.type === 'raster') {
-      if (tree.isEffectivelyLocked(node.id) || !tree.isEffectivelyVisible(node.id)) return null;
-      return { kind: 'node', node };
-    }
-    return originalPaintTarget.call(this);
-  };
-
-  const originalApplyPaintSegment = Workspace.prototype.applyPaintSegment;
-  Workspace.prototype.applyPaintSegment = function applyPaintSegment(gesture, a, b) {
-    if (gesture.targetKind !== 'raster') return originalApplyPaintSegment.call(this, gesture, a, b);
-    const node = M.nodeById(this.activePage(), gesture.nodeId);
-    if (!node || node.type !== 'raster') return false;
-    const points = this.linePoints(a, b).map(point => ({ x: point.x - node.x, y: point.y - node.y }));
-    const before = node.raster.data;
-    node.raster = paintTriStateRaster(node, points, gesture.value);
-    const changed = node.raster.data !== before;
-    gesture.changed ||= changed;
-    return changed;
-  };
-
-  const originalCommitPaint = Workspace.prototype.commitPaint;
-  Workspace.prototype.commitPaint = function commitPaint(gesture) {
-    if (gesture.targetKind !== 'raster') return originalCommitPaint.call(this, gesture);
-    const page = this.activePage(), node = M.nodeById(page, gesture.nodeId);
-    if (!node) return false;
-    const finalRaster = structuredClone(node.raster);
-    node.raster = structuredClone(gesture.originalRaster);
-    if (!gesture.changed) return false;
-    const label = gesture.value === RASTER_TRANSPARENT ? '栅格橡皮' : gesture.value === RASTER_WHITE ? '栅格白色铅笔' : '栅格黑色铅笔';
-    return this.exec(new C.UpdateNodesCommand([node.id], { raster: finalRaster }, page.id, label));
-  };
-
-  const originalCancelCustomGesture = Workspace.prototype.cancelCustomGesture;
-  Workspace.prototype.cancelCustomGesture = function cancelCustomGesture() {
-    const gesture = this.customGesture;
-    if (gesture?.type === 'paint' && gesture.targetKind === 'raster') {
-      const node = M.nodeById(this.activePage(), gesture.nodeId);
-      if (node) node.raster = structuredClone(gesture.originalRaster);
-      this.customGesture = null;
-      this.overlayState = {};
-      this.renderCanvas();
-      return;
-    }
-    return originalCancelCustomGesture.call(this);
-  };
-
   Workspace.prototype.rasterizeSelected = async function rasterizeSelected() {
     const page = this.activePage(), id = this.state.selection.primaryId, node = M.nodeById(page, id), tree = new M.TreeModel(page);
     if (!node || tree.isEffectivelyLocked(id)) return false;
@@ -107,32 +57,6 @@ function installRasterLayerRuntime(target = globalThis) {
       this.state.selection.replace([replacement.id]);
       return true;
     } });
-  };
-
-  const originalSetSelectionSize = Workspace.prototype.setSelectionSize;
-  Workspace.prototype.setSelectionSize = function setSelectionSize(axis, targetValue) {
-    const page = this.activePage(), rasterIds = this.state.selection.ids.filter(id => M.nodeById(page, id)?.type === 'raster');
-    if (!rasterIds.length) return originalSetSelectionSize.call(this, axis, targetValue);
-    const targetSize = Math.max(1, Math.round(Number(targetValue)));
-    if (!Number.isFinite(targetSize)) return false;
-    return this.exec(new C.UpdateNodesCommand(rasterIds, node => {
-      const geometry = { x: node.x, y: node.y, w: node.w, h: node.h };
-      if (axis === 'w') geometry.w = targetSize; else geometry.h = targetSize;
-      if (node.aspectLocked) {
-        const ratio = node.w / Math.max(1, node.h);
-        if (axis === 'w') geometry.h = Math.max(1, Math.round(targetSize / ratio)); else geometry.w = Math.max(1, Math.round(targetSize * ratio));
-      }
-      return resizeTriStateRaster(node, geometry);
-    }, page.id, '调整栅格尺寸'));
-  };
-
-  const originalCommitLiveHandle = Workspace.prototype.commitLiveHandle;
-  Workspace.prototype.commitLiveHandle = function commitLiveHandle(gesture) {
-    const page = this.activePage(), node = M.nodeById(page, gesture.nodeId);
-    if (gesture.type !== 'resize-live' || node?.type !== 'raster') return originalCommitLiveHandle.call(this, gesture);
-    const geometry = { x: node.x, y: node.y, w: node.w, h: node.h }, original = structuredClone(gesture.original);
-    Object.assign(node, original);
-    return this.exec(new C.UpdateNodesCommand([gesture.nodeId], resizeTriStateRaster(original, geometry), page.id, '调整栅格大小'));
   };
 
   PE.rasterLayer = {

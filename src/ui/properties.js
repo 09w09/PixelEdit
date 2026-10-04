@@ -27,7 +27,7 @@ class Properties{
   render(){this.attachSelectionSession();const result=this.provider.render(this);this.finalizeControls();return result;}
   renderPage(page){this.attachSelectionSession();const result=this.provider.renderPage(this,page);this.finalizeControls();return result;}
   renderPreviews(nodes){return this.provider.renderPreviews(this,nodes);}
-  bounds(nodes){return this.provider.bounds(this,nodes);}
+  bounds(nodes){return this.provider.bounds(this,nodes).map(bounds=>{const x=Math.round(Number(bounds.x)||0),y=Math.round(Number(bounds.y)||0),right=Math.round((Number(bounds.x)||0)+(Number(bounds.w)||0)),bottom=Math.round((Number(bounds.y)||0)+(Number(bounds.h)||0));return{...bounds,x,y,w:Math.max(0,right-x),h:Math.max(0,bottom-y)};});}
   general(nodes,locked=false){return this.provider.generalMarkup({properties:this,editor:this.editor,page:this.editor.activePage(),nodes,allLocked:locked});}
   transform(nodes,locked=false){return this.provider.positionMarkup({properties:this,editor:this.editor,page:this.editor.activePage(),nodes,allLocked:locked});}
   typeFields(nodes,locked=false){return this.provider.typeMarkup({properties:this,editor:this.editor,page:this.editor.activePage(),nodes,allLocked:locked,sameType:nodes.every(node=>node.type===nodes[0]?.type)});}

@@ -210,26 +210,10 @@ function installGlobalToolbar(editor) {
 
 function installToolOptionsRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  const Workspace = PE?.ui?.Workspace;
-  if (!Workspace) throw new Error('PixelEditor workspace is not initialized');
+  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');
   if (PE.toolOptionsInstalled) return;
   PE.toolOptionsInstalled = true;
-
-  const originalMount = Workspace.prototype.mount;
-  Workspace.prototype.mount = function mountToolOptions() {
-    const result = originalMount.call(this);
-    const element = installGlobalToolbar(this);
-    this.toolOptionsBar = new ToolOptionsBar(this, element);
-    this.toolOptionsBar.render();
-    return result || this;
-  };
-
-  const originalRenderAll = Workspace.prototype.renderAll;
-  Workspace.prototype.renderAll = function renderAllWithToolAvailability(options = {}) {
-    const result = originalRenderAll.call(this, options);
-    this.toolOptionsBar?.render();
-    return result;
-  };
+  PE.toolOptions = { ToolOptionsBar, installGlobalToolbar, actionRequirement, SELECTION_ACTIONS };
 }
 
 export { SELECTION_ACTIONS, ToolOptionsBar, actionRequirement, installGlobalToolbar, installToolOptionsRuntime };

@@ -79,31 +79,6 @@ function installPhotopeaTransformUIRuntime(target = globalThis) {
   if (PE.photopeaTransformUIInstalled) return;
   PE.photopeaTransformUIInstalled = true;
 
-  const originalBounds = Properties.prototype.bounds;
-  Properties.prototype.bounds = function integerPropertyBounds(nodes) {
-    return originalBounds.call(this, nodes).map(integerVisualBounds);
-  };
-
-  const originalSelectionGeometry = G.selectionGeometry;
-  G.selectionGeometry = function selectionGeometryWithEdges(node, pivotBounds = null) {
-    return withEdgeHandles(originalSelectionGeometry(node, pivotBounds));
-  };
-
-  const originalHitHandle = G.hitHandle;
-  G.hitHandle = function hitEightHandles(node, worldPoint, zoom, pivotBounds = null) {
-    const direct = originalHitHandle(node, worldPoint, zoom, pivotBounds);
-    if (direct || !BOX_TYPES.has(node?.type)) return direct;
-    const geometry = G.selectionGeometry(node, pivotBounds);
-    const tolerance = 8 / Math.max(0.01, Number(zoom) || 1);
-    for (const corner of EDGE_CORNERS) {
-      const point = geometry?.handles?.[corner];
-      if (point && Math.hypot(point.x - worldPoint.x, point.y - worldPoint.y) <= tolerance) {
-        return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };
-      }
-    }
-    return null;
-  };
-
   function edgeHandlesMarkup(editor) {
     if (editor.state.selection.ids.length !== 1) return '';
     const node = M.nodeById(editor.activePage(), editor.state.selection.ids[0]);
@@ -118,88 +93,6 @@ function installPhotopeaTransformUIRuntime(target = globalThis) {
       return svgHandle({ x: point.x + dx, y: point.y + dy }, editor.zoom, S.handleVisualSize);
     }).join('');
   }
-
-  function reanchorTransform(editor, node, gesture, anchorLocal, anchorWorld) {
-    const base = T.normalizeTransform(gesture?.original?.transform || node.transform);
-    node.transform = base;
-    const nextPivot = S.sourcePivotBounds(editor, node) || G.sourceGeometryBounds(node);
-    const currentAnchor = G.localToWorld(node, anchorLocal, nextPivot);
-    node.transform = T.normalizeTransform({
-      ...base,
-      translateX: (base.translateX || 0) + anchorWorld.x - currentAnchor.x,
-      translateY: (base.translateY || 0) + anchorWorld.y - currentAnchor.y,
-    });
-  }
-
-  const originalUpdateLiveResize = Workspace.prototype.updateLiveResize;
-  Workspace.prototype.updateLiveResize = function updateEightHandleResize(gesture, point) {
-    if (!EDGE_CORNERS.includes(gesture?.corner)) return originalUpdateLiveResize.call(this, gesture, point);
-    const node = M.nodeById(this.activePage(), gesture.nodeId);
-    if (!node || !BOX_TYPES.has(node.type)) return originalUpdateLiveResize.call(this, gesture, point);
-
-    const b = gesture.startBounds;
-    const left = b.x;
-    const top = b.y;
-    const right = b.x + b.w;
-    const bottom = b.y + b.h;
-    const centerX = left + b.w / 2;
-    const centerY = top + b.h / 2;
-    const mappingNode = gesture.original || node;
-    const pivot = gesture.pivotBounds || G.sourceGeometryBounds(mappingNode);
-    const raw = G.worldToLocal(mappingNode, point, pivot);
-    const local = { x: Math.round(raw.x), y: Math.round(raw.y) };
-    const ratio = b.w / Math.max(1, b.h);
-
-    let x = left;
-    let y = top;
-    let w = b.w;
-    let h = b.h;
-    let anchorLocal;
-
-    if (gesture.corner === 'e' || gesture.corner === 'w') {
-      const anchorX = gesture.corner === 'e' ? left : right;
-      w = Math.max(1, Math.abs(local.x - anchorX));
-      x = gesture.corner === 'w' ? Math.round(anchorX - w) : Math.round(anchorX);
-      anchorLocal = { x: anchorX, y: centerY };
-      if (node.aspectLocked) {
-        h = Math.max(1, Math.round(w / Math.max(1e-9, ratio)));
-        y = Math.round(centerY - h / 2);
-      }
-    } else {
-      const anchorY = gesture.corner === 's' ? top : bottom;
-      h = Math.max(1, Math.abs(local.y - anchorY));
-      y = gesture.corner === 'n' ? Math.round(anchorY - h) : Math.round(anchorY);
-      anchorLocal = { x: centerX, y: anchorY };
-      if (node.aspectLocked) {
-        w = Math.max(1, Math.round(h * ratio));
-        x = Math.round(centerX - w / 2);
-      }
-    }
-
-    const anchorWorld = G.localToWorld(mappingNode, anchorLocal, pivot);
-    const geometry = { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
-    if (node.type === 'raster' && PE.rasterLayer?.resizeRaster) {
-      Object.assign(node, PE.rasterLayer.resizeRaster(gesture.original, geometry));
-    } else {
-      Object.assign(node, geometry);
-    }
-    reanchorTransform(this, node, gesture, anchorLocal, anchorWorld);
-    this.renderCanvas();
-    this.renderOverlay();
-    this.properties.render();
-  };
-
-  const originalPointerMove = Workspace.prototype.onPointerMove;
-  Workspace.prototype.onPointerMove = function onPointerMoveWithTransformCursor(event) {
-    const result = originalPointerMove.call(this, event);
-    if (this.tool !== 'pointer' || this.customGesture || this.spaceDown || this.interaction?.mode !== 'Idle') return result;
-    const point = this.logicalPointFloat(event);
-    const handle = this.selectionHandleAt(point);
-    if (handle?.type !== 'resize' || !handle.node) return result;
-    const pivot = S.sourcePivotBounds(this, handle.node);
-    this.canvas.style.cursor = resizeCursorForHandle(handle.node, handle.corner, pivot, G);
-    return result;
-  };
 
   PE.photopeaTransformUI = {
     integerVisualBounds,

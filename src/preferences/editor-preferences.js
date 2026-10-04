@@ -198,12 +198,6 @@ function installEditorPreferencesRuntime(target = globalThis) {
     has() { try { return Boolean(this.storage?.getItem(this.key)); } catch { return false; } }
   };
 
-  const oldMount = Workspace.prototype.mount;
-  Workspace.prototype.mount = function mountV17Preferences() {
-    this.editorPreferences = loadEditorPreferences();
-    return oldMount.call(this);
-  };
-
   Workspace.prototype.updateWorkspaceLayout = function updateWorkspaceLayout(patch = {}) {
     this.editorPreferences = updateEditorPreferences(this.editorPreferences, { workspace: patch });
     saveEditorPreferences(this.editorPreferences);
@@ -273,29 +267,6 @@ function installEditorPreferencesRuntime(target = globalThis) {
     split('#rightPaneSplitter', 'rightSplit', '#rightSidebar');
   };
 
-  const oldRenderAll = Workspace.prototype.renderAll;
-  Workspace.prototype.renderAll = function renderAllV17(options = {}) {
-    const result = oldRenderAll.call(this, options);
-    const status = document.querySelector('#statusText');
-    if (status) status.textContent = '400×300 · 1-bit · V17';
-    document.title = `400×300 黑白像素编辑器 V17${this.state?.dirty ? ' *' : ''}`;
-    document.documentElement.dataset.pixelEditor = 'v17';
-    if (target.PixelEditorTest) target.PixelEditorTest.version = 17;
-    return result;
-  };
-
-  const oldTestApi = Workspace.prototype.testApi;
-  Workspace.prototype.testApi = function testApiV17() {
-    const api = oldTestApi.call(this);
-    api.version = 17;
-    return api;
-  };
-
-  const oldSaveProject = Workspace.prototype.saveProject;
-  Workspace.prototype.saveProject = async function saveProjectV17() {
-    if (!this.state.projectFileName && typeof target.showSaveFilePicker !== 'function') this.state.projectFileName = DEFAULT_FILENAME;
-    return oldSaveProject.call(this);
-  };
 }
 
 export {

@@ -41,9 +41,13 @@ function sourceHandles(bounds) {
   const bottom = bounds.y + bounds.h;
   return {
     nw: { x: left, y: top },
+    n: { x: (left + right) / 2, y: top },
     ne: { x: right, y: top },
-    sw: { x: left, y: bottom },
+    e: { x: right, y: (top + bottom) / 2 },
     se: { x: right, y: bottom },
+    s: { x: (left + right) / 2, y: bottom },
+    sw: { x: left, y: bottom },
+    w: { x: left, y: (top + bottom) / 2 },
   };
 }
 
@@ -98,7 +102,7 @@ function createSelectionGeometry(transformModel) {
     if (!geometry) return null;
     const tolerance = 8 / safeZoom(zoom);
     if (BOX_TYPES.has(node.type)) {
-      for (const corner of ['nw', 'ne', 'sw', 'se']) {
+      for (const corner of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
         const point = geometry.handles[corner];
         if (Math.hypot(point.x - worldPoint.x, point.y - worldPoint.y) <= tolerance) {
           return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };

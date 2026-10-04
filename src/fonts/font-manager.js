@@ -82,18 +82,6 @@ function installFontManagerRuntime(target = globalThis) {
   }
   C.RemoveImportedFontCommand = RemoveImportedFontCommand;
 
-  const originalMount = Workspace.prototype.mount;
-  Workspace.prototype.mount = function mount() {
-    if (!this.fontManager) this.fontManager = new FontManager({ editor: this, document: target.document });
-    return originalMount.call(this);
-  };
-
-  const originalRenderAll = Workspace.prototype.renderAll;
-  Workspace.prototype.renderAll = function renderAll(options = {}) {
-    this.fontManager?.sync(this.state.project.fonts || []);
-    return originalRenderAll.call(this, options);
-  };
-
   Workspace.prototype.removeImportedFont = function removeImportedFont(family) {
     const record = (this.state.project.fonts || []).find(item => item.family === family);
     if (!record) return false;

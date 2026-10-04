@@ -115,13 +115,6 @@ function installContextMenuRuntime(target = globalThis) {
     });
   };
 
-  // The document-level context-menu boundary owns right-click routing. Layer
-  // rows keep all of their normal bindings here without a second contextmenu
-  // listener, so native suppression has exactly one authority.
-  const oldBindLayer = PageDock.prototype.bindLayer;
-  PageDock.prototype.bindLayer = function bindLayerWithSharedContext(row) {
-    return oldBindLayer.call(this, row);
-  };
 
   PE.contextMenu = {
     commandDefinitions: editor => commandDefinitions(editor, M, C),

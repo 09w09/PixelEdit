@@ -69,61 +69,7 @@ function installCanvasCursorRuntime(target = globalThis) {
     if (resetNative) this.canvas.style.cursor = 'default';
   };
 
-  const previousSetupCanvas = Workspace.prototype.setupCanvas;
-  Workspace.prototype.setupCanvas = function setupCanvasWithToolCursor() {
-    const result = previousSetupCanvas.call(this);
-    this.canvasCursorInside = false;
-    this.canvasCursorPoint = null;
-    this.canvas?.addEventListener('pointerenter', event => {
-      this.canvasCursorInside = true;
-      this.canvasCursorPoint = this.logicalPoint(event);
-      this.applyCanvasCursor({ resetNative: true });
-      if (cursorModeForTool(this.tool) === 'brush') this.renderOverlay?.();
-    });
-    this.canvas?.addEventListener('pointerleave', () => {
-      this.canvasCursorInside = false;
-      this.canvasCursorPoint = null;
-      if (cursorModeForTool(this.tool) === 'brush') this.renderOverlay?.();
-    });
-    return result;
-  };
 
-  const previousSetupFiles = Workspace.prototype.setupFiles;
-  Workspace.prototype.setupFiles = function setupFilesWithImageToolReset() {
-    const result = previousSetupFiles.call(this);
-    const input = document.querySelector('#fileImage');
-    const resetImageTool = () => {
-      if (this.tool === 'image') this.setTool('pointer');
-    };
-    input?.addEventListener('cancel', resetImageTool);
-    input?.addEventListener('change', () => {
-      if (!input.files?.length) resetImageTool();
-    });
-    return result;
-  };
-
-  const previousImportImageFile = Workspace.prototype.importImageFile;
-  Workspace.prototype.importImageFile = async function importImageFileWithImageToolReset(...args) {
-    try {
-      return await previousImportImageFile.apply(this, args);
-    } finally {
-      if (this.tool === 'image') this.setTool('pointer');
-    }
-  };
-
-  const previousSetToolDefault = Workspace.prototype.setToolDefault;
-  Workspace.prototype.setToolDefault = function setToolDefaultWithCanvasCursor(tool, key, value) {
-    const result = previousSetToolDefault.call(this, tool, key, value);
-    if (
-      key === 'width'
-      && tool === this.tool
-      && cursorModeForTool(tool) === 'brush'
-      && this.canvasCursorInside
-    ) {
-      this.renderOverlay?.();
-    }
-    return result;
-  };
 }
 
 export {

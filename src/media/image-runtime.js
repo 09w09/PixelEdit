@@ -160,11 +160,6 @@ function installImageRuntime(target = globalThis) {
   if (PE.svgVectorRuntimeInstalled) return;
   PE.svgVectorRuntimeInstalled = true;
 
-  const originalRender = PE.renderer.ImageRenderer.render;
-  PE.renderer.ImageRenderer.render = function renderImage(node, assets) {
-    const runtime = assets.getRuntime(node.assetId);
-    return runtime?.kind === SVG_RUNTIME_KIND ? renderSvgNode(node, runtime) : originalRender.call(this, node, assets);
-  };
 
   PE.ui.Workspace.prototype.importSvgText = async function importSvgText(text, name = 'svg', { replaceTargetId = null } = {}) {
     const meta = parseSvgMeta(text);

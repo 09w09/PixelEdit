@@ -367,25 +367,6 @@ function installSelectionTransformRuntime(target = globalThis) {
     return this.exec(new VisualDistributeCommand(axis, this.state.selection.ids, this.activePage().id, this.state.assets));
   };
 
-  const previousApplyPaintSegment = Workspace.prototype.applyPaintSegment;
-  Workspace.prototype.applyPaintSegment = function applyPaintSegmentInRasterCoordinates(gesture, a, b) {
-    if (gesture?.targetKind !== 'raster') return previousApplyPaintSegment.call(this, gesture, a, b);
-    const node = M.nodeById(this.activePage(), gesture.nodeId);
-    if (!node || node.type !== 'raster') return false;
-    const localPath = this.linePoints(a, b)
-      .map(point => screenPointToRasterPixel(node, point, T))
-      .filter(Boolean)
-      .map(point => ({ x: point.x, y: point.y }));
-    const localPoints = PE.paintBrush?.expandBrushPoints
-      ? PE.paintBrush.expandBrushPoints(localPath, gesture.brushWidth)
-      : localPath;
-    const before = node.raster.data;
-    node.raster = Raster.paintTriStateRaster(node, localPoints, gesture.value);
-    const changed = node.raster.data !== before;
-    gesture.changed ||= changed;
-    return changed;
-  };
-
   PE.selectionTransform = {
     unionBounds,
     centerOf,
