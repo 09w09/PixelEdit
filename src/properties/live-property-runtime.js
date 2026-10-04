@@ -139,6 +139,7 @@ function bindNumber(control, {
   control.addEventListener('compositionstart', () => { composing = true; });
   control.addEventListener('compositionend', () => { composing = false; preview(); });
   control.addEventListener('input', preview);
+  control.addEventListener('change', preview);
   control.addEventListener('wheel', event => {
     if (!wheel || globalThis.document?.activeElement !== control || event.deltaY === 0) return;
     event.preventDefault();
@@ -174,6 +175,7 @@ function bindText(control, {
   };
   control.addEventListener('focus', begin);
   control.addEventListener('input', preview);
+  control.addEventListener('change', preview);
   control.addEventListener('blur', () => endEditorSession(editor, 'property-blur'));
   return control;
 }
@@ -194,6 +196,7 @@ function bindTextarea(control, options = {}) {
   control.addEventListener('compositionstart', () => { composing = true; });
   control.addEventListener('input', event => { if (!composing && !event.isComposing) preview(); });
   control.addEventListener('compositionend', () => { composing = false; preview(); });
+  control.addEventListener('change', () => { if (!composing) preview(); });
   control.addEventListener('blur', () => { if (!composing) preview(); endEditorSession(editor, 'property-blur'); });
   return control;
 }
