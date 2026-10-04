@@ -4,14 +4,11 @@ import { installElementClipboardRuntime } from './clipboard/element-clipboard.js
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
 import { installFontOptionsRuntime } from './fonts/font-options.js';
-import { installCommandCoalescingRuntime } from './history/command-coalescing.js';
 import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
-import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
-import { installPropertySelectionBoundary } from './properties/property-selection-boundary.js';
 import { installPropertySystem } from './properties/property-system.js';
 import { installFloodFillRuntime } from './raster/flood-fill.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
@@ -33,44 +30,4 @@ import { installSelectionTransformRuntime } from './transforms/selection-transfo
 import { installContextMenuRuntime } from './ui/context-menu.js';
 import { installContextMenuBoundaryRuntime } from './ui/context-menu-boundary.js';
 import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
-
-function installRuntimeModules() {
-  installEditorPreferencesRuntime(globalThis);
-  installCommandCoalescingRuntime(globalThis);
-  installFontOptionsRuntime(globalThis);
-  installToolStateRuntime(globalThis);
-  installTextToolOptionsRuntime(globalThis);
-  installToolOptionsRuntime(globalThis);
-  installFillToolOptionsRuntime(globalThis);
-  installImageRuntime(globalThis);
-  installBinaryImageRuntime(globalThis);
-  installPixelStrokeRuntime(globalThis);
-  installTriStateRasterRuntime(globalThis);
-  installRasterLayerRuntime(globalThis);
-  installPaintBrushRuntime(globalThis);
-  installRasterSizingRuntime(globalThis);
-  installEditBoundariesRuntime(globalThis);
-  installSelectionGeometryRuntime(globalThis);
-  installSelectionTransformRuntime(globalThis);
-  installIntegerGeometryRuntime(globalThis);
-  installFloodFillRuntime(globalThis);
-  installElementClipboardRuntime(globalThis);
-  installContextMenuRuntime(globalThis);
-  installContextMenuBoundaryRuntime(globalThis);
-  installHistoryPropertiesRuntime(globalThis);
-  installSelectionOverlayRuntime(globalThis);
-  installPhotopeaTransformUIRuntime(globalThis);
-  installTransparencyOverlayRuntime(globalThis);
-  installCanvasCursorRuntime(globalThis);
-  installTextLayoutRuntime(globalThis);
-  installFontManagerRuntime(globalThis);
-  installFontImportRuntime(globalThis);
-  installPropertySystem(globalThis);
-  installPropertySelectionBoundary(globalThis);
-  installBinaryImagePreviewRuntime(globalThis);
-}
-
-installRuntimeModules();
-bootstrapPixelEdit(globalThis);
-
-export { installRuntimeModules };
+function installRuntimeModules(){installEditorPreferencesRuntime(globalThis);installFontOptionsRuntime(globalThis);installToolStateRuntime(globalThis);installTextToolOptionsRuntime(globalThis);installToolOptionsRuntime(globalThis);installFillToolOptionsRuntime(globalThis);installImageRuntime(globalThis);installBinaryImageRuntime(globalThis);installPixelStrokeRuntime(globalThis);installTriStateRasterRuntime(globalThis);installRasterLayerRuntime(globalThis);installPaintBrushRuntime(globalThis);installRasterSizingRuntime(globalThis);installEditBoundariesRuntime(globalThis);installSelectionGeometryRuntime(globalThis);installSelectionTransformRuntime(globalThis);installFloodFillRuntime(globalThis);installElementClipboardRuntime(globalThis);installContextMenuRuntime(globalThis);installContextMenuBoundaryRuntime(globalThis);installHistoryPropertiesRuntime(globalThis);installSelectionOverlayRuntime(globalThis);installPhotopeaTransformUIRuntime(globalThis);installTransparencyOverlayRuntime(globalThis);installCanvasCursorRuntime(globalThis);installTextLayoutRuntime(globalThis);installFontManagerRuntime(globalThis);installFontImportRuntime(globalThis);installPropertySystem(globalThis);installBinaryImagePreviewRuntime(globalThis);}installRuntimeModules();bootstrapPixelEdit(globalThis);export{installRuntimeModules};

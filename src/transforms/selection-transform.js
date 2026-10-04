@@ -115,9 +115,6 @@ function composeFlip(transform, axis, TransformModel) {
   };
 }
 
-// Transform composition uses canonical mathematical geometry. Rendered pixel
-// bounds can shift by half a pixel after rotation; feeding those bounds back
-// into later transforms creates cumulative position drift.
 function canonicalSourceBounds(node, TransformModel) {
   return TransformModel.nodeLocalBounds(node);
 }
@@ -139,11 +136,20 @@ function canonicalTransformedBounds(node, TransformModel) {
   return TransformModel.transformedBounds(node);
 }
 
+function nearestEvenInteger(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || Math.abs(number) < 1e-9) return 0;
+  const lower = Math.floor(number);
+  const fraction = number - lower;
+  if (Math.abs(fraction - 0.5) < 1e-9) return Math.abs(lower % 2) === 0 ? lower : lower + 1;
+  return Math.round(number);
+}
+
 function placeTransformAtCenter(transform, center, source, TransformModel) {
   return TransformModel.normalizeTransform({
     ...transform,
-    translateX: center.x - source.x,
-    translateY: center.y - source.y,
+    translateX: nearestEvenInteger(center.x - source.x),
+    translateY: nearestEvenInteger(center.y - source.y),
   });
 }
 
