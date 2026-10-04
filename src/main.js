@@ -14,6 +14,7 @@ import { installLiveImageStructuralPropertiesRuntime } from './properties/live-i
 import { installLivePropertyRuntime } from './properties/live-property-runtime.js';
 import { installLivePositionPropertiesRuntime } from './properties/live-position-properties.js';
 import { installLiveTextPropertiesRuntime } from './properties/live-text-properties.js';
+import { installLiveTransformPropertiesRuntime } from './properties/live-transform-properties.js';
 import { installPageFillPropertiesRuntime } from './properties/page-fill-properties.js';
 import { installShapeStylePropertiesRuntime } from './properties/shape-style-properties.js';
 import { installTextFontActionsRuntime } from './properties/text-font-actions.js';
@@ -86,6 +87,7 @@ function installRuntimeModules() {
   installLivePositionPropertiesRuntime(globalThis);
   installLiveTextPropertiesRuntime(globalThis);
   installLiveImageStructuralPropertiesRuntime(globalThis);
+  installLiveTransformPropertiesRuntime(globalThis);
 }
 
 installRuntimeModules();
