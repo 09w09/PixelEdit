@@ -1,4 +1,7 @@
 const DEFAULT_REFRESH = Object.freeze({ canvas: true, overlay: true });
+const SHAPE_TYPES = new Set(['line', 'rectangle', 'circle', 'polygon']);
+const FILLABLE_SHAPES = new Set(['rectangle', 'circle', 'polygon']);
+const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
 
 function normalizeNumber(value, { min = -Infinity, max = Infinity, integer = true } = {}) {
   if (value === '' || value == null) return null;
@@ -89,6 +92,11 @@ function cloneControl(control) {
   return clone;
 }
 
+function markBound(control, kind) {
+  if (control?.dataset) control.dataset.liveProperty = kind;
+  return control;
+}
+
 function bindNumber(control, {
   editor,
   channel = control?.id || 'number',
@@ -103,6 +111,7 @@ function bindNumber(control, {
   afterEnd,
 } = {}) {
   if (!control || !editor || typeof createCommand !== 'function') return control;
+  markBound(control, 'number');
   let composing = false;
 
   const begin = () => beginEditorSession(editor, control, channel);
@@ -113,9 +122,7 @@ function bindNumber(control, {
     begin();
     const canonical = String(value);
     if (control.value !== canonical) control.value = canonical;
-    const changed = execute(editor, createCommand(value), refresh, afterPreview);
-    if (changed && typeof afterPreview === 'function') afterPreview(value, control);
-    return changed;
+    return execute(editor, createCommand(value), refresh, afterPreview);
   };
   const restore = () => {
     if (normalizeNumber(control.value, { min, max, integer }) != null) return;
@@ -155,29 +162,25 @@ function bindText(control, {
   editor,
   channel = control?.id || 'text',
   createCommand,
-  readModel,
   refresh = DEFAULT_REFRESH,
   afterPreview,
 } = {}) {
   if (!control || !editor || typeof createCommand !== 'function') return control;
+  markBound(control, 'text');
   const begin = () => beginEditorSession(editor, control, channel);
   const preview = () => {
     begin();
-    const changed = execute(editor, createCommand(control.value), refresh, afterPreview);
-    if (changed && typeof afterPreview === 'function') afterPreview(control.value, control);
-    return changed;
+    return execute(editor, createCommand(control.value), refresh, afterPreview);
   };
   control.addEventListener('focus', begin);
   control.addEventListener('input', preview);
-  control.addEventListener('blur', () => {
-    if (control.value == null && typeof readModel === 'function') control.value = String(readModel() ?? '');
-    endEditorSession(editor, 'property-blur');
-  });
+  control.addEventListener('blur', () => endEditorSession(editor, 'property-blur'));
   return control;
 }
 
 function bindTextarea(control, options = {}) {
   if (!control || !options.editor || typeof options.createCommand !== 'function') return control;
+  markBound(control, 'textarea');
   const editor = options.editor;
   const channel = options.channel || control.id || 'textarea';
   let composing = false;
@@ -197,6 +200,7 @@ function bindTextarea(control, options = {}) {
 
 function bindSelect(control, { editor, createCommand, refresh = DEFAULT_REFRESH, structural = false, afterPreview } = {}) {
   if (!control || !editor || typeof createCommand !== 'function') return control;
+  markBound(control, 'select');
   control.addEventListener('change', () => {
     endEditorSession(editor, 'property-discrete');
     editor.bus?.breakMergeChain?.(`property-select:${control.id}`);
@@ -210,6 +214,7 @@ function bindSelect(control, { editor, createCommand, refresh = DEFAULT_REFRESH,
 
 function bindCheckbox(control, { editor, createCommand, refresh = DEFAULT_REFRESH, structural = false, afterPreview } = {}) {
   if (!control || !editor || typeof createCommand !== 'function') return control;
+  markBound(control, 'checkbox');
   control.addEventListener('change', () => {
     endEditorSession(editor, 'property-discrete');
     editor.bus?.breakMergeChain?.(`property-checkbox:${control.id}`);
@@ -273,7 +278,6 @@ function axisCommand(editor, axis, targetValue) {
 function sizeCommand(editor, axis, value, ids) {
   const PE = globalThis.PixelEditor;
   const C = PE.commands;
-  const M = PE.model;
   const page = editor.activePage();
   return new C.UpdateNodesCommand(ids, node => {
     if (node.type === 'raster' && PE.rasterLayer?.resizeRaster) {
@@ -296,26 +300,190 @@ function sizeCommand(editor, axis, value, ids) {
   }, page.id, '调整尺寸', { historyChannel: axis });
 }
 
-function takeoverControl(root, id) {
-  const control = root?.querySelector?.(`#${id}`);
-  return control ? cloneControl(control) : null;
+function createClaim(root) {
+  const claimed = new Map();
+  return id => {
+    if (claimed.has(id)) return claimed.get(id);
+    const existing = root?.querySelector?.(`#${id}`);
+    if (!existing) return null;
+    const control = cloneControl(existing);
+    claimed.set(id, control);
+    return control;
+  };
 }
 
-function bindCoreElementControls(properties) {
+function previewCallback(properties, values) {
+  return () => properties.renderPreviews?.(typeof values === 'function' ? values() : values);
+}
+
+function bindDitherControls(properties, targets, createCommand, claim) {
+  const editor = properties.editor;
+  const current = () => typeof targets === 'function' ? targets() : targets;
+  const afterPreview = previewCallback(properties, current);
+  const numberFields = [
+    ['propDitherDensity', 'density', 0, 100],
+    ['propDitherOffsetX', 'offsetX', -Infinity, Infinity],
+    ['propDitherOffsetY', 'offsetY', -Infinity, Infinity],
+  ];
+  for (const [id, key, min, max] of numberFields) {
+    const control = claim(id);
+    if (!control) continue;
+    bindNumber(control, {
+      editor,
+      channel: `dither.${key}`,
+      min,
+      max,
+      createCommand: value => createCommand(key, value),
+      readModel: () => current()?.[0]?.dither?.[key],
+      refresh: { canvas: true },
+      afterPreview,
+    });
+  }
+  for (const [id, key, parse] of [
+    ['propDitherType', 'type', value => value],
+    ['propDitherMatrix', 'matrix', value => Number(value)],
+    ['propDitherAlign', 'align', value => value],
+  ]) {
+    const control = claim(id);
+    if (!control) continue;
+    bindSelect(control, {
+      editor,
+      createCommand: raw => createCommand(key, parse(raw)),
+      refresh: { canvas: true },
+      afterPreview,
+    });
+  }
+}
+
+function bindPatternControls(properties, targets, createCommand, claim) {
+  const editor = properties.editor;
+  const current = () => typeof targets === 'function' ? targets() : targets;
+  const afterPreview = previewCallback(properties, current);
+  for (const [id, key, min, max] of [
+    ['propPatternLineWidth', 'lineWidth', 1, 16],
+    ['propPatternGap', 'gap', 0, 32],
+    ['propPatternOffsetX', 'offsetX', -Infinity, Infinity],
+    ['propPatternOffsetY', 'offsetY', -Infinity, Infinity],
+  ]) {
+    const control = claim(id);
+    if (!control) continue;
+    bindNumber(control, {
+      editor,
+      channel: `pattern.${key}`,
+      min,
+      max,
+      createCommand: value => createCommand(key, value),
+      readModel: () => current()?.[0]?.pattern?.[key],
+      refresh: { canvas: true },
+      afterPreview,
+    });
+  }
+  for (const [id, key] of [['propPatternType', 'type'], ['propPatternAlign', 'align']]) {
+    const control = claim(id);
+    if (!control) continue;
+    bindSelect(control, {
+      editor,
+      createCommand: value => createCommand(key, value),
+      refresh: { canvas: true },
+      afterPreview,
+    });
+  }
+}
+
+function bindPageControls(properties, page, claim) {
   const editor = properties.editor;
   const PE = globalThis.PixelEditor;
+  const C = PE.commands;
+  const M = PE.model;
+  const normalizeFill = PE.schemaV17?.normalizeFill;
+  const currentPage = () => M.pageById(editor.state.project, page.id);
+  const pageCommand = (patch, label, channel) => new C.UpdatePageCommand(page.id, patch, label, { historyChannel: channel });
+
+  const name = claim('propPageName');
+  if (name) bindText(name, {
+    editor,
+    channel: 'page.name',
+    createCommand: value => pageCommand({ name: value }, '重命名页面', 'name'),
+    refresh: { layers: true },
+  });
+
+  const locked = claim('propPageLocked');
+  if (locked) bindCheckbox(locked, {
+    editor,
+    createCommand: value => pageCommand({ locked: value }, value ? '锁定页面' : '解锁页面', 'locked'),
+    refresh: { canvas: true, overlay: true, layers: true },
+    structural: true,
+  });
+  if (currentPage()?.locked) return;
+
+  const fill = claim('propFill');
+  if (fill) bindSelect(fill, {
+    editor,
+    createCommand: mode => pageCommand(current => ({
+      fill: { ...normalizeFill(current.fill, { background: true }), mode },
+    }), '背景填充', 'fill.mode'),
+    refresh: { canvas: true },
+    structural: true,
+  });
+
+  const solid = claim('propBgSolid');
+  if (solid) bindSelect(solid, {
+    editor,
+    createCommand: value => pageCommand(current => ({
+      fill: { ...normalizeFill(current.fill, { background: true }), mode: 'solid', color: Number(value) === 1 ? 1 : 0 },
+    }), '背景颜色', 'fill.color'),
+    refresh: { canvas: true },
+  });
+
+  const ditherCommand = (key, value) => pageCommand(current => ({
+    dither: { ...(current.dither || M.defaultDither()), [key]: value },
+  }), '修改背景抖动', `dither.${key}`);
+  bindDitherControls(properties, () => [currentPage()], ditherCommand, claim);
+
+  const patternCommand = (key, value) => pageCommand(current => ({
+    pattern: { ...(current.pattern || M.defaultPattern()), [key]: value },
+  }), '修改背景图案', `pattern.${key}`);
+  bindPatternControls(properties, () => [currentPage()], patternCommand, claim);
+}
+
+function bindGenericElementControls(properties, nodes, claim) {
+  const editor = properties.editor;
+  const PE = globalThis.PixelEditor;
+  const C = PE.commands;
   const M = PE.model;
   const page = editor.activePage();
-  const ids = editor.state.selection.ids;
-  const nodes = ids.map(id => M.nodeById(page, id)).filter(Boolean);
-  if (!nodes.length) return;
+  const ids = nodes.map(node => node.id);
+  const currentNodes = () => ids.map(id => M.nodeById(editor.activePage(), id)).filter(Boolean);
   const tree = new M.TreeModel(page);
-  if (nodes.every(node => tree.isEffectivelyLocked(node.id))) return;
+  const allLocked = nodes.every(node => tree.isEffectivelyLocked(node.id));
+
+  const name = claim('propName');
+  if (name && !name.disabled && nodes.length === 1) bindText(name, {
+    editor,
+    channel: 'name',
+    createCommand: value => new C.UpdateNodesCommand(ids, { name: value }, page.id, '重命名图层', { historyChannel: 'name' }),
+    refresh: { layers: true },
+  });
+
+  const visible = claim('propVisible');
+  if (visible) bindCheckbox(visible, {
+    editor,
+    createCommand: value => new C.SetVisibilityCommand(ids, value, page.id),
+    refresh: { canvas: true, overlay: true, layers: true },
+  });
+
+  const locked = claim('propLocked');
+  if (locked) bindCheckbox(locked, {
+    editor,
+    createCommand: value => new C.ToggleLockCommand(ids, value, page.id),
+    refresh: { canvas: false, overlay: true, layers: true },
+    structural: true,
+  });
+  if (allLocked) return;
 
   for (const axis of ['x', 'y']) {
-    const id = `prop${axis.toUpperCase()}`;
-    const control = takeoverControl(properties.el, id);
-    if (!control) continue;
+    const control = claim(`prop${axis.toUpperCase()}`);
+    if (!control || control.disabled) continue;
     bindNumber(control, {
       editor,
       channel: axis,
@@ -328,9 +496,8 @@ function bindCoreElementControls(properties) {
   const sizableIds = ids.filter(id => ['rectangle', 'circle', 'text', 'image', 'raster'].includes(M.nodeById(page, id)?.type));
   if (sizableIds.length === ids.length) {
     for (const axis of ['w', 'h']) {
-      const id = `prop${axis.toUpperCase()}`;
-      const control = takeoverControl(properties.el, id);
-      if (!control) continue;
+      const control = claim(`prop${axis.toUpperCase()}`);
+      if (!control || control.disabled) continue;
       bindNumber(control, {
         editor,
         channel: axis,
@@ -341,7 +508,144 @@ function bindCoreElementControls(properties) {
         refresh: { canvas: true, overlay: true },
       });
     }
+    const aspect = claim('propAspect');
+    if (aspect && !aspect.disabled) bindCheckbox(aspect, {
+      editor,
+      createCommand: value => new C.UpdateNodesCommand(ids, { aspectLocked: value }, page.id, '锁定比例', { historyChannel: 'aspectLocked' }),
+      refresh: {},
+    });
   }
+
+  return currentNodes;
+}
+
+function bindShapeControls(properties, nodes, claim) {
+  if (!nodes.length || !nodes.every(node => node.type === nodes[0].type && SHAPE_TYPES.has(node.type))) return;
+  const editor = properties.editor;
+  const PE = globalThis.PixelEditor;
+  const C = PE.commands;
+  const M = PE.model;
+  const page = editor.activePage();
+  const ids = nodes.map(node => node.id);
+  const type = nodes[0].type;
+  const normalizeStroke = PE.strokeStyle?.normalizeStroke || PE.schemaV17?.normalizeStroke;
+  const normalizeFill = PE.schemaV17?.normalizeFill;
+  const normalizeStrokeColor = value => value === 'transparent' ? 'transparent' : Number(value) === 0 ? 0 : 1;
+  const currentNodes = () => ids.map(id => M.nodeById(editor.activePage(), id)).filter(Boolean);
+
+  const update = (patch, label, channel) => new C.UpdateNodesCommand(ids, patch, page.id, label, { historyChannel: channel });
+
+  if (type === 'line') {
+    for (const [id, key] of [['propX1', 'x1'], ['propY1', 'y1'], ['propX2', 'x2'], ['propY2', 'y2']]) {
+      const control = claim(id);
+      if (!control) continue;
+      bindNumber(control, {
+        editor,
+        channel: key,
+        min: -9999,
+        max: 9999,
+        createCommand: value => update({ [key]: value }, '修改直线', key),
+        readModel: () => currentNodes()?.[0]?.[key],
+        refresh: { canvas: true, overlay: true },
+      });
+    }
+  }
+
+  if (type === 'rectangle') {
+    for (const [id, key] of [['propRTL', 'rTL'], ['propRTR', 'rTR'], ['propRBL', 'rBL'], ['propRBR', 'rBR']]) {
+      const control = claim(id);
+      if (!control) continue;
+      bindNumber(control, {
+        editor,
+        channel: key,
+        min: 0,
+        max: 200,
+        createCommand: value => update({ [key]: value }, '修改圆角', key),
+        readModel: () => currentNodes()?.[0]?.[key],
+        refresh: { canvas: true, overlay: true },
+      });
+    }
+  }
+
+  const strokeWidth = claim('propStrokeWidth');
+  if (strokeWidth) bindNumber(strokeWidth, {
+    editor,
+    channel: 'stroke.width',
+    min: 0,
+    max: 100,
+    createCommand: value => update(node => ({
+      stroke: normalizeStroke({ ...normalizeStroke(node.stroke), width: value }),
+    }), '修改线宽', 'stroke.width'),
+    readModel: () => normalizeStroke(currentNodes()?.[0]?.stroke).width,
+    refresh: { canvas: true, overlay: true },
+  });
+
+  const strokeColor = claim('propStrokeColor');
+  if (strokeColor) bindSelect(strokeColor, {
+    editor,
+    createCommand: value => update(node => ({
+      stroke: normalizeStroke({ ...normalizeStroke(node.stroke), color: normalizeStrokeColor(value) }),
+    }), '修改描边颜色', 'stroke.color'),
+    refresh: { canvas: true },
+  });
+
+  const strokeStyle = claim('propStrokeStyle');
+  if (strokeStyle) bindSelect(strokeStyle, {
+    editor,
+    createCommand: value => update(node => ({
+      stroke: normalizeStroke({ ...normalizeStroke(node.stroke), style: STROKE_STYLES.has(value) ? value : 'solid' }),
+    }), '修改描边样式', 'stroke.style'),
+    refresh: { canvas: true },
+  });
+
+  if (!FILLABLE_SHAPES.has(type)) return;
+
+  const fill = claim('propFill');
+  if (fill) bindSelect(fill, {
+    editor,
+    createCommand: mode => update(node => ({
+      fill: normalizeFill({ ...normalizeFill(node.fill), mode }),
+    }), '填充', 'fill.mode'),
+    refresh: { canvas: true },
+    structural: true,
+  });
+
+  const fillColor = claim('propFillColor');
+  if (fillColor) bindSelect(fillColor, {
+    editor,
+    createCommand: value => update(node => ({
+      fill: normalizeFill({ ...normalizeFill(node.fill), color: Number(value) === 0 ? 0 : 1 }),
+    }), '填充颜色', 'fill.color'),
+    refresh: { canvas: true },
+  });
+
+  const ditherCommand = (key, value) => update(node => ({
+    dither: { ...(node.dither || M.defaultDither()), [key]: value },
+  }), '修改抖动', `dither.${key}`);
+  bindDitherControls(properties, currentNodes, ditherCommand, claim);
+
+  const patternCommand = (key, value) => update(node => ({
+    pattern: { ...(node.pattern || M.defaultPattern()), [key]: value },
+  }), '修改图案', `pattern.${key}`);
+  bindPatternControls(properties, currentNodes, patternCommand, claim);
+}
+
+function bindAllPropertyControls(properties) {
+  const editor = properties.editor;
+  const PE = globalThis.PixelEditor;
+  const M = PE.model;
+  const page = editor.activePage();
+  const ids = editor.state.selection.ids;
+  const claim = createClaim(properties.el);
+
+  if (editor.pageSelectedId === page.id && !ids.length) {
+    bindPageControls(properties, page, claim);
+    return;
+  }
+  const nodes = ids.map(id => M.nodeById(page, id)).filter(Boolean);
+  if (!nodes.length) return;
+  bindGenericElementControls(properties, nodes, claim);
+  bindShapeControls(properties, nodes, claim);
 }
 
 function installLivePropertyRuntime(target = globalThis) {
@@ -355,7 +659,14 @@ function installLivePropertyRuntime(target = globalThis) {
   Properties.prototype.render = function renderWithLiveProperties(...args) {
     endEditorSession(this.editor, 'properties-render');
     const result = originalRender.apply(this, args);
-    bindCoreElementControls(this);
+    bindAllPropertyControls(this);
+    return result;
+  };
+
+  const originalRenderPage = Properties.prototype.renderPage;
+  Properties.prototype.renderPage = function renderPageWithLiveProperties(...args) {
+    const result = originalRenderPage.apply(this, args);
+    if (this.editor?.properties !== this) bindAllPropertyControls(this);
     return result;
   };
 
@@ -374,7 +685,8 @@ function installLivePropertyRuntime(target = globalThis) {
     selectionBounds,
     axisCommand,
     sizeCommand,
-    takeoverControl,
+    createClaim,
+    bindAllPropertyControls,
   };
 }
 
