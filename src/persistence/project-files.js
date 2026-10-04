@@ -1,0 +1,27 @@
+const P = globalThis.PixelEditor.persistence;
+const PIX_FILE_TYPE = { description: 'Pixel Editor Project (*.pix)', accept: { 'application/json': ['.pix'] } };
+class ProjectFiles {
+  constructor(state, io = {}) { this.state = state; this.io = io; }
+  serialize() { return P.ProjectSerializer.serialize(this.state.project, this.state.assets); }
+  async write(handle, raw) { const writer = await handle.createWritable(); await writer.write(raw); await writer.close(); }
+  async saveAs() {
+    const picker = this.io.showSaveFilePicker || globalThis.showSaveFilePicker;
+    if (!picker) throw new Error('save picker unavailable');
+    const handle = await picker({ suggestedName: this.state.projectFileName?.endsWith('.pix') ? this.state.projectFileName : 'pixel-project-v17.pix', types: [PIX_FILE_TYPE] });
+    if (!handle) return null;
+    const raw = this.serialize(); await this.write(handle, raw);
+    this.state.projectFileHandle = handle; this.state.projectFileName = handle.name || 'pixel-project-v17.pix'; this.state.dirty = false;
+    return raw;
+  }
+  async save() { if (!this.state.projectFileHandle) return this.saveAs(); const raw = this.serialize(); await this.write(this.state.projectFileHandle, raw); this.state.dirty = false; return raw; }
+  async open() {
+    const picker = this.io.showOpenFilePicker || globalThis.showOpenFilePicker;
+    if (!picker) throw new Error('open picker unavailable');
+    const handles = await picker({ multiple: false, types: [PIX_FILE_TYPE] }); const handle = handles?.[0]; if (!handle) return null;
+    const file = await handle.getFile(); const output = P.ProjectSerializer.deserialize(await file.text());
+    this.state.project = output.project; this.state.assets = output.assets; this.state.projectFileHandle = handle; this.state.projectFileName = handle.name || file.name || ''; this.state.dirty = false;
+    return output;
+  }
+}
+Object.assign(P, { ProjectFiles, PIX_FILE_TYPE });
+export { ProjectFiles, PIX_FILE_TYPE };

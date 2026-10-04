@@ -41,9 +41,13 @@ function sourceHandles(bounds) {
   const bottom = bounds.y + bounds.h;
   return {
     nw: { x: left, y: top },
+    n: { x: (left + right) / 2, y: top },
     ne: { x: right, y: top },
-    sw: { x: left, y: bottom },
+    e: { x: right, y: (top + bottom) / 2 },
     se: { x: right, y: bottom },
+    s: { x: (left + right) / 2, y: bottom },
+    sw: { x: left, y: bottom },
+    w: { x: left, y: (top + bottom) / 2 },
   };
 }
 
@@ -70,12 +74,9 @@ function createSelectionGeometry(transformModel) {
 
     if (BOX_TYPES.has(node.type)) {
       const source = sourceHandles(bounds);
-      const handles = {
-        nw: map(source.nw),
-        ne: map(source.ne),
-        sw: map(source.sw),
-        se: map(source.se),
-      };
+      const handles = Object.fromEntries(
+        Object.entries(source).map(([name, point]) => [name, map(point)]),
+      );
       const outline = [handles.nw, handles.ne, handles.se, handles.sw];
       return { outline, handles, controlPoints: [], visualBounds: pointBounds(outline), sourceBounds: bounds };
     }
@@ -98,11 +99,15 @@ function createSelectionGeometry(transformModel) {
     if (!geometry) return null;
     const tolerance = 8 / safeZoom(zoom);
     if (BOX_TYPES.has(node.type)) {
-      for (const corner of ['nw', 'ne', 'sw', 'se']) {
+      const hit = corner => {
         const point = geometry.handles[corner];
-        if (Math.hypot(point.x - worldPoint.x, point.y - worldPoint.y) <= tolerance) {
-          return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };
-        }
+        return Math.hypot(point.x - worldPoint.x, point.y - worldPoint.y) <= tolerance;
+      };
+      for (const corner of ['nw', 'ne', 'sw', 'se']) {
+        if (hit(corner)) return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };
+      }
+      for (const corner of ['n', 'e', 's', 'w']) {
+        if (hit(corner)) return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };
       }
       return null;
     }

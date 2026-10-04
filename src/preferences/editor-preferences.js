@@ -198,23 +198,19 @@ function installEditorPreferencesRuntime(target = globalThis) {
     has() { try { return Boolean(this.storage?.getItem(this.key)); } catch { return false; } }
   };
 
-  const oldMount = Workspace.prototype.mount;
-  Workspace.prototype.mount = function mountV17Preferences() {
-    this.editorPreferences = loadEditorPreferences();
-    return oldMount.call(this);
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.updateWorkspaceLayout = function updateWorkspaceLayout(editor, patch = {}) {
+    editor.editorPreferences = updateEditorPreferences(editor.editorPreferences, { workspace: patch });
+    saveEditorPreferences(editor.editorPreferences);
+    editor.applyLayout();
+    editor.renderRulers?.();
+    return structuredClone(editor.editorPreferences.workspace);
   };
 
-  Workspace.prototype.updateWorkspaceLayout = function updateWorkspaceLayout(patch = {}) {
-    this.editorPreferences = updateEditorPreferences(this.editorPreferences, { workspace: patch });
-    saveEditorPreferences(this.editorPreferences);
-    this.applyLayout();
-    this.renderRulers?.();
-    return structuredClone(this.editorPreferences.workspace);
-  };
-
-  Workspace.prototype.applyLayout = function applyLayoutV17() {
-    if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences();
-    const layout = this.editorPreferences.workspace;
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.applyLayout = function applyLayout(editor) {
+    if (!editor.editorPreferences) editor.editorPreferences = loadEditorPreferences();
+    const layout = editor.editorPreferences.workspace;
     document.documentElement.style.setProperty('--left-w', `${layout.leftWidth}px`);
     document.documentElement.style.setProperty('--right-w', `${layout.rightWidth}px`);
     const leftTop = document.querySelector('#leftTopPane');
@@ -227,7 +223,8 @@ function installEditorPreferencesRuntime(target = globalThis) {
     if (rightBottom) rightBottom.style.flex = `${1 - layout.rightSplit} 1 0`;
   };
 
-  Workspace.prototype.setupDockSplitters = function setupDockSplittersV17() {
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.setupDockSplitters = function setupDockSplitters(editor) {
     const width = (selector, key, direction) => {
       const element = document.querySelector(selector);
       if (!element) return;
@@ -237,12 +234,12 @@ function installEditorPreferencesRuntime(target = globalThis) {
       element.onpointerdown = event => {
         active = true;
         startX = event.clientX;
-        start = this.editorPreferences.workspace[key];
+        start = editor.editorPreferences.workspace[key];
         element.setPointerCapture?.(event.pointerId);
       };
       element.onpointermove = event => {
         if (!active) return;
-        this.updateWorkspaceLayout({ [key]: start + (event.clientX - startX) * direction });
+        editor.updateWorkspaceLayout({ [key]: start + (event.clientX - startX) * direction });
       };
       element.onpointerup = () => { active = false; };
       element.onpointercancel = () => { active = false; };
@@ -264,7 +261,7 @@ function installEditorPreferencesRuntime(target = globalThis) {
         const rect = container.getBoundingClientRect();
         const min = Math.min(0.45, 120 / Math.max(1, rect.height));
         const value = clamp((event.clientY - rect.top) / Math.max(1, rect.height), min, 1 - min);
-        this.updateWorkspaceLayout({ [key]: value });
+        editor.updateWorkspaceLayout({ [key]: value });
       };
       element.onpointerup = () => { active = false; };
       element.onpointercancel = () => { active = false; };
@@ -273,29 +270,6 @@ function installEditorPreferencesRuntime(target = globalThis) {
     split('#rightPaneSplitter', 'rightSplit', '#rightSidebar');
   };
 
-  const oldRenderAll = Workspace.prototype.renderAll;
-  Workspace.prototype.renderAll = function renderAllV17(options = {}) {
-    const result = oldRenderAll.call(this, options);
-    const status = document.querySelector('#statusText');
-    if (status) status.textContent = '400×300 · 1-bit · V17';
-    document.title = `400×300 黑白像素编辑器 V17${this.state?.dirty ? ' *' : ''}`;
-    document.documentElement.dataset.pixelEditor = 'v17';
-    if (target.PixelEditorTest) target.PixelEditorTest.version = 17;
-    return result;
-  };
-
-  const oldTestApi = Workspace.prototype.testApi;
-  Workspace.prototype.testApi = function testApiV17() {
-    const api = oldTestApi.call(this);
-    api.version = 17;
-    return api;
-  };
-
-  const oldSaveProject = Workspace.prototype.saveProject;
-  Workspace.prototype.saveProject = async function saveProjectV17() {
-    if (!this.state.projectFileName && typeof target.showSaveFilePicker !== 'function') this.state.projectFileName = DEFAULT_FILENAME;
-    return oldSaveProject.call(this);
-  };
 }
 
 export {

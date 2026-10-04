@@ -62,20 +62,6 @@ function rasterState(settings, renderer, tristate, absoluteX, absoluteY, localX,
   return bit ? tristate.RASTER_BLACK : tristate.RASTER_WHITE;
 }
 
-function ensureBucketButton() {
-  if (document.querySelector('[data-tool="bucket"]')) return;
-  const eraser = document.querySelector('[data-tool="eraser"]');
-  const grid = eraser?.closest('.tool-grid');
-  if (!grid) return;
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.dataset.tool = 'bucket';
-  button.className = 'tool-btn';
-  button.title = '油漆桶（B）';
-  button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 4l8 8-6 6-6-6zM7 4l2-2 8 8M14 17h7M18 14l3 3-3 3"/></svg><span>油漆桶</span>';
-  eraser.insertAdjacentElement('afterend', button);
-}
-
 function installFloodFillRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
@@ -89,37 +75,10 @@ function installFloodFillRuntime(target = globalThis) {
   if (PE.floodFillInstalled) return;
   PE.floodFillInstalled = true;
 
-  const originalMount = Workspace.prototype.mount;
-  Workspace.prototype.mount = function mountWithBucket() {
-    const result = originalMount.call(this);
-    ensureBucketButton();
-    this.toolbar?.mount?.();
-    const shortcut = event => {
-      const editing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName) || event.target?.isContentEditable;
-      if (editing || event.ctrlKey || event.metaKey || event.altKey || event.key?.toLowerCase() !== 'b') return;
-      event.preventDefault();
-      this.setTool('bucket');
-    };
-    target.addEventListener?.('keydown', shortcut);
-    return result;
-  };
-
-  const originalSetTool = Workspace.prototype.setTool;
-  Workspace.prototype.setTool = function setToolWithBucket(tool) {
-    if (tool !== 'bucket') return originalSetTool.call(this, tool);
-    this.cancelCustomGesture?.();
-    this.tool = 'bucket';
-    document.querySelectorAll('[data-tool]').forEach(button => {
-      button.classList.toggle('active', button.dataset.tool === 'bucket');
-    });
-    this.updateInteraction?.();
-    this.toolOptionsBar?.render?.();
-    return 'bucket';
-  };
-
-  Workspace.prototype.bucketFillTarget = function bucketFillTarget() {
-    const page = this.activePage();
-    const id = this.state.selection.primaryId;
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.bucketFillTarget = function bucketFillTarget(editor) {
+    const page = editor.activePage();
+    const id = editor.state.selection.primaryId;
     const node = M.nodeById(page, id);
     const tree = new M.TreeModel(page);
     if (node) {
@@ -131,10 +90,11 @@ function installFloodFillRuntime(target = globalThis) {
     return null;
   };
 
-  Workspace.prototype.bucketFillRaster = function bucketFillRaster(node, point, settings) {
-    const page = this.activePage();
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.bucketFillRaster = function bucketFillRaster(editor, node, point, settings) {
+    const page = editor.activePage();
     const geometry = PE.selectionGeometry;
-    const pivot = PE.selectionOverlay?.sourcePivotBounds?.(this, node) || geometry?.sourceGeometryBounds?.(node);
+    const pivot = PE.selectionOverlay?.sourcePivotBounds?.(editor, node) || geometry?.sourceGeometryBounds?.(node);
     const localPoint = geometry?.worldToLocal
       ? geometry.worldToLocal(node, point, pivot)
       : point;
@@ -156,13 +116,14 @@ function installFloodFillRuntime(target = globalThis) {
     }
     if (!changed) return false;
     const raster = T.createTriStateRaster(node.w, node.h, pixels);
-    return this.exec(new C.UpdateNodesCommand([node.id], { raster }, page.id, '油漆桶填充'));
+    return editor.exec(new C.UpdateNodesCommand([node.id], { raster }, page.id, '油漆桶填充'));
   };
 
-  Workspace.prototype.bucketFillPage = function bucketFillPage(page, point, settings) {
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.bucketFillPage = function bucketFillPage(editor, page, point, settings) {
     const sx = Math.max(0, Math.min(399, Math.round(point.x)));
     const sy = Math.max(0, Math.min(299, Math.round(point.y)));
-    const source = R.FramebufferRenderer.renderPage(this.state.project, page.id, this.state.assets);
+    const source = R.FramebufferRenderer.renderPage(editor.state.project, page.id, editor.state.assets);
     const region = collectFloodRegion(source, 400, 300, sx, sy);
     if (!region.length) return false;
     const overlay = structuredClone(page.overlay || {});
@@ -184,17 +145,18 @@ function installFloodFillRuntime(target = globalThis) {
       changed = true;
     }
     if (!changed) return false;
-    this.state.selection.clear();
-    this.pageSelectedId = page.id;
-    return this.exec(new C.UpdatePageCommand(page.id, { overlay }, '背景油漆桶填充'));
+    editor.state.selection.clear();
+    editor.pageSelectedId = page.id;
+    return editor.exec(new C.UpdatePageCommand(page.id, { overlay }, '背景油漆桶填充'));
   };
 
-  Workspace.prototype.bucketFillImage = function bucketFillImage(node, point, settings) {
-    const page = this.activePage();
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.bucketFillImage = function bucketFillImage(editor, node, point, settings) {
+    const page = editor.activePage();
     const sx = Math.floor(point.x - node.x);
     const sy = Math.floor(point.y - node.y);
     if (sx < 0 || sy < 0 || sx >= node.w || sy >= node.h) return false;
-    const subtree = R.FramebufferRenderer.renderSubtree(this.state.project, page.id, node.id, this.state.assets, 0);
+    const subtree = R.FramebufferRenderer.renderSubtree(editor.state.project, page.id, node.id, editor.state.assets, 0);
     const source = new Uint8Array(node.w * node.h);
     for (let y = 0; y < node.h; y += 1) {
       for (let x = 0; x < node.w; x += 1) {
@@ -222,36 +184,24 @@ function installFloodFillRuntime(target = globalThis) {
       changed = true;
     }
     if (!changed) return false;
-    return this.exec(new C.UpdateNodesCommand([node.id], { overlay }, page.id, '图片油漆桶填充'));
+    return editor.exec(new C.UpdateNodesCommand([node.id], { overlay }, page.id, '图片油漆桶填充'));
   };
 
-  Workspace.prototype.bucketFillAt = function bucketFillAt(point) {
-    const info = this.bucketFillTarget();
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.bucketFillAt = function bucketFillAt(editor, point) {
+    const info = editor.bucketFillTarget();
     if (!info) {
-      this.notice('油漆桶只能编辑未锁定的图片 / 栅格图层；未选择图层时编辑页面背景');
+      editor.notice('油漆桶只能编辑未锁定的图片 / 栅格图层；未选择图层时编辑页面背景');
       return false;
     }
-    this.notice('');
-    const settings = toolSettings(this);
-    if (info.kind === 'page') return this.bucketFillPage(info.page, point, settings);
-    if (info.node.type === 'raster') return this.bucketFillRaster(info.node, point, settings);
-    return this.bucketFillImage(info.node, point, settings);
+    editor.notice('');
+    const settings = toolSettings(editor);
+    if (info.kind === 'page') return editor.bucketFillPage(info.page, point, settings);
+    if (info.node.type === 'raster') return editor.bucketFillRaster(info.node, point, settings);
+    return editor.bucketFillImage(info.node, point, settings);
   };
 
-  const originalPointerDown = Workspace.prototype.onPointerDown;
-  Workspace.prototype.onPointerDown = function onPointerDownWithBucket(event) {
-    if (this.tool !== 'bucket') return originalPointerDown.call(this, event);
-    if (event.button === 2) return;
-    const point = this.logicalPoint(event);
-    this.canvas.setPointerCapture?.(event.pointerId);
-    this.bucketFillAt(point);
-  };
-
-  PE.floodFill = {
-    collectFloodRegion,
-    sampledBit,
-    ensureBucketButton,
-  };
+  PE.floodFill = { collectFloodRegion, sampledBit };
 }
 
 export { collectFloodRegion, installFloodFillRuntime };

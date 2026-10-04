@@ -3,7 +3,6 @@ import {
   normalizeDither,
   normalizePattern,
 } from '../model/fill-values.js';
-import { ToolOptionsBar } from './tool-options-bar.js';
 
 const FILL_OPTIONS = [
   ['transparent', '透明'],
@@ -146,16 +145,9 @@ function renderFillToolOptions(editor, container, tool = 'bucket') {
 
 function installFillToolOptionsRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  if (!PE?.preferences || !ToolOptionsBar) throw new Error('PixelEditor fill tool option dependencies are not initialized');
+  if (!PE?.preferences) throw new Error('PixelEditor fill tool option dependencies are not initialized');
   if (PE.fillToolOptionsInstalled) return;
   PE.fillToolOptionsInstalled = true;
-
-  const originalRender = ToolOptionsBar.prototype.render;
-  ToolOptionsBar.prototype.render = function renderWithFillTool() {
-    if (this.editor.tool === 'bucket') return renderFillToolOptions(this.editor, this.element, 'bucket');
-    return originalRender.call(this);
-  };
-
   PE.fillToolOptions = { renderFillToolOptions };
 }
 

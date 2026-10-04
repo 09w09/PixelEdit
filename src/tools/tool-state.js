@@ -1,5 +1,3 @@
-import { normalizeStrokeWidth, normalizeStrokeColor } from '../model/stroke-values.js';
-
 function clone(value) {
   return structuredClone(value);
 }
@@ -11,90 +9,11 @@ function toolDefaults(preferences, tool) {
 
 function installToolStateRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  const Workspace = PE?.ui?.Workspace;
-  const preferences = PE?.preferences;
-  if (!Workspace || !preferences) throw new Error('PixelEditor preferences are not initialized');
+  if (!PE?.preferences) throw new Error('PixelEditor preferences are not initialized');
   if (PE.toolStateInstalled) return;
   PE.toolStateInstalled = true;
-
   PE.tools = PE.tools || {};
   PE.tools.toolDefaults = toolDefaults;
-
-  Workspace.prototype.getToolDefaults = function getToolDefaults(tool = this.tool) {
-    if (!this.editorPreferences) this.editorPreferences = preferences.loadEditorPreferences();
-    return toolDefaults(this.editorPreferences, tool);
-  };
-
-  Workspace.prototype.setToolDefault = function setToolDefault(tool, key, value) {
-    if (!this.editorPreferences) this.editorPreferences = preferences.loadEditorPreferences();
-    const patch = { tools: { [tool]: { [key]: value } } };
-    this.editorPreferences = preferences.updateEditorPreferences(this.editorPreferences, patch);
-    preferences.saveEditorPreferences(this.editorPreferences);
-    this.toolOptionsBar?.render?.();
-    return this.getToolDefaults(tool);
-  };
-
-  Workspace.prototype.setTransparencyPreview = function setTransparencyPreview(enabled) {
-    if (!this.editorPreferences) this.editorPreferences = preferences.loadEditorPreferences();
-    this.editorPreferences = preferences.updateEditorPreferences(this.editorPreferences, {
-      transparencyPreview: Boolean(enabled),
-    });
-    preferences.saveEditorPreferences(this.editorPreferences);
-    this.updateTransparencyPreviewButton?.();
-    this.renderOverlay?.();
-    return this.editorPreferences.transparencyPreview;
-  };
-
-  const originalBeginLiveDraw = Workspace.prototype.beginLiveDraw;
-  Workspace.prototype.beginLiveDraw = function beginLiveDrawWithDefaults(tool, point) {
-    const result = originalBeginLiveDraw.call(this, tool, point);
-    if (!result && !this.customGesture) return result;
-    const node = PE.model.nodeById(this.activePage(), this.customGesture?.nodeId);
-    if (!node) return result;
-
-    if (tool === 'text') {
-      const settings = this.getToolDefaults('text');
-      const resolved = PE.fontOptions?.resolveTextToolSelection?.(settings, this.state.project, settings.fontFamily) || {
-        fontFamily: settings.fontFamily || 'sans-serif',
-        fontSize: settings.fontSize || 16,
-        fixed: false,
-      };
-      node.fontFamily = resolved.fontFamily;
-      node.fontSize = resolved.fontSize;
-      node.fixedFontSize = resolved.fixed ? resolved.fontSize : null;
-      node.alignH = ['left', 'center', 'right'].includes(settings.alignH) ? settings.alignH : 'left';
-      node.alignV = ['top', 'middle', 'bottom'].includes(settings.alignV) ? settings.alignV : 'top';
-      this.renderCanvas?.();
-      return result;
-    }
-
-    if (!['line', 'rectangle', 'circle', 'polygon'].includes(tool)) return result;
-    const settings = this.getToolDefaults(tool);
-    node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || PE.schemaV17?.normalizeStroke?.(settings) || {
-      width: normalizeStrokeWidth(settings.width, 1),
-      color: normalizeStrokeColor(settings.color),
-      style: settings.style || 'solid',
-    };
-    if (tool !== 'line') {
-      node.fill = PE.schemaV17?.normalizeFill?.(settings.fill) || {
-        mode: settings.fill?.mode === 'solid' ? 'solid' : 'transparent',
-        color: Number(settings.fill?.color) === 0 ? 0 : 1,
-      };
-    }
-    this.renderCanvas?.();
-    return result;
-  };
-
-  const originalBeginPaint = Workspace.prototype.beginPaint;
-  Workspace.prototype.beginPaint = function beginPaintWithDefaults(point) {
-    const result = originalBeginPaint.call(this, point);
-    if (this.customGesture?.type === 'paint') {
-      const settings = this.getToolDefaults(this.tool);
-      this.customGesture.brushWidth = settings.width || 1;
-      if (this.tool === 'pencil') this.customGesture.toolColor = settings.color ?? 1;
-    }
-    return result;
-  };
 }
 
 export { toolDefaults, installToolStateRuntime };

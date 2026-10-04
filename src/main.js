@@ -1,32 +1,24 @@
+import './core/index.js';
+import { bootstrapPixelEdit } from './app/bootstrap.js';
+import { installV17WorkspaceClass } from './app/v17-workspace.js';
 import { installElementClipboardRuntime } from './clipboard/element-clipboard.js';
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
 import { installFontOptionsRuntime } from './fonts/font-options.js';
-import { installCommandCoalescingRuntime } from './history/command-coalescing.js';
 import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
-import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
-import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
-import { installLiveImageStructuralPropertiesRuntime } from './properties/live-image-structural-properties.js';
-import { installLivePropertyRuntime } from './properties/live-property-runtime.js';
-import { installLivePositionPropertiesRuntime } from './properties/live-position-properties.js';
-import { installLiveTextPropertiesRuntime } from './properties/live-text-properties.js';
-import { installLiveTransformPropertiesRuntime } from './properties/live-transform-properties.js';
-import { installPageFillPropertiesRuntime } from './properties/page-fill-properties.js';
-import { installShapeStylePropertiesRuntime } from './properties/shape-style-properties.js';
-import { installTextFontActionsRuntime } from './properties/text-font-actions.js';
+import { installPropertySystem } from './properties/property-system.js';
 import { installFloodFillRuntime } from './raster/flood-fill.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
 import { installBinaryImagePreviewRuntime } from './rendering/binary-image-preview.js';
 import { installBinaryImageRuntime } from './rendering/binary-image.js';
-import { installHierarchyClippingRuntime } from './rendering/hierarchy-clipping.js';
+import { installOverlayPipelineRuntime } from './rendering/overlay-pipeline.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
-import { installStrokeStyleRuntime } from './rendering/stroke-style.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
 import { installTransparencyOverlayRuntime } from './rendering/transparency-overlay.js';
 import { installSelectionGeometryRuntime } from './selection/selection-geometry.js';
@@ -34,18 +26,16 @@ import { installCanvasCursorRuntime } from './tools/canvas-cursor.js';
 import { installFillToolOptionsRuntime } from './tools/fill-tool-options.js';
 import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
+import { installToolSystemRuntime } from './tools/tool-controller.js';
 import { installTextToolOptionsRuntime } from './tools/text-tool-options.js';
 import { installPhotopeaTransformUIRuntime } from './transforms/photopea-transform-ui.js';
 import { installSelectionTransformRuntime } from './transforms/selection-transform.js';
-import { installTransformModelRuntime } from './transforms/transform-model.js';
 import { installContextMenuRuntime } from './ui/context-menu.js';
 import { installContextMenuBoundaryRuntime } from './ui/context-menu-boundary.js';
 import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 
 function installRuntimeModules() {
-  installV17SchemaRuntime(globalThis);
   installEditorPreferencesRuntime(globalThis);
-  installCommandCoalescingRuntime(globalThis);
   installFontOptionsRuntime(globalThis);
   installToolStateRuntime(globalThis);
   installTextToolOptionsRuntime(globalThis);
@@ -53,21 +43,14 @@ function installRuntimeModules() {
   installFillToolOptionsRuntime(globalThis);
   installImageRuntime(globalThis);
   installBinaryImageRuntime(globalThis);
-  installBinaryImagePreviewRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
-  installHierarchyClippingRuntime(globalThis);
-  installStrokeStyleRuntime(globalThis);
-  installShapeStylePropertiesRuntime(globalThis);
-  installPageFillPropertiesRuntime(globalThis);
   installTriStateRasterRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
   installPaintBrushRuntime(globalThis);
   installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
-  installTransformModelRuntime(globalThis);
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
-  installIntegerGeometryRuntime(globalThis);
   installFloodFillRuntime(globalThis);
   installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
@@ -77,19 +60,17 @@ function installRuntimeModules() {
   installPhotopeaTransformUIRuntime(globalThis);
   installTransparencyOverlayRuntime(globalThis);
   installCanvasCursorRuntime(globalThis);
+  installOverlayPipelineRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
   installFontManagerRuntime(globalThis);
-  installTextFontActionsRuntime(globalThis);
   installFontImportRuntime(globalThis);
-  // Install last so these runtimes take ownership of the final property controls
-  // after all compatibility/property modules have attached their legacy handlers.
-  installLivePropertyRuntime(globalThis);
-  installLivePositionPropertiesRuntime(globalThis);
-  installLiveTextPropertiesRuntime(globalThis);
-  installLiveImageStructuralPropertiesRuntime(globalThis);
-  installLiveTransformPropertiesRuntime(globalThis);
+  installPropertySystem(globalThis);
+  installBinaryImagePreviewRuntime(globalThis);
+  installToolSystemRuntime(globalThis);
 }
 
 installRuntimeModules();
+installV17WorkspaceClass(globalThis);
+bootstrapPixelEdit(globalThis);
 
 export { installRuntimeModules };

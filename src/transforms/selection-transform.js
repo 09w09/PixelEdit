@@ -115,9 +115,6 @@ function composeFlip(transform, axis, TransformModel) {
   };
 }
 
-// Transform composition uses canonical mathematical geometry. Rendered pixel
-// bounds can shift by half a pixel after rotation; feeding those bounds back
-// into later transforms creates cumulative position drift.
 function canonicalSourceBounds(node, TransformModel) {
   return TransformModel.nodeLocalBounds(node);
 }
@@ -139,11 +136,20 @@ function canonicalTransformedBounds(node, TransformModel) {
   return TransformModel.transformedBounds(node);
 }
 
+function nearestEvenInteger(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || Math.abs(number) < 1e-9) return 0;
+  const lower = Math.floor(number);
+  const fraction = number - lower;
+  if (Math.abs(fraction - 0.5) < 1e-9) return Math.abs(lower % 2) === 0 ? lower : lower + 1;
+  return Math.round(number);
+}
+
 function placeTransformAtCenter(transform, center, source, TransformModel) {
   return TransformModel.normalizeTransform({
     ...transform,
-    translateX: center.x - source.x,
-    translateY: center.y - source.y,
+    translateX: nearestEvenInteger(center.x - source.x),
+    translateY: nearestEvenInteger(center.y - source.y),
   });
 }
 
@@ -339,45 +345,29 @@ function installSelectionTransformRuntime(target = globalThis) {
   C.VisualAlignCommand = VisualAlignCommand;
   C.VisualDistributeCommand = VisualDistributeCommand;
 
-  Workspace.prototype.runSelectionTransform = function runSelectionTransform(action, value = 0) {
-    if (!this.state.selection.ids.length) return false;
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.runSelectionTransform = function runSelectionTransform(editor, action, value = 0) {
+    if (!editor.state.selection.ids.length) return false;
     if (action === 'rotate-angle' && T.normalizeRotation(value) === 0) return false;
-    return this.exec(new SelectionTransformCommand(
-      this.state.selection.ids,
+    return editor.exec(new SelectionTransformCommand(
+      editor.state.selection.ids,
       action,
       value,
-      this.activePage().id,
-      this.state.assets,
+      editor.activePage().id,
+      editor.state.assets,
     ));
   };
 
-  Workspace.prototype.align = function alignTransformed(mode) {
-    if (this.state.selection.ids.length < 2) return false;
-    return this.exec(new VisualAlignCommand(mode, this.state.selection.ids, this.activePage().id, this.state.assets));
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.align = function align(editor, mode) {
+    if (editor.state.selection.ids.length < 2) return false;
+    return editor.exec(new VisualAlignCommand(mode, editor.state.selection.ids, editor.activePage().id, editor.state.assets));
   };
 
-  Workspace.prototype.distribute = function distributeTransformed(axis) {
-    if (this.state.selection.ids.length < 3) return false;
-    return this.exec(new VisualDistributeCommand(axis, this.state.selection.ids, this.activePage().id, this.state.assets));
-  };
-
-  const previousApplyPaintSegment = Workspace.prototype.applyPaintSegment;
-  Workspace.prototype.applyPaintSegment = function applyPaintSegmentInRasterCoordinates(gesture, a, b) {
-    if (gesture?.targetKind !== 'raster') return previousApplyPaintSegment.call(this, gesture, a, b);
-    const node = M.nodeById(this.activePage(), gesture.nodeId);
-    if (!node || node.type !== 'raster') return false;
-    const localPath = this.linePoints(a, b)
-      .map(point => screenPointToRasterPixel(node, point, T))
-      .filter(Boolean)
-      .map(point => ({ x: point.x, y: point.y }));
-    const localPoints = PE.paintBrush?.expandBrushPoints
-      ? PE.paintBrush.expandBrushPoints(localPath, gesture.brushWidth)
-      : localPath;
-    const before = node.raster.data;
-    node.raster = Raster.paintTriStateRaster(node, localPoints, gesture.value);
-    const changed = node.raster.data !== before;
-    gesture.changed ||= changed;
-    return changed;
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.distribute = function distribute(editor, axis) {
+    if (editor.state.selection.ids.length < 3) return false;
+    return editor.exec(new VisualDistributeCommand(axis, editor.state.selection.ids, editor.activePage().id, editor.state.assets));
   };
 
   PE.selectionTransform = {

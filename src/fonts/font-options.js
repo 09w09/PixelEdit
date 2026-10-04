@@ -40,38 +40,15 @@ function resolveTextToolSelection(preferences, project, family = preferences?.fo
   const fixedSize = Number(record?.fixedSize) > 0 ? clampSize(record.fixedSize) : null;
   const lastScalableFontSize = clampSize(source.lastScalableFontSize ?? source.fontSize ?? 16);
   const fontSize = fixedSize || clampSize(source.fontSize ?? lastScalableFontSize);
-  return {
-    fontFamily,
-    fontSize,
-    lastScalableFontSize,
-    fixed: fixedSize != null,
-    fixedSize,
-  };
+  return { fontFamily, fontSize, lastScalableFontSize, fixed: fixedSize != null, fixedSize };
 }
 
 function installFontOptionsRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  const Properties = PE?.ui?.Properties;
-  if (!PE || !Properties) throw new Error('PixelEditor font option dependencies are not initialized');
+  if (!PE) throw new Error('PixelEditor font option dependencies are not initialized');
   if (PE.fontOptionsInstalled) return;
   PE.fontOptionsInstalled = true;
-
-  Properties.prototype.fontOptionsArray = function fontOptionsArrayShared() {
-    return fontOptions(this.editor.state.project).map(option => [option.value, option.label]);
-  };
-
-  PE.fontOptions = {
-    BUILTIN_FONT_OPTIONS,
-    fontOptions,
-    fontRecordForFamily,
-    resolveTextToolSelection,
-  };
+  PE.fontOptions = { BUILTIN_FONT_OPTIONS, fontOptions, fontRecordForFamily, resolveTextToolSelection };
 }
 
-export {
-  BUILTIN_FONT_OPTIONS,
-  fontOptions,
-  fontRecordForFamily,
-  resolveTextToolSelection,
-  installFontOptionsRuntime,
-};
+export { BUILTIN_FONT_OPTIONS, fontOptions, fontRecordForFamily, resolveTextToolSelection, installFontOptionsRuntime };
