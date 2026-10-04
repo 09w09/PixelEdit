@@ -44,13 +44,7 @@ function installTextContentEditingRuntime(target = globalThis) {
         { historyChannel: 'text' },
       );
       const changed = editor.bus.execute(command);
-      if (changed) {
-        if (typeof editor.scheduleLiveFeedbackRender === 'function') {
-          editor.scheduleLiveFeedbackRender({ canvas: true, overlay: true, previews: true });
-        } else {
-          editor.renderAll({ properties: false, layers: false });
-        }
-      }
+      if (changed) editor.renderAll({ properties: false, layers: false });
       return changed;
     };
 
@@ -70,7 +64,6 @@ function installTextContentEditingRuntime(target = globalThis) {
     text.addEventListener('blur', event => {
       if (!composing) commit(event.target.value);
       editor.bus.breakMergeChain?.('text-edit-end');
-      editor.history?.render?.();
     });
   };
 

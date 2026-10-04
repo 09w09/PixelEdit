@@ -10,7 +10,6 @@ import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
 import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
-import { installLivePropertyFeedbackRuntime } from './properties/live-property-feedback.js';
 import { installPageFillPropertiesRuntime } from './properties/page-fill-properties.js';
 import { installShapeStylePropertiesRuntime } from './properties/shape-style-properties.js';
 import { installTextContentEditingRuntime } from './properties/text-content-editing.js';
@@ -78,7 +77,6 @@ function installRuntimeModules() {
   installFontManagerRuntime(globalThis);
   installTextFontActionsRuntime(globalThis);
   installTextContentEditingRuntime(globalThis);
-  installLivePropertyFeedbackRuntime(globalThis);
   installFontImportRuntime(globalThis);
 }
 
