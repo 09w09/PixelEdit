@@ -23,8 +23,11 @@ test('OverlayPipeline is the single owner of overlay composition', async ({ page
   }
 
   const pipelineSource = await readFile(new URL('../src/rendering/overlay-pipeline.js', import.meta.url), 'utf8').catch(() => '');
+  const workspaceSource = await readFile(new URL('../src/app/v17-workspace.js', import.meta.url), 'utf8').catch(() => '');
   expect(pipelineSource).toContain('class OverlayPipeline');
-  expect((pipelineSource.match(/Workspace\.prototype\.renderOverlay\s*=/g) || []).length).toBe(1);
+  expect(pipelineSource).not.toMatch(/Workspace\.prototype\.renderOverlay\s*=/);
+  expect(pipelineSource).toContain('PE.workspaceCapabilities.renderOverlay');
+  expect(workspaceSource).toContain("renderOverlay() { return capability('renderOverlay', this); }");
 
   await openEditor(page);
   const state = await page.evaluate(() => {
