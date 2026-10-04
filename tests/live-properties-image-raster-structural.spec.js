@@ -179,7 +179,7 @@ test('polygon point count changes live without replacing the active count contro
   await openEditor(page);
   const id = await createPolygon(page);
   const count = page.locator('#propPointCount');
-  const handle = await count.elementHandle();
+  await count.evaluate(el => { window.__pointCountIdentity = el; });
   await count.focus();
   await count.fill('4');
 
@@ -187,7 +187,7 @@ test('polygon point count changes live without replacing the active count contro
   expect(current.node.points).toHaveLength(4);
   expect(current.activeId).toBe('propPointCount');
   await expect(count).toBeFocused();
-  expect(await count.elementHandle()).toEqual(handle);
+  expect(await page.evaluate(() => document.getElementById('propPointCount') === window.__pointCountIdentity)).toBe(true);
   await expect(page.locator('#propPoint3X')).toBeVisible();
   await expect(page.locator('#propPoint3Y')).toBeVisible();
 
