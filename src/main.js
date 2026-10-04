@@ -10,9 +10,13 @@ import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
 import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
+import { installLiveImageStructuralPropertiesRuntime } from './properties/live-image-structural-properties.js';
+import { installLivePropertyRuntime } from './properties/live-property-runtime.js';
+import { installLivePositionPropertiesRuntime } from './properties/live-position-properties.js';
+import { installLiveTextPropertiesRuntime } from './properties/live-text-properties.js';
+import { installLiveTransformPropertiesRuntime } from './properties/live-transform-properties.js';
 import { installPageFillPropertiesRuntime } from './properties/page-fill-properties.js';
 import { installShapeStylePropertiesRuntime } from './properties/shape-style-properties.js';
-import { installTextContentEditingRuntime } from './properties/text-content-editing.js';
 import { installTextFontActionsRuntime } from './properties/text-font-actions.js';
 import { installFloodFillRuntime } from './raster/flood-fill.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
@@ -76,8 +80,14 @@ function installRuntimeModules() {
   installTextLayoutRuntime(globalThis);
   installFontManagerRuntime(globalThis);
   installTextFontActionsRuntime(globalThis);
-  installTextContentEditingRuntime(globalThis);
   installFontImportRuntime(globalThis);
+  // Install last so these runtimes take ownership of the final property controls
+  // after all compatibility/property modules have attached their legacy handlers.
+  installLivePropertyRuntime(globalThis);
+  installLivePositionPropertiesRuntime(globalThis);
+  installLiveTextPropertiesRuntime(globalThis);
+  installLiveImageStructuralPropertiesRuntime(globalThis);
+  installLiveTransformPropertiesRuntime(globalThis);
 }
 
 installRuntimeModules();

@@ -3,12 +3,6 @@ import { STROKE_COLOR_OPTIONS, normalizeStrokeWidth, normalizeStrokeColor } from
 const SHAPE_TYPES = new Set(['line', 'rectangle', 'circle', 'polygon']);
 const FILLABLE_SHAPES = new Set(['rectangle', 'circle', 'polygon']);
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
-const CORNER_FIELDS = [
-  ['propRTL', 'rTL'],
-  ['propRTR', 'rTR'],
-  ['propRBL', 'rBL'],
-  ['propRBR', 'rBR'],
-];
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -18,66 +12,6 @@ function common(nodes, getter) {
   if (!nodes.length) return null;
   const first = getter(nodes[0]);
   return nodes.every(node => JSON.stringify(getter(node)) === JSON.stringify(first)) ? first : null;
-}
-
-function normalizeLiveInteger(value, min = -Infinity, max = Infinity) {
-  if (value === '') return null;
-  const number = Number(value);
-  if (!Number.isFinite(number)) return null;
-  return Math.max(min, Math.min(max, Math.round(number)));
-}
-
-function executeLivePropertyCommand(editor, command) {
-  globalThis.PixelEditor?.commandCoalescing?.attachSelectionBoundary?.(editor);
-  const changed = editor.bus.execute(command);
-  if (!changed) return false;
-  editor.renderCanvas?.();
-  editor.renderOverlay?.();
-  return true;
-}
-
-function bindLiveIntegerInput(control, {
-  editor,
-  min = -Infinity,
-  max = Infinity,
-  createCommand,
-}) {
-  if (!control || typeof createCommand !== 'function') return;
-  let editing = false;
-
-  const begin = () => {
-    if (editing) return;
-    editing = true;
-    editor.bus?.breakMergeChain?.(`property-input-start:${control.id}`);
-  };
-
-  const preview = () => {
-    const value = normalizeLiveInteger(control.value, min, max);
-    if (value == null) return false;
-    begin();
-    if (control.value !== String(value)) control.value = String(value);
-    return executeLivePropertyCommand(editor, createCommand(value));
-  };
-
-  const end = () => {
-    if (!editing) return;
-    editing = false;
-    editor.bus?.breakMergeChain?.(`property-input-end:${control.id}`);
-    editor.history?.render?.();
-  };
-
-  control.addEventListener('focus', begin);
-  control.addEventListener('input', preview);
-  control.addEventListener('wheel', event => {
-    if (globalThis.document?.activeElement !== control || event.deltaY === 0) return;
-    event.preventDefault();
-    begin();
-    const previousValue = control.value;
-    if (event.deltaY < 0) control.stepUp();
-    else control.stepDown();
-    if (control.value !== previousValue) preview();
-  }, { passive: false });
-  control.addEventListener('blur', end);
 }
 
 function field(id, label, value, { min = '', max = '', disabled = false, mixed = false } = {}) {
@@ -170,23 +104,6 @@ function installShapeStylePropertiesRuntime(target = globalThis) {
       { historyChannel: channel },
     ));
 
-    if (nodes[0].type === 'rectangle') {
-      for (const [controlId, key] of CORNER_FIELDS) {
-        bindLiveIntegerInput(this.el.querySelector(`#${controlId}`), {
-          editor: this.editor,
-          min: 0,
-          max: 200,
-          createCommand: value => new C.UpdateNodesCommand(
-            ids,
-            { [key]: value },
-            page.id,
-            '修改圆角',
-            { historyChannel: key },
-          ),
-        });
-      }
-    }
-
     const width = this.el.querySelector('#propStrokeWidth');
     const color = this.el.querySelector('#propStrokeColor');
     const style = this.el.querySelector('#propStrokeStyle');
@@ -205,8 +122,6 @@ function installShapeStylePropertiesRuntime(target = globalThis) {
   PE.shapeStyleProperties = {
     SHAPE_TYPES,
     FILLABLE_SHAPES,
-    normalizeLiveInteger,
-    bindLiveIntegerInput,
     shapeStylePropertyMarkup: (properties, nodes, locked = false) => shapeStylePropertyMarkup(properties, nodes, locked, normalizeStroke, normalizeFill),
   };
 }
@@ -214,8 +129,6 @@ function installShapeStylePropertiesRuntime(target = globalThis) {
 export {
   SHAPE_TYPES,
   FILLABLE_SHAPES,
-  normalizeLiveInteger,
-  bindLiveIntegerInput,
   shapeStylePropertyMarkup,
   installShapeStylePropertiesRuntime,
 };
