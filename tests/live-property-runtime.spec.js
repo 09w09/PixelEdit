@@ -26,6 +26,19 @@ async function state(page, id) {
   }), id);
 }
 
+async function historySince(page, baseline) {
+  return page.evaluate(start => {
+    const editor = window.PixelEditorTest.editor;
+    return {
+      cursor: editor.bus.cursor,
+      entries: editor.bus.entries.slice(start + 1, editor.bus.cursor + 1).map(entry => ({
+        label: entry.label,
+        descriptor: entry.mergeDescriptor || null,
+      })),
+    };
+  }, baseline);
+}
+
 test('number input updates geometry before blur and keeps the same focused control', async ({ page }) => {
   await openEditor(page);
   const id = await createRectangle(page);
@@ -117,6 +130,7 @@ test('selection changes split live property history sessions', async ({ page }) 
     return [a, b];
   });
   const baseline = await page.evaluate(() => window.PixelEditorTest.editor.bus.cursor);
+  const stages = {};
 
   await page.evaluate(id => {
     const editor = window.PixelEditorTest.editor;
@@ -124,20 +138,34 @@ test('selection changes split live property history sessions', async ({ page }) 
     editor.pageSelectedId = null;
     editor.renderAll({ canvas: false, history: false });
   }, ids[0]);
+  stages.afterFirstSelection = await historySince(page, baseline);
   await page.locator('#propX').fill('30');
+  stages.afterFirstFill = await historySince(page, baseline);
 
   await page.evaluate(id => {
     const editor = window.PixelEditorTest.editor;
     editor.state.selection.replace([id]);
     editor.renderAll({ canvas: false, history: false });
   }, ids[1]);
+  stages.afterSecondSelection = await historySince(page, baseline);
   await page.locator('#propX').fill('110');
+  stages.afterSecondFill = await historySince(page, baseline);
   await page.locator('#propX').press('Tab');
+  stages.afterTab = await historySince(page, baseline);
 
   const result = await page.evaluate(nodeIds => ({
     values: nodeIds.map(id => window.PixelEditorTest.getNode(id)?.x),
     cursor: window.PixelEditorTest.editor.bus.cursor,
   }), ids);
   expect(result.values).toEqual([30, 110]);
-  expect(result.cursor - baseline).toBe(2);
+  expect({ delta: result.cursor - baseline, stages }).toEqual({
+    delta: 2,
+    stages: {
+      afterFirstSelection: { cursor: baseline, entries: [] },
+      afterFirstFill: expect.any(Object),
+      afterSecondSelection: expect.any(Object),
+      afterSecondFill: expect.any(Object),
+      afterTab: expect.any(Object),
+    },
+  });
 });
