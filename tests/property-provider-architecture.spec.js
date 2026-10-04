@@ -1,0 +1,86 @@
+import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+
+async function openEditor(page) {
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(window.PixelEditorTest?.editor));
+}
+
+test('properties are owned by one PropertyProvider and PropertySession', async ({ page }) => {
+  await openEditor(page);
+  const result = await page.evaluate(() => {
+    const system = window.PixelEditor.properties;
+    const editor = window.PixelEditorTest.editor;
+    return {
+      hasDescriptor: typeof system?.PropertyDescriptor === 'function',
+      hasProvider: typeof system?.PropertyProvider === 'function',
+      hasSession: typeof system?.PropertySession === 'function',
+      providerOwned: Boolean(system?.provider) && editor.properties?.provider === system.provider,
+      descriptorIds: system?.provider?.descriptors?.map(item => item.id) || [],
+    };
+  });
+  expect(result.hasDescriptor).toBe(true);
+  expect(result.hasProvider).toBe(true);
+  expect(result.hasSession).toBe(true);
+  expect(result.providerOwned).toBe(true);
+  expect(result.descriptorIds.length).toBeGreaterThan(0);
+  expect(new Set(result.descriptorIds).size).toBe(result.descriptorIds.length);
+});
+
+test('live property editing keeps the original DOM control instead of cloning it', async ({ page }) => {
+  await openEditor(page);
+  await page.evaluate(() => window.PixelEditorTest.createNode('rectangle', {
+    x: 40, y: 40, w: 80, h: 60,
+    stroke: { width: 1, color: 1, style: 'solid' },
+    fill: { mode: 'solid', color: 1 },
+  }));
+  const result = await page.evaluate(() => {
+    const control = document.querySelector('#propX');
+    control.focus();
+    control.value = '73';
+    control.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '3' }));
+    return {
+      sameControl: document.querySelector('#propX') === control,
+      activeControl: document.activeElement === control,
+      value: window.PixelEditorTest.getNode(window.PixelEditorTest.editor.state.selection.primaryId)?.x,
+    };
+  });
+  expect(result).toEqual({ sameControl: true, activeControl: true, value: 73 });
+});
+
+test('property implementation has no prototype patch stack, cloneControl, or regex UI surgery', async () => {
+  const paths = [
+    '../src/properties/live-property-runtime.js',
+    '../src/properties/live-position-properties.js',
+    '../src/properties/live-transform-properties.js',
+    '../src/properties/live-text-properties.js',
+    '../src/properties/live-image-structural-properties.js',
+    '../src/properties/shape-style-properties.js',
+    '../src/properties/page-fill-properties.js',
+    '../src/properties/text-font-actions.js',
+    '../src/media/raster-layer.js',
+    '../src/ui/history-properties.js',
+    '../src/fonts/font-options.js',
+  ];
+  for (const relative of paths) {
+    const source = await readFile(new URL(relative, import.meta.url), 'utf8');
+    expect(source, relative).not.toContain('Properties.prototype');
+    expect(source, relative).not.toContain('cloneControl');
+    expect(source, relative).not.toContain('stripFontActionButtons');
+  }
+});
+
+test('main installs one native property system instead of layered property runtimes', async () => {
+  const source = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  for (const legacy of [
+    'installLivePropertyRuntime',
+    'installLivePositionPropertiesRuntime',
+    'installLiveTextPropertiesRuntime',
+    'installLiveImageStructuralPropertiesRuntime',
+    'installLiveTransformPropertiesRuntime',
+    'installPageFillPropertiesRuntime',
+    'installShapeStylePropertiesRuntime',
+    'installTextFontActionsRuntime',
+  ]) expect(source).not.toContain(legacy);
+  expect(source).toContain('installPropertySystem');
+});
