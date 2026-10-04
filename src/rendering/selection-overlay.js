@@ -102,6 +102,36 @@ function installSelectionOverlayRuntime(target = globalThis) {
     return '';
   }
 
+  function selectionMarkup(editor) {
+    const page = editor.activePage();
+    if (!page) return '';
+    const preview = editor.overlayState?.previewMove;
+    const dx = preview?.dx || 0;
+    const dy = preview?.dy || 0;
+    let html = '';
+    for (const id of editor.state.selection.ids) {
+      const node = M.nodeById(page, id);
+      if (node) html += outlineMarkup(node, dx, dy, sourcePivotBounds(editor, node));
+    }
+    return html;
+  }
+
+  function handlesMarkup(editor) {
+    const page = editor.activePage();
+    const ids = editor.state.selection.ids;
+    if (!page || ids.length !== 1) return '';
+    const node = M.nodeById(page, ids[0]);
+    const geometry = node ? G.selectionGeometry(node, sourcePivotBounds(editor, node)) : null;
+    if (!geometry) return '';
+    const preview = editor.overlayState?.previewMove;
+    const dx = preview?.dx || 0;
+    const dy = preview?.dy || 0;
+    const handles = BOX_TYPES.has(node.type)
+      ? ['nw', 'ne', 'sw', 'se'].map(corner => geometry.handles[corner])
+      : geometry.controlPoints;
+    return handles.map(point => handleRect(translated(point, dx, dy), editor.zoom)).join('');
+  }
+
   Workspace.prototype.selectionHandleAt = function selectionHandleAt(point) {
     const ids = this.state.selection.ids;
     if (ids.length !== 1) return null;
@@ -110,37 +140,6 @@ function installSelectionOverlayRuntime(target = globalThis) {
     const tree = new M.TreeModel(page);
     if (!node || tree.isEffectivelyLocked(node.id)) return null;
     return G.hitHandle(node, point, this.zoom, sourcePivotBounds(this, node));
-  };
-
-  Workspace.prototype.renderOverlay = function renderOverlay() {
-    const svg = this.overlay;
-    if (!svg) return;
-    const page = this.activePage();
-    const preview = this.overlayState.previewMove;
-    const dx = preview?.dx || 0;
-    const dy = preview?.dy || 0;
-    const ids = this.state.selection.ids;
-    let html = '';
-
-    for (const id of ids) {
-      const node = M.nodeById(page, id);
-      if (node) html += outlineMarkup(node, dx, dy, sourcePivotBounds(this, node));
-    }
-
-    if (ids.length === 1) {
-      const node = M.nodeById(page, ids[0]);
-      const geometry = node ? G.selectionGeometry(node, sourcePivotBounds(this, node)) : null;
-      let handles = [];
-      if (geometry && BOX_TYPES.has(node.type)) handles = ['nw', 'ne', 'sw', 'se'].map(corner => geometry.handles[corner]);
-      else if (geometry) handles = geometry.controlPoints;
-      for (const point of handles) html += handleRect(translated(point, dx, dy), this.zoom);
-    }
-
-    html += R.OverlayRenderer.markup({
-      smartGuides: this.overlayState.smartGuides || [],
-      marquee: this.overlayState.marquee,
-    });
-    svg.innerHTML = html;
   };
 
   const originalBeginLiveHandle = Workspace.prototype.beginLiveHandle;
@@ -284,6 +283,8 @@ function installSelectionOverlayRuntime(target = globalThis) {
     sourcePivotBounds,
     selectionGeometry: G.selectionGeometry,
     outlineMarkup,
+    selectionMarkup,
+    handlesMarkup,
   };
 }
 

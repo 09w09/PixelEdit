@@ -22,22 +22,18 @@ function transparencyPreviewMarkup(node, decodePixels) {
 function installTransparencyOverlayRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
-  const Workspace = PE?.ui?.Workspace;
   const decode = PE?.tristateRaster?.decodeTriStatePixels;
-  if (!M || !Workspace || !decode) throw new Error('PixelEditor transparency dependencies are not initialized');
+  if (!M || !decode) throw new Error('PixelEditor transparency dependencies are not initialized');
   if (PE.transparencyOverlayInstalled) return;
   PE.transparencyOverlayInstalled = true;
 
-  const originalRenderOverlay = Workspace.prototype.renderOverlay;
-  Workspace.prototype.renderOverlay = function renderOverlayWithTransparency() {
-    originalRenderOverlay.call(this);
-    if (!this.editorPreferences?.transparencyPreview || !this.overlay) return;
-    const id = this.state.selection.primaryId;
-    if (!id) return;
-    const node = M.nodeById(this.activePage(), id);
-    if (!node || node.type !== 'raster') return;
-    const markup = transparencyPreviewMarkup(node, decode);
-    if (markup) this.overlay.insertAdjacentHTML('afterbegin', markup);
+  const markup = editor => {
+    if (!editor?.editorPreferences?.transparencyPreview) return '';
+    const id = editor.state.selection.primaryId;
+    if (!id) return '';
+    const node = M.nodeById(editor.activePage(), id);
+    if (!node || node.type !== 'raster') return '';
+    return transparencyPreviewMarkup(node, decode);
   };
 
   PE.transparencyOverlay = {
@@ -45,6 +41,7 @@ function installTransparencyOverlayRuntime(target = globalThis) {
     PREVIEW_OPACITY,
     transparentPixelRects: node => transparentPixelRects(node, decode),
     transparencyPreviewMarkup: node => transparencyPreviewMarkup(node, decode),
+    markup,
   };
 }
 

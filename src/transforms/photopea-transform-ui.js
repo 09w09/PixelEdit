@@ -104,24 +104,20 @@ function installPhotopeaTransformUIRuntime(target = globalThis) {
     return null;
   };
 
-  const originalRenderOverlay = Workspace.prototype.renderOverlay;
-  Workspace.prototype.renderOverlay = function renderEightHandleOverlay() {
-    const result = originalRenderOverlay.call(this);
-    if (this.state.selection.ids.length !== 1 || !this.overlay) return result;
-    const node = M.nodeById(this.activePage(), this.state.selection.ids[0]);
-    if (!node || !BOX_TYPES.has(node.type)) return result;
-    const pivot = S.sourcePivotBounds(this, node);
+  function edgeHandlesMarkup(editor) {
+    if (editor.state.selection.ids.length !== 1) return '';
+    const node = M.nodeById(editor.activePage(), editor.state.selection.ids[0]);
+    if (!node || !BOX_TYPES.has(node.type)) return '';
+    const pivot = S.sourcePivotBounds(editor, node);
     const geometry = G.selectionGeometry(node, pivot);
-    if (!geometry?.handles) return result;
-    const dx = this.overlayState.previewMove?.dx || 0;
-    const dy = this.overlayState.previewMove?.dy || 0;
-    const markup = EDGE_CORNERS.map(corner => {
+    if (!geometry?.handles) return '';
+    const dx = editor.overlayState.previewMove?.dx || 0;
+    const dy = editor.overlayState.previewMove?.dy || 0;
+    return EDGE_CORNERS.map(corner => {
       const point = geometry.handles[corner];
-      return svgHandle({ x: point.x + dx, y: point.y + dy }, this.zoom, S.handleVisualSize);
+      return svgHandle({ x: point.x + dx, y: point.y + dy }, editor.zoom, S.handleVisualSize);
     }).join('');
-    this.overlay.insertAdjacentHTML('beforeend', markup);
-    return result;
-  };
+  }
 
   function reanchorTransform(editor, node, gesture, anchorLocal, anchorWorld) {
     const base = T.normalizeTransform(gesture?.original?.transform || node.transform);
@@ -209,6 +205,7 @@ function installPhotopeaTransformUIRuntime(target = globalThis) {
     integerVisualBounds,
     withEdgeHandles,
     resizeCursorForHandle,
+    edgeHandlesMarkup,
   };
 }
 

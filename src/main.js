@@ -15,6 +15,7 @@ import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
 import { installBinaryImagePreviewRuntime } from './rendering/binary-image-preview.js';
 import { installBinaryImageRuntime } from './rendering/binary-image.js';
+import { installOverlayPipelineRuntime } from './rendering/overlay-pipeline.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
 import { installSelectionOverlayRuntime } from './rendering/selection-overlay.js';
 import { installTextLayoutRuntime } from './rendering/text-layout.js';
@@ -58,6 +59,7 @@ function installRuntimeModules() {
   installPhotopeaTransformUIRuntime(globalThis);
   installTransparencyOverlayRuntime(globalThis);
   installCanvasCursorRuntime(globalThis);
+  installOverlayPipelineRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
   installFontManagerRuntime(globalThis);
   installFontImportRuntime(globalThis);

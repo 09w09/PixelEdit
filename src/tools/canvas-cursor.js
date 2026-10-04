@@ -52,6 +52,7 @@ function installCanvasCursorRuntime(target = globalThis) {
     CROSSHAIR_TOOLS,
     cursorModeForTool,
     brushCursorBounds,
+    brushCursorMarkup,
   };
 
   Workspace.prototype.applyCanvasCursor = function applyCanvasCursor({ resetNative = false } = {}) {
@@ -123,14 +124,6 @@ function installCanvasCursorRuntime(target = globalThis) {
     }
     return result;
   };
-
-  const previousRenderOverlay = Workspace.prototype.renderOverlay;
-  Workspace.prototype.renderOverlay = function renderOverlayWithCanvasCursor(...args) {
-    const result = previousRenderOverlay.apply(this, args);
-    const markup = brushCursorMarkup(this);
-    if (markup && this.overlay) this.overlay.insertAdjacentHTML('beforeend', markup);
-    return result;
-  };
 }
 
 export {
@@ -138,5 +131,6 @@ export {
   CROSSHAIR_TOOLS,
   cursorModeForTool,
   brushCursorBounds,
+  brushCursorMarkup,
   installCanvasCursorRuntime,
 };
