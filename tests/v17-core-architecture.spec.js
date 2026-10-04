@@ -18,6 +18,12 @@ test('index is a pure V17 shell without inline V15 core definitions', async () =
   expect(html).toContain('<script type="module" src="./src/main.js"></script>');
 });
 
+test('main no longer upgrades a V15 model through installV17SchemaRuntime', async () => {
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  expect(main).not.toContain('installV17SchemaRuntime');
+  expect(main).toContain("import './core/index.js';");
+});
+
 test('application boots directly as canonical V17', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => ({
@@ -54,4 +60,5 @@ test('canonical project/page schema is V17 without legacy workspaceLayout or fil
   expect(result.pageFillHasValue).toBe(false);
   expect(result.pageFill).toMatchObject({ mode: 'solid', color: expect.any(Number) });
   expect(result.nodeTypes.map(item => item.type)).toEqual(['line', 'rectangle', 'circle', 'polygon', 'text', 'image', 'raster']);
+  expect(result.nodeTypes.every(item => item.hasTransform)).toBe(true);
 });
