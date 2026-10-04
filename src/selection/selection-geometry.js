@@ -99,11 +99,15 @@ function createSelectionGeometry(transformModel) {
     if (!geometry) return null;
     const tolerance = 8 / safeZoom(zoom);
     if (BOX_TYPES.has(node.type)) {
-      for (const corner of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
+      const hit = corner => {
         const point = geometry.handles[corner];
-        if (Math.hypot(point.x - worldPoint.x, point.y - worldPoint.y) <= tolerance) {
-          return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };
-        }
+        return Math.hypot(point.x - worldPoint.x, point.y - worldPoint.y) <= tolerance;
+      };
+      for (const corner of ['nw', 'ne', 'sw', 'se']) {
+        if (hit(corner)) return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };
+      }
+      for (const corner of ['n', 'e', 's', 'w']) {
+        if (hit(corner)) return { type: 'resize', corner, node, startBounds: { ...geometry.sourceBounds } };
       }
       return null;
     }
