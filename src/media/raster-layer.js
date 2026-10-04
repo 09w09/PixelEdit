@@ -43,6 +43,7 @@ function installRasterLayerRuntime(target = globalThis) {
   const originalPaintTarget = Workspace.prototype.paintTarget;
   Workspace.prototype.paintTarget = function paintTarget() {
     const page = this.activePage(), id = this.state.selection.primaryId, node = M.nodeById(page, id), tree = new M.TreeModel(page);
+    if (node?.type === 'image') return null;
     if (node?.type === 'raster') {
       if (tree.isEffectivelyLocked(node.id) || !tree.isEffectivelyVisible(node.id)) return null;
       return { kind: 'node', node };

@@ -1,5 +1,5 @@
 import { fillValue } from '../effects/fill.js';
-import { renderStroke } from '../effects/stroke.js';
+import { renderStroke, usesVectorTransformedRectangleStroke } from '../effects/stroke.js';
 import { finishNode } from './helpers.js';
 
 const rectangleRenderer = {
@@ -15,7 +15,7 @@ const rectangleRenderer = {
       const value = fillValue(node, runtime, (node.x || 0) + x, (node.y || 0) + y, x, y);
       if (value != null) layer.plot((node.x || 0) + x, (node.y || 0) + y, value, true);
     }
-    renderStroke(layer, node, runtime);
+    if (!usesVectorTransformedRectangleStroke(node, runtime)) renderStroke(layer, node, runtime);
     finishNode(context, node, layer, bounds);
   },
 };

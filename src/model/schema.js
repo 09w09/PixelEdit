@@ -55,7 +55,8 @@ function validateProject(project) {
     if (page.fill?.mode === 'transparent' || Object.hasOwn(page.fill || {}, 'value') || !sameRecord(page.fill, normalizeFill(page.fill, { background: true }))) throw new Error('V17 页面填充数据无效');
     for (const node of page.nodes) {
       if (!node?.id || !node.type) throw new Error('V17 图层数据无效');
-      if (Object.hasOwn(node, 'lineWidth') || Object.hasOwn(node, 'strokeColor') || Object.hasOwn(node, 'strokeStyle')) throw new Error('V17 图形包含旧描边字段');
+      const legacyStrokeFields = ['lineWidth', 'strokeColor', 'strokeStyle'].filter(key => Object.hasOwn(node, key));
+      if (legacyStrokeFields.length) throw new Error(`V17 图形包含旧描边字段: ${legacyStrokeFields.join(', ')}`);
       if (Object.hasOwn(node.fill || {}, 'value')) throw new Error('V17 填充不得包含 fill.value');
       if (SHAPE_TYPES.has(node.type) && !sameRecord(node.stroke, normalizeStroke(node.stroke))) throw new Error('V17 描边数据无效');
       if ((FILLABLE_TYPES.has(node.type) || node.fill) && !sameRecord(node.fill, normalizeFill(node.fill))) throw new Error('V17 填充数据无效');

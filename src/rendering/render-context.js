@@ -1,6 +1,7 @@
 import { Framebuffer, integerLayerBounds } from './framebuffer.js';
 import { CANVAS_BOUNDS, intersectBounds, hasArea } from './effects/clipping.js';
 import { transformFramebuffer } from './effects/transform.js';
+import { renderTransformedRectangleStroke } from './effects/stroke.js';
 import { nodeTransformMatrix } from '../transforms/transform-model.js';
 
 class RenderContext {
@@ -40,7 +41,8 @@ class RenderContext {
     const matrix = nodeTransformMatrix(node, sourceBounds);
     this.transformStack.push(matrix);
     try {
-      const output = transformFramebuffer(layer, node, sourceBounds);
+      let output = transformFramebuffer(layer, node, sourceBounds);
+      output = renderTransformedRectangleStroke(output, node, sourceBounds, this.renderer.runtime);
       this.framebuffer.composite(output, this.currentClip);
       return output;
     } finally {
