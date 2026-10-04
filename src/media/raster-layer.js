@@ -51,22 +51,6 @@ function installRasterLayerRuntime(target = globalThis) {
     return originalPaintTarget.call(this);
   };
 
-  const originalBeginPaint = Workspace.prototype.beginPaint;
-  Workspace.prototype.beginPaint = function beginPaint(point) {
-    const targetInfo = this.paintTarget();
-    if (!targetInfo || targetInfo.kind !== 'node' || targetInfo.node.type !== 'raster') return originalBeginPaint.call(this, point);
-    const pencilColor = this.getToolDefaults?.('pencil')?.color === 0 ? RASTER_WHITE : RASTER_BLACK;
-    this.notice('');
-    this.customGesture = {
-      type: 'paint', targetKind: 'raster', nodeId: targetInfo.node.id, pageId: this.activePage().id,
-      value: this.tool === 'eraser' ? RASTER_TRANSPARENT : pencilColor,
-      start: point, last: point, lastPaint: point, originalRaster: structuredClone(targetInfo.node.raster), changed: false,
-    };
-    this.applyPaintSegment(this.customGesture, point, point);
-    this.renderCanvas();
-    return true;
-  };
-
   const originalApplyPaintSegment = Workspace.prototype.applyPaintSegment;
   Workspace.prototype.applyPaintSegment = function applyPaintSegment(gesture, a, b) {
     if (gesture.targetKind !== 'raster') return originalApplyPaintSegment.call(this, gesture, a, b);

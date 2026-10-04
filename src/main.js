@@ -24,10 +24,49 @@ import { installCanvasCursorRuntime } from './tools/canvas-cursor.js';
 import { installFillToolOptionsRuntime } from './tools/fill-tool-options.js';
 import { installToolOptionsRuntime } from './tools/tool-options-bar.js';
 import { installToolStateRuntime } from './tools/tool-state.js';
+import { installToolSystemRuntime } from './tools/tool-controller.js';
 import { installTextToolOptionsRuntime } from './tools/text-tool-options.js';
 import { installPhotopeaTransformUIRuntime } from './transforms/photopea-transform-ui.js';
 import { installSelectionTransformRuntime } from './transforms/selection-transform.js';
 import { installContextMenuRuntime } from './ui/context-menu.js';
 import { installContextMenuBoundaryRuntime } from './ui/context-menu-boundary.js';
 import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
-function installRuntimeModules(){installEditorPreferencesRuntime(globalThis);installFontOptionsRuntime(globalThis);installToolStateRuntime(globalThis);installTextToolOptionsRuntime(globalThis);installToolOptionsRuntime(globalThis);installFillToolOptionsRuntime(globalThis);installImageRuntime(globalThis);installBinaryImageRuntime(globalThis);installPixelStrokeRuntime(globalThis);installTriStateRasterRuntime(globalThis);installRasterLayerRuntime(globalThis);installPaintBrushRuntime(globalThis);installRasterSizingRuntime(globalThis);installEditBoundariesRuntime(globalThis);installSelectionGeometryRuntime(globalThis);installSelectionTransformRuntime(globalThis);installFloodFillRuntime(globalThis);installElementClipboardRuntime(globalThis);installContextMenuRuntime(globalThis);installContextMenuBoundaryRuntime(globalThis);installHistoryPropertiesRuntime(globalThis);installSelectionOverlayRuntime(globalThis);installPhotopeaTransformUIRuntime(globalThis);installTransparencyOverlayRuntime(globalThis);installCanvasCursorRuntime(globalThis);installTextLayoutRuntime(globalThis);installFontManagerRuntime(globalThis);installFontImportRuntime(globalThis);installPropertySystem(globalThis);installBinaryImagePreviewRuntime(globalThis);}installRuntimeModules();bootstrapPixelEdit(globalThis);export{installRuntimeModules};
+
+function installRuntimeModules() {
+  installEditorPreferencesRuntime(globalThis);
+  installFontOptionsRuntime(globalThis);
+  installToolStateRuntime(globalThis);
+  installTextToolOptionsRuntime(globalThis);
+  installToolOptionsRuntime(globalThis);
+  installFillToolOptionsRuntime(globalThis);
+  installImageRuntime(globalThis);
+  installBinaryImageRuntime(globalThis);
+  installPixelStrokeRuntime(globalThis);
+  installTriStateRasterRuntime(globalThis);
+  installRasterLayerRuntime(globalThis);
+  installPaintBrushRuntime(globalThis);
+  installRasterSizingRuntime(globalThis);
+  installEditBoundariesRuntime(globalThis);
+  installSelectionGeometryRuntime(globalThis);
+  installSelectionTransformRuntime(globalThis);
+  installFloodFillRuntime(globalThis);
+  installElementClipboardRuntime(globalThis);
+  installContextMenuRuntime(globalThis);
+  installContextMenuBoundaryRuntime(globalThis);
+  installHistoryPropertiesRuntime(globalThis);
+  installSelectionOverlayRuntime(globalThis);
+  installPhotopeaTransformUIRuntime(globalThis);
+  installTransparencyOverlayRuntime(globalThis);
+  installCanvasCursorRuntime(globalThis);
+  installTextLayoutRuntime(globalThis);
+  installFontManagerRuntime(globalThis);
+  installFontImportRuntime(globalThis);
+  installPropertySystem(globalThis);
+  installBinaryImagePreviewRuntime(globalThis);
+  installToolSystemRuntime(globalThis);
+}
+
+installRuntimeModules();
+bootstrapPixelEdit(globalThis);
+
+export { installRuntimeModules };

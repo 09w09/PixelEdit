@@ -62,20 +62,6 @@ function rasterState(settings, renderer, tristate, absoluteX, absoluteY, localX,
   return bit ? tristate.RASTER_BLACK : tristate.RASTER_WHITE;
 }
 
-function ensureBucketButton() {
-  if (document.querySelector('[data-tool="bucket"]')) return;
-  const eraser = document.querySelector('[data-tool="eraser"]');
-  const grid = eraser?.closest('.tool-grid');
-  if (!grid) return;
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.dataset.tool = 'bucket';
-  button.className = 'tool-btn';
-  button.title = '油漆桶（B）';
-  button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 4l8 8-6 6-6-6zM7 4l2-2 8 8M14 17h7M18 14l3 3-3 3"/></svg><span>油漆桶</span>';
-  eraser.insertAdjacentElement('afterend', button);
-}
-
 function installFloodFillRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
@@ -88,34 +74,6 @@ function installFloodFillRuntime(target = globalThis) {
   }
   if (PE.floodFillInstalled) return;
   PE.floodFillInstalled = true;
-
-  const originalMount = Workspace.prototype.mount;
-  Workspace.prototype.mount = function mountWithBucket() {
-    const result = originalMount.call(this);
-    ensureBucketButton();
-    this.toolbar?.mount?.();
-    const shortcut = event => {
-      const editing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName) || event.target?.isContentEditable;
-      if (editing || event.ctrlKey || event.metaKey || event.altKey || event.key?.toLowerCase() !== 'b') return;
-      event.preventDefault();
-      this.setTool('bucket');
-    };
-    target.addEventListener?.('keydown', shortcut);
-    return result;
-  };
-
-  const originalSetTool = Workspace.prototype.setTool;
-  Workspace.prototype.setTool = function setToolWithBucket(tool) {
-    if (tool !== 'bucket') return originalSetTool.call(this, tool);
-    this.cancelCustomGesture?.();
-    this.tool = 'bucket';
-    document.querySelectorAll('[data-tool]').forEach(button => {
-      button.classList.toggle('active', button.dataset.tool === 'bucket');
-    });
-    this.updateInteraction?.();
-    this.toolOptionsBar?.render?.();
-    return 'bucket';
-  };
 
   Workspace.prototype.bucketFillTarget = function bucketFillTarget() {
     const page = this.activePage();
@@ -238,20 +196,7 @@ function installFloodFillRuntime(target = globalThis) {
     return this.bucketFillImage(info.node, point, settings);
   };
 
-  const originalPointerDown = Workspace.prototype.onPointerDown;
-  Workspace.prototype.onPointerDown = function onPointerDownWithBucket(event) {
-    if (this.tool !== 'bucket') return originalPointerDown.call(this, event);
-    if (event.button === 2) return;
-    const point = this.logicalPoint(event);
-    this.canvas.setPointerCapture?.(event.pointerId);
-    this.bucketFillAt(point);
-  };
-
-  PE.floodFill = {
-    collectFloodRegion,
-    sampledBit,
-    ensureBucketButton,
-  };
+  PE.floodFill = { collectFloodRegion, sampledBit };
 }
 
 export { collectFloodRegion, installFloodFillRuntime };

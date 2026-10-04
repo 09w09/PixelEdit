@@ -1,3 +1,5 @@
+import { canPaintSelection } from '../media/edit-boundaries.js';
+
 function brushWidth(value) {
   return Math.max(1, Math.min(100, Math.round(Number(value) || 1)));
 }
@@ -18,6 +20,72 @@ function expandBrushPoints(points, width) {
   return [...unique.values()];
 }
 
+function beginPaintWithBrush(editor, point) {
+  const T = globalThis.PixelEditor?.tristateRaster;
+  if (!editor || !T) return false;
+  if (!canPaintSelection(editor)) return false;
+  const info = editor.paintTarget?.();
+  if (!info) {
+    editor.notice?.('铅笔和橡皮擦只能编辑已选择且未锁定的图片 / 栅格图层；未选择普通图层时直接编辑页面背景');
+    return false;
+  }
+  const settings = editor.getToolDefaults?.(editor.tool) || {};
+  const width = brushWidth(settings.width);
+
+  if (info.kind === 'page') {
+    editor.notice?.('');
+    editor.state.selection.clear();
+    editor.pageSelectedId = info.page.id;
+    editor.pageLayers?.render?.();
+    editor.properties?.render?.();
+    const value = editor.tool === 'eraser' ? 0 : settings.color === 0 ? 0 : 1;
+    editor.customGesture = {
+      type: 'paint',
+      tool: editor.tool,
+      targetKind: 'page',
+      nodeId: null,
+      pageId: info.page.id,
+      value,
+      brushWidth: width,
+      start: point,
+      last: point,
+      lastPaint: point,
+      originalOverlay: structuredClone(info.page.overlay || {}),
+      changed: false,
+    };
+    editor.applyPaintSegment(editor.customGesture, point, point);
+    editor.renderCanvas?.();
+    return true;
+  }
+
+  if (info.kind === 'node' && info.node?.type === 'raster') {
+    const value = editor.tool === 'eraser'
+      ? T.RASTER_TRANSPARENT
+      : settings.color === 0 ? T.RASTER_WHITE : T.RASTER_BLACK;
+    editor.notice?.('');
+    editor.customGesture = {
+      type: 'paint',
+      tool: editor.tool,
+      targetKind: 'raster',
+      nodeId: info.node.id,
+      pageId: editor.activePage().id,
+      value,
+      brushWidth: width,
+      start: point,
+      last: point,
+      lastPaint: point,
+      originalRaster: structuredClone(info.node.raster),
+      changed: false,
+    };
+    editor.applyPaintSegment(editor.customGesture, point, point);
+    editor.renderCanvas?.();
+    return true;
+  }
+
+  editor.notice?.('图片、文字和矢量图层不能直接涂鸦，请先栅格化后再使用铅笔或橡皮。');
+  return false;
+}
+
 function installPaintBrushRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
@@ -27,66 +95,6 @@ function installPaintBrushRuntime(target = globalThis) {
   if (!M || !C || !Workspace || !T) throw new Error('PixelEditor paint brush dependencies are not initialized');
   if (PE.paintBrushInstalled) return;
   PE.paintBrushInstalled = true;
-
-  const previousBeginPaint = Workspace.prototype.beginPaint;
-  Workspace.prototype.beginPaint = function beginPaintWithBrush(point) {
-    const info = this.paintTarget();
-    if (!info) return previousBeginPaint.call(this, point);
-    const settings = this.getToolDefaults?.(this.tool) || {};
-    const width = brushWidth(settings.width);
-
-    if (info.kind === 'page') {
-      this.notice('');
-      this.state.selection.clear();
-      this.pageSelectedId = info.page.id;
-      this.pageLayers?.render();
-      this.properties?.render();
-      const value = this.tool === 'eraser' ? 0 : settings.color === 0 ? 0 : 1;
-      this.customGesture = {
-        type: 'paint',
-        tool: this.tool,
-        targetKind: 'page',
-        nodeId: null,
-        pageId: info.page.id,
-        value,
-        brushWidth: width,
-        start: point,
-        last: point,
-        lastPaint: point,
-        originalOverlay: structuredClone(info.page.overlay || {}),
-        changed: false,
-      };
-      this.applyPaintSegment(this.customGesture, point, point);
-      this.renderCanvas();
-      return true;
-    }
-
-    if (info.kind === 'node' && info.node?.type === 'raster') {
-      const value = this.tool === 'eraser'
-        ? T.RASTER_TRANSPARENT
-        : settings.color === 0 ? T.RASTER_WHITE : T.RASTER_BLACK;
-      this.notice('');
-      this.customGesture = {
-        type: 'paint',
-        tool: this.tool,
-        targetKind: 'raster',
-        nodeId: info.node.id,
-        pageId: this.activePage().id,
-        value,
-        brushWidth: width,
-        start: point,
-        last: point,
-        lastPaint: point,
-        originalRaster: structuredClone(info.node.raster),
-        changed: false,
-      };
-      this.applyPaintSegment(this.customGesture, point, point);
-      this.renderCanvas();
-      return true;
-    }
-
-    return previousBeginPaint.call(this, point);
-  };
 
   const previousApplyPaintSegment = Workspace.prototype.applyPaintSegment;
   Workspace.prototype.applyPaintSegment = function applyPaintSegmentWithBrush(gesture, a, b) {
@@ -100,9 +108,9 @@ function installPaintBrushRuntime(target = globalThis) {
       const page = this.activePage();
       page.overlay = page.overlay || {};
       let changed = false;
-      for (const point of points) {
-        if (point.x < 0 || point.y < 0 || point.x >= 400 || point.y >= 300) continue;
-        const key = `${point.x},${point.y}`;
+      for (const pixel of points) {
+        if (pixel.x < 0 || pixel.y < 0 || pixel.x >= 400 || pixel.y >= 300) continue;
+        const key = `${pixel.x},${pixel.y}`;
         if (page.overlay[key] === gesture.value) continue;
         page.overlay[key] = gesture.value;
         changed = true;
@@ -113,7 +121,7 @@ function installPaintBrushRuntime(target = globalThis) {
 
     const node = M.nodeById(this.activePage(), gesture.nodeId);
     if (!node || node.type !== 'raster') return false;
-    const local = points.map(point => ({ x: point.x - node.x, y: point.y - node.y }));
+    const local = points.map(pixel => ({ x: pixel.x - node.x, y: pixel.y - node.y }));
     const before = node.raster.data;
     node.raster = T.paintTriStateRaster(node, local, gesture.value);
     const changed = node.raster.data !== before;
@@ -150,7 +158,7 @@ function installPaintBrushRuntime(target = globalThis) {
     return previousCommitPaint.call(this, gesture);
   };
 
-  PE.paintBrush = { brushWidth, expandBrushPoints };
+  PE.paintBrush = { brushWidth, expandBrushPoints, beginPaintWithBrush };
 }
 
-export { brushWidth, expandBrushPoints, installPaintBrushRuntime };
+export { brushWidth, expandBrushPoints, beginPaintWithBrush, installPaintBrushRuntime };

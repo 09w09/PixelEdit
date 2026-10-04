@@ -5,8 +5,12 @@ function bootstrapPixelEdit(target = globalThis) {
   const boot = () => {
     if (PE.app) return PE.app;
     if (typeof document === 'undefined') return null;
+    if (!PE.tools?.ToolController || !PE.tools?.registry) throw new Error('PixelEditor tool system is not initialized');
     document.documentElement.dataset.pixelEditor = 'v17';
-    PE.app = new PE.ui.Workspace().mount();
+    const editor = new PE.ui.Workspace();
+    editor.toolController = new PE.tools.ToolController(editor, PE.tools.registry, target);
+    editor.toolController.install();
+    PE.app = editor.mount();
     return PE.app;
   };
   PE.boot = boot;

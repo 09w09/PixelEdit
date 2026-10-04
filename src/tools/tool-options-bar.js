@@ -1,5 +1,6 @@
 import { renderShapeToolOptions, SHAPE_TOOLS } from './shape-style-options.js';
 import { renderTextToolOptions } from './text-tool-options.js';
+import { renderFillToolOptions } from './fill-tool-options.js';
 import { ICONS, iconButton, setIconButton } from '../ui/icon-toolbar.js';
 
 const SELECTION_ACTIONS = [
@@ -154,6 +155,7 @@ class ToolOptionsBar {
     else if (tool === 'text') renderTextToolOptions(this.editor, this.element);
     else if (SHAPE_TOOLS.has(tool)) renderShapeToolOptions(this.editor, this.element, tool);
     else if (tool === 'pencil' || tool === 'eraser') this.renderPaintTool(tool);
+    else if (tool === 'bucket') renderFillToolOptions(this.editor, this.element, 'bucket');
     else this.element.replaceChildren();
   }
 
@@ -220,13 +222,6 @@ function installToolOptionsRuntime(target = globalThis) {
     this.toolOptionsBar = new ToolOptionsBar(this, element);
     this.toolOptionsBar.render();
     return result || this;
-  };
-
-  const originalSetTool = Workspace.prototype.setTool;
-  Workspace.prototype.setTool = function setToolWithOptions(tool) {
-    const result = originalSetTool.call(this, tool);
-    this.toolOptionsBar?.render();
-    return result;
   };
 
   const originalRenderAll = Workspace.prototype.renderAll;

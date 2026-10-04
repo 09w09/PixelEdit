@@ -110,26 +110,6 @@ function installCanvasCursorRuntime(target = globalThis) {
     }
   };
 
-  const previousSetTool = Workspace.prototype.setTool;
-  Workspace.prototype.setTool = function setToolWithCanvasCursor(tool) {
-    if (tool === 'image') {
-      this.cancelCustomGesture?.();
-      this.tool = 'image';
-      document.querySelectorAll('[data-tool]').forEach(button => {
-        button.classList.toggle('active', button.dataset.tool === 'image');
-      });
-      this.updateInteraction?.();
-      this.toolOptionsBar?.render?.();
-      this.applyCanvasCursor({ resetNative: true });
-      this.renderOverlay?.();
-      return 'image';
-    }
-    const result = previousSetTool.call(this, tool);
-    this.applyCanvasCursor({ resetNative: true });
-    this.renderOverlay?.();
-    return result;
-  };
-
   const previousSetToolDefault = Workspace.prototype.setToolDefault;
   Workspace.prototype.setToolDefault = function setToolDefaultWithCanvasCursor(tool, key, value) {
     const result = previousSetToolDefault.call(this, tool, key, value);
@@ -141,26 +121,6 @@ function installCanvasCursorRuntime(target = globalThis) {
     ) {
       this.renderOverlay?.();
     }
-    return result;
-  };
-
-  const previousPointerDown = Workspace.prototype.onPointerDown;
-  Workspace.prototype.onPointerDown = function onPointerDownWithImageTool(event) {
-    if (this.tool === 'image') {
-      if (event.button === 2) return;
-      document.querySelector('#fileImage')?.click();
-      return;
-    }
-    return previousPointerDown.call(this, event);
-  };
-
-  const previousPointerMove = Workspace.prototype.onPointerMove;
-  Workspace.prototype.onPointerMove = function onPointerMoveWithCanvasCursor(event) {
-    const result = previousPointerMove.call(this, event);
-    this.canvasCursorInside = true;
-    this.canvasCursorPoint = this.logicalPoint(event);
-    if (this.tool !== 'pointer') this.applyCanvasCursor();
-    if (cursorModeForTool(this.tool) === 'brush') this.renderOverlay?.();
     return result;
   };
 
