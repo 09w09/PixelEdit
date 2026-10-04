@@ -10,6 +10,7 @@ import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
 import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
+import { installLiveImageStructuralPropertiesRuntime } from './properties/live-image-structural-properties.js';
 import { installLivePropertyRuntime } from './properties/live-property-runtime.js';
 import { installLivePositionPropertiesRuntime } from './properties/live-position-properties.js';
 import { installLiveTextPropertiesRuntime } from './properties/live-text-properties.js';
@@ -84,6 +85,7 @@ function installRuntimeModules() {
   installLivePropertyRuntime(globalThis);
   installLivePositionPropertiesRuntime(globalThis);
   installLiveTextPropertiesRuntime(globalThis);
+  installLiveImageStructuralPropertiesRuntime(globalThis);
 }
 
 installRuntimeModules();
