@@ -55,18 +55,19 @@ function installCanvasCursorRuntime(target = globalThis) {
     brushCursorMarkup,
   };
 
-  Workspace.prototype.applyCanvasCursor = function applyCanvasCursor({ resetNative = false } = {}) {
-    if (!this.canvas) return;
-    const mode = cursorModeForTool(this.tool);
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.applyCanvasCursor = function applyCanvasCursor(editor, { resetNative = false } = {}) {
+    if (!editor.canvas) return;
+    const mode = cursorModeForTool(editor.tool);
     if (mode === 'brush') {
-      this.canvas.style.cursor = 'none';
+      editor.canvas.style.cursor = 'none';
       return;
     }
     if (mode === 'crosshair') {
-      this.canvas.style.cursor = 'crosshair';
+      editor.canvas.style.cursor = 'crosshair';
       return;
     }
-    if (resetNative) this.canvas.style.cursor = 'default';
+    if (resetNative) editor.canvas.style.cursor = 'default';
   };
 
 

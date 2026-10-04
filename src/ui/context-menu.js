@@ -56,31 +56,35 @@ function installContextMenuRuntime(target = globalThis) {
   if (PE.contextMenuInstalled) return;
   PE.contextMenuInstalled = true;
 
-  Workspace.prototype.contextCommands = function contextCommands() {
-    return visibleCommands(this, M, C);
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.contextCommands = function contextCommands(editor) {
+    return visibleCommands(editor, M, C);
   };
 
-  Workspace.prototype.executeContextCommand = function executeContextCommand(id, value) {
-    const command = this.contextCommands().find(item => item.id === id);
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.executeContextCommand = function executeContextCommand(editor, id, value) {
+    const command = editor.contextCommands().find(item => item.id === id);
     if (!command || !command.enabled) return false;
     return command.run(value);
   };
 
-  Workspace.prototype.renderContextMenu = function renderContextMenu() {
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.renderContextMenu = function renderContextMenu(editor) {
     const menu = document.querySelector('#contextMenu');
     if (!menu) return;
-    menu.innerHTML = this.contextCommands().map(command => (
+    menu.innerHTML = editor.contextCommands().map(command => (
       `<button type="button" data-context-command="${escapeHtml(command.id)}" ${command.enabled ? '' : 'disabled'} class="${command.danger ? 'danger' : ''}">${escapeHtml(command.label)}</button>`
     )).join('');
   };
 
-  Workspace.prototype.openContextMenu = function openContextMenu({ source = 'canvas', nodeId = null, event = null, clientX = null, clientY = null } = {}) {
-    if (nodeId && !this.state.selection.has(nodeId)) this.state.selection.replace([nodeId]);
-    if (nodeId) this.pageSelectedId = null;
-    this.renderAll({ canvas: false, history: false });
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.openContextMenu = function openContextMenu(editor, { source = 'canvas', nodeId = null, event = null, clientX = null, clientY = null } = {}) {
+    if (nodeId && !editor.state.selection.has(nodeId)) editor.state.selection.replace([nodeId]);
+    if (nodeId) editor.pageSelectedId = null;
+    editor.renderAll({ canvas: false, history: false });
     const menu = document.querySelector('#contextMenu');
     if (!menu) return false;
-    this.renderContextMenu();
+    editor.renderContextMenu();
     menu.dataset.source = source;
     menu.dataset.nodeId = nodeId || '';
     const x = clientX ?? event?.clientX ?? 0;
@@ -91,27 +95,30 @@ function installContextMenuRuntime(target = globalThis) {
     return true;
   };
 
-  Workspace.prototype.closeContextMenu = function closeContextMenu() {
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.closeContextMenu = function closeContextMenu(editor) {
     document.querySelector('#contextMenu')?.classList.remove('open');
   };
 
-  Workspace.prototype.onContextMenu = function sharedCanvasContextMenu(event) {
-    const point = this.logicalPoint(event);
-    const hit = new I.HitTest(this.state.project, this.activePage().id, this.state.assets).topmostAt(point.x, point.y, { ignoreLocked: false });
-    return this.openContextMenu({ source: 'canvas', nodeId: hit?.id || null, event });
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.onContextMenu = function onContextMenu(editor, event) {
+    const point = editor.logicalPoint(event);
+    const hit = new I.HitTest(editor.state.project, editor.activePage().id, editor.state.assets).topmostAt(point.x, point.y, { ignoreLocked: false });
+    return editor.openContextMenu({ source: 'canvas', nodeId: hit?.id || null, event });
   };
 
-  Workspace.prototype.setupContextMenu = function setupSharedContextMenu() {
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.setupContextMenu = function setupContextMenu(editor) {
     document.addEventListener('pointerdown', event => {
-      if (!event.target.closest('#contextMenu') && event.button !== 2) this.closeContextMenu();
+      if (!event.target.closest('#contextMenu') && event.button !== 2) editor.closeContextMenu();
     });
     document.querySelector('#contextMenu')?.addEventListener('click', event => {
       const button = event.target.closest('[data-context-command]');
       if (!button || button.disabled) return;
       const id = button.dataset.contextCommand;
-      this.closeContextMenu();
-      const result = this.executeContextCommand(id);
-      if (result && typeof result.then === 'function') result.catch(error => this.notice?.(String(error?.message || error)));
+      editor.closeContextMenu();
+      const result = editor.executeContextCommand(id);
+      if (result && typeof result.then === 'function') result.catch(error => editor.notice?.(String(error?.message || error)));
     });
   };
 

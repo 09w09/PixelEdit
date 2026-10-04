@@ -205,26 +205,29 @@ function installElementClipboardRuntime(target = globalThis) {
     assets,
   }, M);
 
-  Workspace.prototype.copySelection = function copySelection() {
-    if (!this.state.selection.ids.length) return null;
-    return this.clipboard.copy({
-      project: this.state.project,
-      pageId: this.activePage().id,
-      selection: this.state.selection,
-      assets: this.state.assets,
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.copySelection = function copySelection(editor) {
+    if (!editor.state.selection.ids.length) return null;
+    return editor.clipboard.copy({
+      project: editor.state.project,
+      pageId: editor.activePage().id,
+      selection: editor.state.selection,
+      assets: editor.state.assets,
     });
   };
 
-  Workspace.prototype.pasteClipboard = function pasteClipboard() {
-    const next = this.clipboard.nextPaste();
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.pasteClipboard = function pasteClipboard(editor) {
+    const next = editor.clipboard.nextPaste();
     if (!next) return false;
-    return this.exec(new PasteCommand(next.payload, next.offsetIndex, this.activePage().id));
+    return editor.exec(new PasteCommand(next.payload, next.offsetIndex, editor.activePage().id));
   };
 
-  Workspace.prototype.selectAllOnPage = function selectAllWorkspacePage() {
-    const changed = selectAllOnPage(this.activePage(), this.state.selection);
-    this.pageSelectedId = null;
-    this.renderAll({ canvas: false, history: false });
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.selectAllOnPage = function selectAllOnPage(editor) {
+    const changed = selectAllOnPage(editor.activePage(), editor.state.selection);
+    editor.pageSelectedId = null;
+    editor.renderAll({ canvas: false, history: false });
     return changed;
   };
 

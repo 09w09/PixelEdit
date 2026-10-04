@@ -161,26 +161,28 @@ function installImageRuntime(target = globalThis) {
   PE.svgVectorRuntimeInstalled = true;
 
 
-  PE.ui.Workspace.prototype.importSvgText = async function importSvgText(text, name = 'svg', { replaceTargetId = null } = {}) {
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.importSvgText = async function importSvgText(editor, text, name = 'svg', { replaceTargetId = null } = {}) {
     const meta = parseSvgMeta(text);
     const { runtime, dataUrl } = await createSvgRuntime(text, meta.width, meta.height);
-    return this.addImageAsset(dataUrl, runtime, name, 'image/svg+xml', { sourceType: 'svg', svgViewBox: meta.viewBox, replaceTargetId });
+    return editor.addImageAsset(dataUrl, runtime, name, 'image/svg+xml', { sourceType: 'svg', svgViewBox: meta.viewBox, replaceTargetId });
   };
 
-  PE.ui.Workspace.prototype.hydrateAssets = async function hydrateAssets() {
-    for (const font of this.state.project.fonts || []) await this.registerFont(font).catch(() => {});
-    for (const record of this.state.assets.records()) {
-      if (record.type !== 'image' || this.state.assets.getRuntime(record.id)) continue;
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.hydrateAssets = async function hydrateAssets(editor) {
+    for (const font of editor.state.project.fonts || []) await editor.registerFont(font).catch(() => {});
+    for (const record of editor.state.assets.records()) {
+      if (record.type !== 'image' || editor.state.assets.getRuntime(record.id)) continue;
       try {
         if (isSvgAsset(record)) {
           const sourceText = svgTextFromDataUrl(record.dataUrl);
           const parsed = parseSvgMeta(sourceText);
-          const sourceSize = sourceSizeForAsset(this, record.id, parsed);
+          const sourceSize = sourceSizeForAsset(editor, record.id, parsed);
           const { runtime, dataUrl } = await createSvgRuntime(sourceText, sourceSize.width, sourceSize.height);
-          this.state.assets.set({ ...record, dataUrl, meta: { ...record.meta, mime: 'image/svg+xml' } });
-          this.state.assets.setRuntime(record.id, runtime);
+          editor.state.assets.set({ ...record, dataUrl, meta: { ...record.meta, mime: 'image/svg+xml' } });
+          editor.state.assets.setRuntime(record.id, runtime);
         } else {
-          this.state.assets.setRuntime(record.id, await decodeRasterImage(record.dataUrl));
+          editor.state.assets.setRuntime(record.id, await decodeRasterImage(record.dataUrl));
         }
       } catch {}
     }

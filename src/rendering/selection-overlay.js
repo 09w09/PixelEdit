@@ -132,14 +132,15 @@ function installSelectionOverlayRuntime(target = globalThis) {
     return handles.map(point => handleRect(translated(point, dx, dy), editor.zoom)).join('');
   }
 
-  Workspace.prototype.selectionHandleAt = function selectionHandleAt(point) {
-    const ids = this.state.selection.ids;
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.selectionHandleAt = function selectionHandleAt(editor, point) {
+    const ids = editor.state.selection.ids;
     if (ids.length !== 1) return null;
-    const page = this.activePage();
+    const page = editor.activePage();
     const node = M.nodeById(page, ids[0]);
     const tree = new M.TreeModel(page);
     if (!node || tree.isEffectivelyLocked(node.id)) return null;
-    return G.hitHandle(node, point, this.zoom, sourcePivotBounds(this, node));
+    return G.hitHandle(node, point, editor.zoom, sourcePivotBounds(editor, node));
   };
 
   PE.selectionOverlay = {

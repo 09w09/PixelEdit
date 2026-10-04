@@ -20,10 +20,11 @@ function installFontImportRuntime(target = globalThis) {
   if (PE.fontImportInstalled) return;
   PE.fontImportInstalled = true;
 
-  Workspace.prototype.importFonts = async function importFonts(files) {
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.importFonts = async function importFonts(editor, files) {
     const records = [];
     let skipped = 0;
-    const knownSha = new Set((this.state.project.fonts || []).map(record => record.sha256).filter(Boolean));
+    const knownSha = new Set((editor.state.project.fonts || []).map(record => record.sha256).filter(Boolean));
 
     for (const file of files || []) {
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -34,11 +35,11 @@ function installFontImportRuntime(target = globalThis) {
       }
       knownSha.add(sha256);
 
-      let asset = this.state.assets.findBySha256('font', sha256);
+      let asset = editor.state.assets.findBySha256('font', sha256);
       let assetId = asset?.id || null;
       if (!assetId) {
         const mime = file.type || 'font/ttf';
-        assetId = this.state.assets.add('font', bytesToDataUrl(bytes, mime), {
+        assetId = editor.state.assets.add('font', bytesToDataUrl(bytes, mime), {
           name: file.name,
           mime,
           sha256,
@@ -52,12 +53,12 @@ function installFontImportRuntime(target = globalThis) {
         assetId,
         sha256,
       };
-      await this.registerFont(record).catch(() => {});
+      await editor.registerFont(record).catch(() => {});
       records.push(record);
     }
 
     if (records.length) {
-      this.exec({
+      editor.exec({
         label: '导入字体',
         execute: state => {
           state.project.fonts.push(...records.map(record => structuredClone(record)));

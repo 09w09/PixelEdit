@@ -29,7 +29,8 @@ function installHistoryPropertiesRuntime(target = globalThis) {
   if (PE.historyPropertiesInstalled) return;
   PE.historyPropertiesInstalled = true;
 
-  HistoryDock.prototype.render = function renderNewestHistoryFirst() {
+  class V17HistoryDock extends HistoryDock {
+    render() {
     const bus = this.editor.bus;
     const entries = bus.entries.map((entry, index) => ({ entry, index })).reverse();
     this.el.innerHTML = entries.map(({ entry, index }) =>
@@ -42,7 +43,9 @@ function installHistoryPropertiesRuntime(target = globalThis) {
         this.editor.renderAll();
       };
     });
-  };
+  }
+  }
+  PE.ui.HistoryDock = V17HistoryDock;
 
   PE.historyProperties = {
     TRANSFORM_TYPES,

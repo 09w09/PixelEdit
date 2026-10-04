@@ -42,6 +42,12 @@ function installV17WorkspaceClass(target = globalThis) {
   const T = PE.transformModel;
   const G = PE.selectionGeometry;
 
+  const capability = (name, editor, ...args) => {
+    const fn = PE.workspaceCapabilities?.[name];
+    if (typeof fn !== 'function') throw new Error(`PixelEditor workspace capability is not registered: ${name}`);
+    return fn(editor, ...args);
+  };
+
   class V17Workspace extends BaseWorkspace {
     mount() {
       if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences();
@@ -440,9 +446,38 @@ function installV17WorkspaceClass(target = globalThis) {
       return result;
     }
 
+    copySelection() { return capability('copySelection', this); }
+    pasteClipboard() { return capability('pasteClipboard', this); }
+    selectAllOnPage() { return capability('selectAllOnPage', this); }
+    importFonts(files) { return capability('importFonts', this, files); }
+    removeImportedFont(family) { return capability('removeImportedFont', this, family); }
+    importSvgText(text, name = 'svg', options = {}) { return capability('importSvgText', this, text, name, options); }
+    hydrateAssets() { return capability('hydrateAssets', this); }
+    rasterizeSelected() { return capability('rasterizeSelected', this); }
+    updateWorkspaceLayout(patch = {}) { return capability('updateWorkspaceLayout', this, patch); }
+    applyLayout() { return capability('applyLayout', this); }
+    setupDockSplitters() { return capability('setupDockSplitters', this); }
+    bucketFillTarget() { return capability('bucketFillTarget', this); }
+    bucketFillRaster(node, point, settings) { return capability('bucketFillRaster', this, node, point, settings); }
+    bucketFillPage(page, point, settings) { return capability('bucketFillPage', this, page, point, settings); }
+    bucketFillImage(node, point, settings) { return capability('bucketFillImage', this, node, point, settings); }
+    bucketFillAt(point) { return capability('bucketFillAt', this, point); }
+    renderOverlay() { return capability('renderOverlay', this); }
+    selectionHandleAt(point) { return capability('selectionHandleAt', this, point); }
+    applyCanvasCursor(options = {}) { return capability('applyCanvasCursor', this, options); }
+    runSelectionTransform(action, value = 0) { return capability('runSelectionTransform', this, action, value); }
+    align(mode) { return capability('align', this, mode); }
+    distribute(axis) { return capability('distribute', this, axis); }
+    contextCommands() { return capability('contextCommands', this); }
+    executeContextCommand(id, value) { return capability('executeContextCommand', this, id, value); }
+    renderContextMenu() { return capability('renderContextMenu', this); }
+    openContextMenu(options = {}) { return capability('openContextMenu', this, options); }
+    closeContextMenu() { return capability('closeContextMenu', this); }
+    onContextMenu(event) { return capability('onContextMenu', this, event); }
+
     setupContextMenu() {
       this.nativeContextMenuCleanup?.();
-      const result = super.setupContextMenu();
+      const result = capability('setupContextMenu', this);
       this.nativeContextMenuCleanup = installNativeContextMenuBoundary(this, target.document);
       return result;
     }

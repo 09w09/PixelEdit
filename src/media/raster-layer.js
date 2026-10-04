@@ -40,21 +40,22 @@ function installRasterLayerRuntime(target = globalThis) {
   if (PE.rasterLayerInstalled) return;
   PE.rasterLayerInstalled = true;
 
-  Workspace.prototype.rasterizeSelected = async function rasterizeSelected() {
-    const page = this.activePage(), id = this.state.selection.primaryId, node = M.nodeById(page, id), tree = new M.TreeModel(page);
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.rasterizeSelected = async function rasterizeSelected(editor) {
+    const page = editor.activePage(), id = editor.state.selection.primaryId, node = M.nodeById(page, id), tree = new M.TreeModel(page);
     if (!node || tree.isEffectivelyLocked(id)) return false;
     if (node.type === 'raster' && tree.childrenOf(id).length === 0) return false;
     if (typeof confirm === 'function' && !confirm('确认将该图层及其所有子图层栅格化为固定像素图层吗？')) return false;
-    const cut = rasterizeSubtree({ project: this.state.project, pageId: page.id, nodeId: id, assets: this.state.assets, framebufferRenderer: R.FramebufferRenderer });
+    const cut = rasterizeSubtree({ project: editor.state.project, pageId: page.id, nodeId: id, assets: editor.state.assets, framebufferRenderer: R.FramebufferRenderer });
     const replacement = M.createNode('raster', {
       id: node.id, parentId: node.parentId, name: node.name, visible: node.visible, locked: node.locked,
       x: cut.x, y: cut.y, w: cut.w, h: cut.h, pixels: cut.pixels, transform: node.transform,
     });
     const ids = new Set([id, ...tree.descendantsOf(id).map(item => item.id)]), index = page.nodes.findIndex(item => item.id === id);
-    return this.exec({ label: '栅格化图层', execute: () => {
+    return editor.exec({ label: '栅格化图层', execute: () => {
       page.nodes = page.nodes.filter(item => !ids.has(item.id));
       page.nodes.splice(Math.min(index, page.nodes.length), 0, replacement);
-      this.state.selection.replace([replacement.id]);
+      editor.state.selection.replace([replacement.id]);
       return true;
     } });
   };

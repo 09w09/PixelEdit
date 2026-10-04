@@ -345,26 +345,29 @@ function installSelectionTransformRuntime(target = globalThis) {
   C.VisualAlignCommand = VisualAlignCommand;
   C.VisualDistributeCommand = VisualDistributeCommand;
 
-  Workspace.prototype.runSelectionTransform = function runSelectionTransform(action, value = 0) {
-    if (!this.state.selection.ids.length) return false;
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.runSelectionTransform = function runSelectionTransform(editor, action, value = 0) {
+    if (!editor.state.selection.ids.length) return false;
     if (action === 'rotate-angle' && T.normalizeRotation(value) === 0) return false;
-    return this.exec(new SelectionTransformCommand(
-      this.state.selection.ids,
+    return editor.exec(new SelectionTransformCommand(
+      editor.state.selection.ids,
       action,
       value,
-      this.activePage().id,
-      this.state.assets,
+      editor.activePage().id,
+      editor.state.assets,
     ));
   };
 
-  Workspace.prototype.align = function alignTransformed(mode) {
-    if (this.state.selection.ids.length < 2) return false;
-    return this.exec(new VisualAlignCommand(mode, this.state.selection.ids, this.activePage().id, this.state.assets));
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.align = function align(editor, mode) {
+    if (editor.state.selection.ids.length < 2) return false;
+    return editor.exec(new VisualAlignCommand(mode, editor.state.selection.ids, editor.activePage().id, editor.state.assets));
   };
 
-  Workspace.prototype.distribute = function distributeTransformed(axis) {
-    if (this.state.selection.ids.length < 3) return false;
-    return this.exec(new VisualDistributeCommand(axis, this.state.selection.ids, this.activePage().id, this.state.assets));
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.distribute = function distribute(editor, axis) {
+    if (editor.state.selection.ids.length < 3) return false;
+    return editor.exec(new VisualDistributeCommand(axis, editor.state.selection.ids, editor.activePage().id, editor.state.assets));
   };
 
   PE.selectionTransform = {

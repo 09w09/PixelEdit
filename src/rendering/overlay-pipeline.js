@@ -57,9 +57,10 @@ function installOverlayPipelineRuntime(target = globalThis) {
   PE.overlayPipelineInstalled = true;
   const pipeline = new OverlayPipeline(target);
   PE.overlayPipeline = pipeline;
-  Workspace.prototype.renderOverlay = function renderOverlayWithPipeline() {
-    this.overlayPipeline = pipeline;
-    return pipeline.render(this);
+  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
+  PE.workspaceCapabilities.renderOverlay = function renderOverlay(editor) {
+    editor.overlayPipeline = pipeline;
+    return pipeline.render(editor);
   };
   return pipeline;
 }
