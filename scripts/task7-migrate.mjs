@@ -2,184 +2,117 @@ import fs from 'node:fs';
 
 function read(path) { return fs.readFileSync(path, 'utf8'); }
 function write(path, text) { fs.writeFileSync(path, text); }
-function mustReplace(path, pattern, replacement, label) {
-  const source = read(path);
-  const next = source.replace(pattern, replacement);
-  if (next === source) throw new Error(`${label || path}: expected source pattern was not found`);
-  write(path, next);
+
+function matchingBrace(source, open) {
+  let depth = 0;
+  let quote = null;
+  let lineComment = false;
+  let blockComment = false;
+  let escaped = false;
+  for (let i = open; i < source.length; i += 1) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (lineComment) {
+      if (ch === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (ch === '*' && next === '/') { blockComment = false; i += 1; }
+      continue;
+    }
+    if (quote) {
+      if (escaped) { escaped = false; continue; }
+      if (ch === '\\') { escaped = true; continue; }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '/' && next === '/') { lineComment = true; i += 1; continue; }
+    if (ch === '/' && next === '*') { blockComment = true; i += 1; continue; }
+    if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
+    if (ch === '{') depth += 1;
+    else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  throw new Error('matching brace not found');
 }
-function removeBetween(path, start, end, label) {
-  const source = read(path);
-  const a = source.indexOf(start);
-  const b = source.indexOf(end, a + start.length);
-  if (a < 0 || b < 0) throw new Error(`${label || path}: boundary not found`);
-  write(path, source.slice(0, a) + source.slice(b));
+
+function prototypeMethodRange(source, receiver, name) {
+  const needle = `  ${receiver}.prototype.${name} = `;
+  const start = source.indexOf(needle);
+  if (start < 0) throw new Error(`${receiver}.${name}: prototype assignment not found`);
+  const signatureStart = start + needle.length;
+  const signature = source.slice(signatureStart).match(/^(async\s+)?function\s+[A-Za-z_$][\w$]*\s*\(([^)]*)\)\s*\{/);
+  if (!signature) throw new Error(`${receiver}.${name}: unsupported function signature`);
+  const open = signatureStart + signature[0].length - 1;
+  const close = matchingBrace(source, open);
+  let end = close + 1;
+  while (/\s/.test(source[end] || '')) end += 1;
+  if (source[end] !== ';') throw new Error(`${receiver}.${name}: assignment terminator not found`);
+  end += 1;
+  return {
+    start,
+    end,
+    async: Boolean(signature[1]),
+    args: signature[2].trim(),
+    body: source.slice(open + 1, close),
+  };
 }
 
-// Clipboard: keyboard ownership moves to V17Workspace.
-removeBetween(
-  'src/clipboard/element-clipboard.js',
-  '  const oldSetupKeyboard = Workspace.prototype.setupKeyboard;',
-  '  PE.elementClipboard = {',
-  'clipboard keyboard wrapper',
-);
+function capabilityMethod(path, receiver, name) {
+  const source = read(path);
+  const range = prototypeMethodRange(source, receiver, name);
+  const args = range.args ? `, ${range.args}` : '';
+  const body = range.body.replace(/\bthis\b/g, 'editor');
+  const replacement = `  PE.workspaceCapabilities = PE.workspaceCapabilities || {};\n  PE.workspaceCapabilities.${name} = ${range.async ? 'async ' : ''}function ${name}(editor${args}) {${body}};`;
+  write(path, source.slice(0, range.start) + replacement + source.slice(range.end));
+}
 
-// Font lifecycle is owned by V17Workspace; font commands remain in this module.
-removeBetween(
-  'src/fonts/font-manager.js',
-  '  const originalMount = Workspace.prototype.mount;',
-  '  Workspace.prototype.removeImportedFont =',
-  'font manager lifecycle wrappers',
-);
+const workspaceMethods = [
+  ['src/clipboard/element-clipboard.js', 'Workspace', ['copySelection', 'pasteClipboard', 'selectAllOnPage']],
+  ['src/fonts/font-import.js', 'Workspace', ['importFonts']],
+  ['src/fonts/font-manager.js', 'Workspace', ['removeImportedFont']],
+  ['src/media/image-runtime.js', 'PE.ui.Workspace', ['importSvgText', 'hydrateAssets']],
+  ['src/media/raster-layer.js', 'Workspace', ['rasterizeSelected']],
+  ['src/preferences/editor-preferences.js', 'Workspace', ['updateWorkspaceLayout', 'applyLayout', 'setupDockSplitters']],
+  ['src/raster/flood-fill.js', 'Workspace', ['bucketFillTarget', 'bucketFillRaster', 'bucketFillPage', 'bucketFillImage', 'bucketFillAt']],
+  ['src/rendering/overlay-pipeline.js', 'Workspace', ['renderOverlay']],
+  ['src/rendering/selection-overlay.js', 'Workspace', ['selectionHandleAt']],
+  ['src/tools/canvas-cursor.js', 'Workspace', ['applyCanvasCursor']],
+  ['src/transforms/selection-transform.js', 'Workspace', ['runSelectionTransform', 'align', 'distribute']],
+  ['src/ui/context-menu.js', 'Workspace', ['contextCommands', 'executeContextCommand', 'renderContextMenu', 'openContextMenu', 'closeContextMenu', 'onContextMenu', 'setupContextMenu']],
+];
 
-// Preferences still own persistence/layout helpers, not Workspace lifecycle wrapping.
-removeBetween(
-  'src/preferences/editor-preferences.js',
-  '  const oldMount = Workspace.prototype.mount;',
-  '  Workspace.prototype.updateWorkspaceLayout =',
-  'preferences mount wrapper',
-);
-mustReplace(
-  'src/preferences/editor-preferences.js',
-  /\n  const oldRenderAll = Workspace\.prototype\.renderAll;[\s\S]*?\n  const oldTestApi = Workspace\.prototype\.testApi;[\s\S]*?\n  const oldSaveProject = Workspace\.prototype\.saveProject;[\s\S]*?\n  };\n(?=}\n\nexport)/,
-  '\n',
-  'preferences render/test/save wrappers',
-);
+for (const [path, receiver, names] of workspaceMethods) {
+  for (const name of names) capabilityMethod(path, receiver, name);
+}
 
-// Tool defaults are pure preference helpers; Workspace behavior is defined in V17Workspace.
-write('src/tools/tool-state.js', `function clone(value) {\n  return structuredClone(value);\n}\n\nfunction toolDefaults(preferences, tool) {\n  const defaults = preferences?.tools?.[tool];\n  return defaults ? clone(defaults) : {};\n}\n\nfunction installToolStateRuntime(target = globalThis) {\n  const PE = target.PixelEditor;\n  if (!PE?.preferences) throw new Error('PixelEditor preferences are not initialized');\n  if (PE.toolStateInstalled) return;\n  PE.toolStateInstalled = true;\n  PE.tools = PE.tools || {};\n  PE.tools.toolDefaults = toolDefaults;\n}\n\nexport { toolDefaults, installToolStateRuntime };\n`);
+// HistoryDock remains a class owner rather than a runtime prototype mutation.
+{
+  const path = 'src/ui/history-properties.js';
+  const source = read(path);
+  const range = prototypeMethodRange(source, 'HistoryDock', 'render');
+  const replacement = `  class V17HistoryDock extends HistoryDock {\n    render() {${range.body}}\n  }\n  PE.ui.HistoryDock = V17HistoryDock;`;
+  write(path, source.slice(0, range.start) + replacement + source.slice(range.end));
+}
 
-// Tool options retain their view/provider classes only.
-mustReplace(
-  'src/tools/tool-options-bar.js',
-  /function installToolOptionsRuntime\(target = globalThis\) \{[\s\S]*?\n\}\n\nexport \{/,
-  `function installToolOptionsRuntime(target = globalThis) {\n  const PE = target.PixelEditor;\n  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');\n  if (PE.toolOptionsInstalled) return;\n  PE.toolOptionsInstalled = true;\n  PE.toolOptions = { ToolOptionsBar, installGlobalToolbar, actionRequirement, SELECTION_ACTIONS };\n}\n\nexport {`,
-  'tool options lifecycle wrappers',
-);
+// V17Workspace exposes the public methods explicitly and delegates subsystem work
+// to registered capabilities. This preserves one class owner without moving all
+// subsystem algorithms into the application shell.
+{
+  const path = 'src/app/v17-workspace.js';
+  let source = read(path);
+  const anchor = `  const G = PE.selectionGeometry;\n\n  class V17Workspace extends BaseWorkspace {`;
+  if (!source.includes(anchor)) throw new Error('V17Workspace capability helper anchor not found');
+  source = source.replace(anchor, `  const G = PE.selectionGeometry;\n\n  const capability = (name, editor, ...args) => {\n    const fn = PE.workspaceCapabilities?.[name];\n    if (typeof fn !== 'function') throw new Error(\`PixelEditor workspace capability is not registered: \${name}\`);\n    return fn(editor, ...args);\n  };\n\n  class V17Workspace extends BaseWorkspace {`);
 
-// Canvas cursor keeps cursor primitives/one native capability. Setup lifecycle moves to V17Workspace.
-removeBetween(
-  'src/tools/canvas-cursor.js',
-  '  const previousSetupCanvas = Workspace.prototype.setupCanvas;',
-  '\n}\n\nexport {',
-  'canvas cursor lifecycle wrappers',
-);
+  const oldContextSetup = `    setupContextMenu() {\n      this.nativeContextMenuCleanup?.();\n      const result = super.setupContextMenu();\n      this.nativeContextMenuCleanup = installNativeContextMenuBoundary(this, target.document);\n      return result;\n    }`;
+  if (!source.includes(oldContextSetup)) throw new Error('V17Workspace setupContextMenu anchor not found');
 
-// Raster model owns raster algorithms and rasterize action, not generic Workspace routing.
-removeBetween(
-  'src/media/raster-layer.js',
-  '  const originalPaintTarget = Workspace.prototype.paintTarget;',
-  '  Workspace.prototype.rasterizeSelected =',
-  'raster paint wrappers',
-);
-removeBetween(
-  'src/media/raster-layer.js',
-  '  const originalSetSelectionSize = Workspace.prototype.setSelectionSize;',
-  '  PE.rasterLayer = {',
-  'raster size/commit wrappers',
-);
-write('src/media/raster-sizing.js', `function installRasterSizingRuntime(target = globalThis) {\n  const PE = target.PixelEditor;\n  if (!PE?.rasterLayer?.resizeRaster) throw new Error('PixelEditor raster sizing dependencies are not initialized');\n  if (PE.rasterSizingInstalled) return;\n  PE.rasterSizingInstalled = true;\n}\n\nexport { installRasterSizingRuntime };\n`);
+  const delegates = `    copySelection() { return capability('copySelection', this); }\n    pasteClipboard() { return capability('pasteClipboard', this); }\n    selectAllOnPage() { return capability('selectAllOnPage', this); }\n    importFonts(files) { return capability('importFonts', this, files); }\n    removeImportedFont(family) { return capability('removeImportedFont', this, family); }\n    importSvgText(text, name = 'svg', options = {}) { return capability('importSvgText', this, text, name, options); }\n    hydrateAssets() { return capability('hydrateAssets', this); }\n    rasterizeSelected() { return capability('rasterizeSelected', this); }\n    updateWorkspaceLayout(patch = {}) { return capability('updateWorkspaceLayout', this, patch); }\n    applyLayout() { return capability('applyLayout', this); }\n    setupDockSplitters() { return capability('setupDockSplitters', this); }\n    bucketFillTarget() { return capability('bucketFillTarget', this); }\n    bucketFillRaster(node, point, settings) { return capability('bucketFillRaster', this, node, point, settings); }\n    bucketFillPage(page, point, settings) { return capability('bucketFillPage', this, page, point, settings); }\n    bucketFillImage(node, point, settings) { return capability('bucketFillImage', this, node, point, settings); }\n    bucketFillAt(point) { return capability('bucketFillAt', this, point); }\n    renderOverlay() { return capability('renderOverlay', this); }\n    selectionHandleAt(point) { return capability('selectionHandleAt', this, point); }\n    applyCanvasCursor(options = {}) { return capability('applyCanvasCursor', this, options); }\n    runSelectionTransform(action, value = 0) { return capability('runSelectionTransform', this, action, value); }\n    align(mode) { return capability('align', this, mode); }\n    distribute(axis) { return capability('distribute', this, axis); }\n    contextCommands() { return capability('contextCommands', this); }\n    executeContextCommand(id, value) { return capability('executeContextCommand', this, id, value); }\n    renderContextMenu() { return capability('renderContextMenu', this); }\n    openContextMenu(options = {}) { return capability('openContextMenu', this, options); }\n    closeContextMenu() { return capability('closeContextMenu', this); }\n    onContextMenu(event) { return capability('onContextMenu', this, event); }\n\n    setupContextMenu() {\n      this.nativeContextMenuCleanup?.();\n      const result = capability('setupContextMenu', this);\n      this.nativeContextMenuCleanup = installNativeContextMenuBoundary(this, target.document);\n      return result;\n    }`;
+  source = source.replace(oldContextSetup, delegates);
+  write(path, source);
+}
 
-// Brush module owns algorithms and begin action; Workspace painting lifecycle is native.
-removeBetween(
-  'src/raster/paint-brush.js',
-  '  const previousApplyPaintSegment = Workspace.prototype.applyPaintSegment;',
-  '  PE.paintBrush = {',
-  'paint brush wrappers',
-);
-
-// Selection overlay keeps geometry/markup plus the single selectionHandleAt capability.
-removeBetween(
-  'src/rendering/selection-overlay.js',
-  '  const originalBeginLiveHandle = Workspace.prototype.beginLiveHandle;',
-  '  PE.selectionOverlay = {',
-  'selection interaction wrappers',
-);
-
-// Photopea UI keeps pure edge-handle markup/cursor functions. Geometry and interaction are canonical elsewhere.
-removeBetween(
-  'src/transforms/photopea-transform-ui.js',
-  '  const originalBounds = Properties.prototype.bounds;',
-  '  function edgeHandlesMarkup(editor) {',
-  'photopea property/geometry wrappers',
-);
-removeBetween(
-  'src/transforms/photopea-transform-ui.js',
-  '  function reanchorTransform(editor, node, gesture, anchorLocal, anchorWorld) {',
-  '  PE.photopeaTransformUI = {',
-  'photopea interaction wrappers',
-);
-
-// Selection transform keeps commands/conversions, not paint routing.
-removeBetween(
-  'src/transforms/selection-transform.js',
-  '  const previousApplyPaintSegment = Workspace.prototype.applyPaintSegment;',
-  '  PE.selectionTransform = {',
-  'selection transform paint wrapper',
-);
-
-// Context-menu document boundary is composed by V17Workspace.
-mustReplace(
-  'src/ui/context-menu-boundary.js',
-  /function installContextMenuBoundaryRuntime\(target = globalThis\) \{[\s\S]*?\n\}\n\nexport \{/,
-  `function installContextMenuBoundaryRuntime(target = globalThis) {\n  const PE = target.PixelEditor;\n  if (!PE?.ui?.Workspace) throw new Error('PixelEditor context-menu boundary dependencies are not initialized');\n  if (PE.contextMenuBoundaryInstalled) return;\n  PE.contextMenuBoundaryInstalled = true;\n  PE.contextMenuBoundary = { classifyContextRegion, installNativeContextMenuBoundary };\n}\n\nexport {`,
-  'context menu boundary wrapper',
-);
-mustReplace(
-  'src/ui/context-menu.js',
-  /\n  \/\/ The document-level context-menu boundary[\s\S]*?PageDock\.prototype\.bindLayer = function bindLayerWithSharedContext\(row\) \{\n    return oldBindLayer\.call\(this, row\);\n  \};\n/,
-  '\n',
-  'page dock no-op wrapper',
-);
-
-// SVG vector rendering becomes a native ImageRenderer branch.
-mustReplace(
-  'src/media/image-runtime.js',
-  /\n  const originalRender = PE\.renderer\.ImageRenderer\.render;\n  PE\.renderer\.ImageRenderer\.render = function renderImage\(node, assets\) \{[\s\S]*?\n  \};\n/,
-  '\n',
-  'image renderer wrapper',
-);
-mustReplace(
-  'src/rendering/base-image-renderer.js',
-  "function render(node,assets){const src=assets.getRuntime(node.assetId);if(!src)return null;",
-  "function render(node,assets){const src=assets.getRuntime(node.assetId);if(!src)return null;if(src.kind==='svg-vector'&&globalThis.PixelEditor?.svgVectorRuntime?.renderSvgNode)return globalThis.PixelEditor.svgVectorRuntime.renderSvgNode(node,src);",
-  'native SVG renderer branch',
-);
-
-// Canonical selection geometry owns all eight box handles.
-mustReplace(
-  'src/selection/selection-geometry.js',
-  `  return {\n    nw: { x: left, y: top },\n    ne: { x: right, y: top },\n    sw: { x: left, y: bottom },\n    se: { x: right, y: bottom },\n  };`,
-  `  return {\n    nw: { x: left, y: top },\n    n: { x: (left + right) / 2, y: top },\n    ne: { x: right, y: top },\n    e: { x: right, y: (top + bottom) / 2 },\n    se: { x: right, y: bottom },\n    s: { x: (left + right) / 2, y: bottom },\n    sw: { x: left, y: bottom },\n    w: { x: left, y: (top + bottom) / 2 },\n  };`,
-  'eight source handles',
-);
-mustReplace(
-  'src/selection/selection-geometry.js',
-  "      for (const corner of ['nw', 'ne', 'sw', 'se']) {",
-  "      for (const corner of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {",
-  'eight handle hit test',
-);
-
-// Property bounds are normalized where the Properties class owns the API.
-mustReplace(
-  'src/ui/properties.js',
-  '  bounds(nodes){return this.provider.bounds(this,nodes);}',
-  `  bounds(nodes){return this.provider.bounds(this,nodes).map(bounds=>{const x=Math.round(Number(bounds.x)||0),y=Math.round(Number(bounds.y)||0),right=Math.round((Number(bounds.x)||0)+(Number(bounds.w)||0)),bottom=Math.round((Number(bounds.y)||0)+(Number(bounds.h)||0));return{...bounds,x,y,w:Math.max(0,right-x),h:Math.max(0,bottom-y)};});}`,
-  'integer property bounds',
-);
-
-// V17Workspace is installed after providers/capabilities and before bootstrap.
-mustReplace(
-  'src/main.js',
-  "import { bootstrapPixelEdit } from './app/bootstrap.js';",
-  "import { bootstrapPixelEdit } from './app/bootstrap.js';\nimport { installV17WorkspaceClass } from './app/v17-workspace.js';",
-  'main workspace import',
-);
-mustReplace(
-  'src/main.js',
-  'installRuntimeModules();\nbootstrapPixelEdit(globalThis);',
-  'installRuntimeModules();\ninstallV17WorkspaceClass(globalThis);\nbootstrapPixelEdit(globalThis);',
-  'main workspace install',
-);
-
-console.log('Task 7 codemod completed');
+console.log('Task 7 capability codemod completed');
