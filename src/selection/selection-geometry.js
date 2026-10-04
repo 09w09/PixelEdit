@@ -74,12 +74,9 @@ function createSelectionGeometry(transformModel) {
 
     if (BOX_TYPES.has(node.type)) {
       const source = sourceHandles(bounds);
-      const handles = {
-        nw: map(source.nw),
-        ne: map(source.ne),
-        sw: map(source.sw),
-        se: map(source.se),
-      };
+      const handles = Object.fromEntries(
+        Object.entries(source).map(([name, point]) => [name, map(point)]),
+      );
       const outline = [handles.nw, handles.ne, handles.se, handles.sw];
       return { outline, handles, controlPoints: [], visualBounds: pointBounds(outline), sourceBounds: bounds };
     }
