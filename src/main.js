@@ -1,3 +1,5 @@
+import './core/index.js';
+import { bootstrapPixelEdit } from './app/bootstrap.js';
 import { installElementClipboardRuntime } from './clipboard/element-clipboard.js';
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
@@ -8,7 +10,6 @@ import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
-import { installV17SchemaRuntime } from './model/v17-schema.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
 import { installLiveImageStructuralPropertiesRuntime } from './properties/live-image-structural-properties.js';
 import { installLivePropertyRuntime } from './properties/live-property-runtime.js';
@@ -43,7 +44,6 @@ import { installContextMenuBoundaryRuntime } from './ui/context-menu-boundary.js
 import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 
 function installRuntimeModules() {
-  installV17SchemaRuntime(globalThis);
   installEditorPreferencesRuntime(globalThis);
   installCommandCoalescingRuntime(globalThis);
   installFontOptionsRuntime(globalThis);
@@ -91,5 +91,6 @@ function installRuntimeModules() {
 }
 
 installRuntimeModules();
+bootstrapPixelEdit(globalThis);
 
 export { installRuntimeModules };
