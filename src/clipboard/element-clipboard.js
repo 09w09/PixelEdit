@@ -224,7 +224,7 @@ function installElementClipboardRuntime(target = globalThis) {
   };
 
   PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.selectAllOnPage = function selectAllOnPage(editor) {
+  PE.workspaceCapabilities.selectAllOnPage = function selectAllOnPageCapability(editor) {
     const changed = selectAllOnPage(editor.activePage(), editor.state.selection);
     editor.pageSelectedId = null;
     editor.renderAll({ canvas: false, history: false });
