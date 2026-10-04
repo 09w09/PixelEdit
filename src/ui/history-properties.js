@@ -23,11 +23,9 @@ function transformControlsMarkup(node, locked, transformModel) {
 
 function installHistoryPropertiesRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  const C = PE?.commands;
   const HistoryDock = PE?.ui?.HistoryDock;
-  const Properties = PE?.ui?.Properties;
   const T = PE?.transformModel;
-  if (!C || !HistoryDock || !Properties || !T) throw new Error('PixelEditor history/property dependencies are not initialized');
+  if (!HistoryDock || !T) throw new Error('PixelEditor history/property dependencies are not initialized');
   if (PE.historyPropertiesInstalled) return;
   PE.historyPropertiesInstalled = true;
 
@@ -44,41 +42,6 @@ function installHistoryPropertiesRuntime(target = globalThis) {
         this.editor.renderAll();
       };
     });
-  };
-
-  const originalTransform = Properties.prototype.transform;
-  Properties.prototype.transform = function transformWithOrientation(nodes, locked) {
-    const base = originalTransform.call(this, nodes, locked);
-    if (nodes.length !== 1 || !TRANSFORM_TYPES.has(nodes[0]?.type)) return base;
-    return base + transformControlsMarkup(nodes[0], locked, T);
-  };
-
-  const originalBind = Properties.prototype.bind;
-  Properties.prototype.bind = function bindElementTransform(nodes, locked) {
-    originalBind.call(this, nodes, locked);
-    if (locked || nodes.length !== 1 || !TRANSFORM_TYPES.has(nodes[0]?.type)) return;
-
-    const node = nodes[0];
-    const page = this.editor.activePage();
-    const updateTransform = (patch, label, channel) => this.editor.exec(new C.UpdateNodesCommand(
-      [node.id],
-      current => ({ transform: T.normalizeTransform({ ...current.transform, ...patch }) }),
-      page.id,
-      label,
-      { historyChannel: channel },
-    ));
-
-    const rotation = this.el.querySelector('#propRotation');
-    const flipX = this.el.querySelector('#propFlipX');
-    const flipY = this.el.querySelector('#propFlipY');
-
-    if (rotation) rotation.onchange = () => {
-      const value = Number(rotation.value);
-      if (!Number.isFinite(value)) return;
-      updateTransform({ rotation: T.normalizeRotation(value) }, '旋转元素', 'transform.rotation');
-    };
-    if (flipX) flipX.onchange = () => updateTransform({ flipX: flipX.checked }, '水平翻转元素', 'transform.flipX');
-    if (flipY) flipY.onchange = () => updateTransform({ flipY: flipY.checked }, '垂直翻转元素', 'transform.flipY');
   };
 
   PE.historyProperties = {

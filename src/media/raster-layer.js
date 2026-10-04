@@ -35,7 +35,7 @@ function validateRasterProject(project) {
 function installRasterLayerRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model, C = PE?.commands, R = PE?.renderer;
-  const Workspace = PE?.ui?.Workspace, Properties = PE?.ui?.Properties;
+  const Workspace = PE?.ui?.Workspace;
   if (!M?.createNode || !R?.FramebufferRenderer || !Workspace || !PE?.tristateRaster) throw new Error('PixelEditor tri-state raster dependencies are not initialized');
   if (PE.rasterLayerInstalled) return;
   PE.rasterLayerInstalled = true;
@@ -126,17 +126,17 @@ function installRasterLayerRuntime(target = globalThis) {
   };
 
   const originalSetSelectionSize = Workspace.prototype.setSelectionSize;
-  Workspace.prototype.setSelectionSize = function setSelectionSize(axis, target) {
+  Workspace.prototype.setSelectionSize = function setSelectionSize(axis, targetValue) {
     const page = this.activePage(), rasterIds = this.state.selection.ids.filter(id => M.nodeById(page, id)?.type === 'raster');
-    if (!rasterIds.length) return originalSetSelectionSize.call(this, axis, target);
-    target = Math.max(1, Math.round(Number(target)));
-    if (!Number.isFinite(target)) return false;
+    if (!rasterIds.length) return originalSetSelectionSize.call(this, axis, targetValue);
+    const targetSize = Math.max(1, Math.round(Number(targetValue)));
+    if (!Number.isFinite(targetSize)) return false;
     return this.exec(new C.UpdateNodesCommand(rasterIds, node => {
       const geometry = { x: node.x, y: node.y, w: node.w, h: node.h };
-      if (axis === 'w') geometry.w = target; else geometry.h = target;
+      if (axis === 'w') geometry.w = targetSize; else geometry.h = targetSize;
       if (node.aspectLocked) {
         const ratio = node.w / Math.max(1, node.h);
-        if (axis === 'w') geometry.h = Math.max(1, Math.round(target / ratio)); else geometry.w = Math.max(1, Math.round(target * ratio));
+        if (axis === 'w') geometry.h = Math.max(1, Math.round(targetSize / ratio)); else geometry.w = Math.max(1, Math.round(targetSize * ratio));
       }
       return resizeTriStateRaster(node, geometry);
     }, page.id, '调整栅格尺寸'));
@@ -150,38 +150,6 @@ function installRasterLayerRuntime(target = globalThis) {
     Object.assign(node, original);
     return this.exec(new C.UpdateNodesCommand([gesture.nodeId], resizeTriStateRaster(original, geometry), page.id, '调整栅格大小'));
   };
-
-  if (Properties) {
-    const originalTransform = Properties.prototype.transform;
-    Properties.prototype.transform = function transform(nodes, locked) {
-      if (!nodes.length || !nodes.every(node => node.type === 'raster')) return originalTransform.call(this, nodes, locked);
-      const bounds = this.bounds(nodes);
-      const common = key => {
-        const first = bounds[0]?.[key];
-        return bounds.every(item => item?.[key] === first) ? first : null;
-      };
-      const aspect = nodes.every(node => node.aspectLocked === nodes[0].aspectLocked) ? nodes[0].aspectLocked : null;
-      const input = (id, label, value, min = '') => `<div class="field"><label for="${id}">${label}</label><input id="${id}" type="number" ${value == null ? 'placeholder="—" class="mixed"' : `value="${value}"`} ${min !== '' ? `min="${min}"` : ''} ${locked ? 'disabled' : ''} step="1"></div>`;
-      return `<div class="property-section"><h4>位置</h4><div class="row">${input('propX','X',common('x'))}${input('propY','Y',common('y'))}</div><div class="row">${input('propW','W',common('w'),1)}${input('propH','H',common('h'),1)}</div><label class="check"><input id="propAspect" type="checkbox" ${aspect === true ? 'checked' : ''} ${locked ? 'disabled' : ''}> 锁定比例${aspect == null ? '（混合）' : ''}</label></div>`;
-    };
-
-    const originalTypeFields = Properties.prototype.typeFields;
-    Properties.prototype.typeFields = function typeFields(nodes, locked) {
-      if (nodes[0]?.type === 'raster') return '<div class="property-section"><h4>栅格</h4><div class="muted">固定像素画布：黑、白、透明三态。铅笔写入黑/白，橡皮写入透明；调整边框只扩展透明区域或裁剪，不重采样。</div></div>';
-      return originalTypeFields.call(this, nodes, locked);
-    };
-
-    const originalBind = Properties.prototype.bind;
-    Properties.prototype.bind = function bind(nodes, locked) {
-      const result = originalBind.call(this, nodes, locked);
-      if (locked || !nodes.length || !nodes.every(node => node.type === 'raster')) return result;
-      const page = this.editor.activePage(), ids = nodes.map(node => node.id);
-      this.el.querySelector('#propW')?.addEventListener('change', event => this.editor.setSelectionSize('w', Math.max(1, Math.round(Number(event.target.value)))));
-      this.el.querySelector('#propH')?.addEventListener('change', event => this.editor.setSelectionSize('h', Math.max(1, Math.round(Number(event.target.value)))));
-      this.el.querySelector('#propAspect')?.addEventListener('change', event => this.editor.exec(new C.UpdateNodesCommand(ids, { aspectLocked: event.target.checked }, page.id, '锁定比例')));
-      return result;
-    };
-  }
 
   PE.rasterLayer = {
     encoding: RASTER_ENCODING,

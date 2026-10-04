@@ -11,14 +11,8 @@ import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installIntegerGeometryRuntime } from './model/integer-geometry.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
-import { installLiveImageStructuralPropertiesRuntime } from './properties/live-image-structural-properties.js';
-import { installLivePropertyRuntime } from './properties/live-property-runtime.js';
-import { installLivePositionPropertiesRuntime } from './properties/live-position-properties.js';
-import { installLiveTextPropertiesRuntime } from './properties/live-text-properties.js';
-import { installLiveTransformPropertiesRuntime } from './properties/live-transform-properties.js';
-import { installPageFillPropertiesRuntime } from './properties/page-fill-properties.js';
-import { installShapeStylePropertiesRuntime } from './properties/shape-style-properties.js';
-import { installTextFontActionsRuntime } from './properties/text-font-actions.js';
+import { installPropertySelectionBoundary } from './properties/property-selection-boundary.js';
+import { installPropertySystem } from './properties/property-system.js';
 import { installFloodFillRuntime } from './raster/flood-fill.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
@@ -50,10 +44,7 @@ function installRuntimeModules() {
   installFillToolOptionsRuntime(globalThis);
   installImageRuntime(globalThis);
   installBinaryImageRuntime(globalThis);
-  installBinaryImagePreviewRuntime(globalThis);
   installPixelStrokeRuntime(globalThis);
-  installShapeStylePropertiesRuntime(globalThis);
-  installPageFillPropertiesRuntime(globalThis);
   installTriStateRasterRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
   installPaintBrushRuntime(globalThis);
@@ -73,13 +64,10 @@ function installRuntimeModules() {
   installCanvasCursorRuntime(globalThis);
   installTextLayoutRuntime(globalThis);
   installFontManagerRuntime(globalThis);
-  installTextFontActionsRuntime(globalThis);
   installFontImportRuntime(globalThis);
-  installLivePropertyRuntime(globalThis);
-  installLivePositionPropertiesRuntime(globalThis);
-  installLiveTextPropertiesRuntime(globalThis);
-  installLiveImageStructuralPropertiesRuntime(globalThis);
-  installLiveTransformPropertiesRuntime(globalThis);
+  installPropertySystem(globalThis);
+  installPropertySelectionBoundary(globalThis);
+  installBinaryImagePreviewRuntime(globalThis);
 }
 
 installRuntimeModules();

@@ -59,6 +59,7 @@ test('property implementation has no prototype patch stack, cloneControl, or reg
     '../src/properties/page-fill-properties.js',
     '../src/properties/text-font-actions.js',
     '../src/media/raster-layer.js',
+    '../src/rendering/binary-image-preview.js',
     '../src/ui/history-properties.js',
     '../src/fonts/font-options.js',
   ];
