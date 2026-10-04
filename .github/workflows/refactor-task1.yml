@@ -1,0 +1,36 @@
+name: Refactor Task1 Migration
+
+on:
+  push:
+    branches:
+      - refactor/v17-core-architecture
+    paths:
+      - scripts/refactor-task1-migrate.mjs
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/v17-core-architecture
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run Task 1 migration
+        run: node scripts/refactor-task1-migrate.mjs
+      - name: Commit generated core migration
+        run: |
+          git config user.name "poaipi"
+          git config user.email "28643012+09w09@users.noreply.github.com"
+          git add index.html vite.config.js src
+          if git diff --cached --quiet; then
+            echo "No migration changes"
+            exit 0
+          fi
+          git commit -m "refactor: 迁移原生 V17 核心模块"
+          git push origin HEAD:refactor/v17-core-architecture
