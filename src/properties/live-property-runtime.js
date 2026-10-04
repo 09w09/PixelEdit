@@ -97,6 +97,12 @@ function markBound(control, kind) {
   return control;
 }
 
+function isCurrentControl(control) {
+  if (!control?.isConnected) return false;
+  if (!control.id) return true;
+  return globalThis.document?.getElementById?.(control.id) === control;
+}
+
 function bindNumber(control, {
   editor,
   channel = control?.id || 'number',
@@ -114,9 +120,12 @@ function bindNumber(control, {
   markBound(control, 'number');
   let composing = false;
 
-  const begin = () => beginEditorSession(editor, control, channel);
+  const begin = () => {
+    if (!isCurrentControl(control)) return null;
+    return beginEditorSession(editor, control, channel);
+  };
   const preview = () => {
-    if (composing) return false;
+    if (composing || !isCurrentControl(control)) return false;
     const value = normalizeNumber(control.value, { min, max, integer });
     if (value == null) return false;
     begin();
@@ -125,14 +134,14 @@ function bindNumber(control, {
     return execute(editor, createCommand(value), refresh, afterPreview);
   };
   const restore = () => {
-    if (normalizeNumber(control.value, { min, max, integer }) != null) return;
+    if (!isCurrentControl(control) || normalizeNumber(control.value, { min, max, integer }) != null) return;
     const value = typeof readModel === 'function' ? readModel() : null;
     if (value != null && Number.isFinite(Number(value))) control.value = String(value);
   };
   const end = reason => {
     restore();
-    if (typeof afterEnd === 'function') afterEnd(control);
-    endEditorSession(editor, reason);
+    if (typeof afterEnd === 'function' && isCurrentControl(control)) afterEnd(control);
+    if (sessionState(editor).control === control) endEditorSession(editor, reason);
   };
 
   control.addEventListener('focus', begin);
@@ -141,7 +150,7 @@ function bindNumber(control, {
   control.addEventListener('input', preview);
   control.addEventListener('change', preview);
   control.addEventListener('wheel', event => {
-    if (!wheel || globalThis.document?.activeElement !== control || event.deltaY === 0) return;
+    if (!wheel || !isCurrentControl(control) || globalThis.document?.activeElement !== control || event.deltaY === 0) return;
     event.preventDefault();
     begin();
     const before = control.value;
@@ -168,15 +177,21 @@ function bindText(control, {
 } = {}) {
   if (!control || !editor || typeof createCommand !== 'function') return control;
   markBound(control, 'text');
-  const begin = () => beginEditorSession(editor, control, channel);
+  const begin = () => {
+    if (!isCurrentControl(control)) return null;
+    return beginEditorSession(editor, control, channel);
+  };
   const preview = () => {
+    if (!isCurrentControl(control)) return false;
     begin();
     return execute(editor, createCommand(control.value), refresh, afterPreview);
   };
   control.addEventListener('focus', begin);
   control.addEventListener('input', preview);
   control.addEventListener('change', preview);
-  control.addEventListener('blur', () => endEditorSession(editor, 'property-blur'));
+  control.addEventListener('blur', () => {
+    if (sessionState(editor).control === control) endEditorSession(editor, 'property-blur');
+  });
   return control;
 }
 
@@ -186,9 +201,12 @@ function bindTextarea(control, options = {}) {
   const editor = options.editor;
   const channel = options.channel || control.id || 'textarea';
   let composing = false;
-  const begin = () => beginEditorSession(editor, control, channel);
+  const begin = () => {
+    if (!isCurrentControl(control)) return null;
+    return beginEditorSession(editor, control, channel);
+  };
   const preview = () => {
-    if (composing) return false;
+    if (composing || !isCurrentControl(control)) return false;
     begin();
     return execute(editor, options.createCommand(control.value), options.refresh || DEFAULT_REFRESH, options.afterPreview);
   };
@@ -197,19 +215,29 @@ function bindTextarea(control, options = {}) {
   control.addEventListener('input', event => { if (!composing && !event.isComposing) preview(); });
   control.addEventListener('compositionend', () => { composing = false; preview(); });
   control.addEventListener('change', () => { if (!composing) preview(); });
-  control.addEventListener('blur', () => { if (!composing) preview(); endEditorSession(editor, 'property-blur'); });
+  control.addEventListener('blur', () => {
+    if (!composing) preview();
+    if (sessionState(editor).control === control) endEditorSession(editor, 'property-blur');
+  });
   return control;
+}
+
+function structuralRefresh(editor) {
+  editor.properties?.render?.();
+  editor.history?.render?.();
 }
 
 function bindSelect(control, { editor, createCommand, refresh = DEFAULT_REFRESH, structural = false, afterPreview } = {}) {
   if (!control || !editor || typeof createCommand !== 'function') return control;
   markBound(control, 'select');
   control.addEventListener('change', () => {
+    if (!isCurrentControl(control)) return false;
     endEditorSession(editor, 'property-discrete');
     editor.bus?.breakMergeChain?.(`property-select:${control.id}`);
-    const changed = execute(editor, createCommand(control.value), structural ? { ...refresh, properties: true, history: true } : refresh, afterPreview);
+    const changed = execute(editor, createCommand(control.value), structural ? { ...refresh, properties: false, history: false } : refresh, afterPreview);
     editor.bus?.breakMergeChain?.(`property-select-end:${control.id}`);
-    if (!structural) editor.history?.render?.();
+    if (changed && structural) structuralRefresh(editor);
+    else if (!structural) editor.history?.render?.();
     return changed;
   });
   return control;
@@ -219,11 +247,13 @@ function bindCheckbox(control, { editor, createCommand, refresh = DEFAULT_REFRES
   if (!control || !editor || typeof createCommand !== 'function') return control;
   markBound(control, 'checkbox');
   control.addEventListener('change', () => {
+    if (!isCurrentControl(control)) return false;
     endEditorSession(editor, 'property-discrete');
     editor.bus?.breakMergeChain?.(`property-checkbox:${control.id}`);
-    const changed = execute(editor, createCommand(Boolean(control.checked)), structural ? { ...refresh, properties: true, history: true } : refresh, afterPreview);
+    const changed = execute(editor, createCommand(Boolean(control.checked)), structural ? { ...refresh, properties: false, history: false } : refresh, afterPreview);
     editor.bus?.breakMergeChain?.(`property-checkbox-end:${control.id}`);
-    if (!structural) editor.history?.render?.();
+    if (changed && structural) structuralRefresh(editor);
+    else if (!structural) editor.history?.render?.();
     return changed;
   });
   return control;
