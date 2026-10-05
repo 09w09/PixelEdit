@@ -1,6 +1,7 @@
 import {
   createClipboardPayload,
   cloneClipboardPayload,
+  selectAllOnPage,
 } from '../clipboard/element-clipboard.js';
 
 const PE = globalThis.PixelEditor;
@@ -105,6 +106,31 @@ Object.assign(C, {
     TransformModel: PE.transformModel,
   }),
   payloadFromIds,
+});
+
+// Transitional bridge until the V17 Workspace subclass is folded into the canonical Workspace.
+PE.workspaceCapabilities ||= {};
+Object.assign(PE.workspaceCapabilities, {
+  copySelection(editor) {
+    if (!editor.state.selection.ids.length) return null;
+    return editor.clipboard.copy({
+      project: editor.state.project,
+      pageId: editor.activePage().id,
+      selection: editor.state.selection,
+      assets: editor.state.assets,
+    });
+  },
+  pasteClipboard(editor) {
+    const next = editor.clipboard.nextPaste();
+    if (!next) return false;
+    return editor.exec(new PasteCommand(next.payload, next.offsetIndex, editor.activePage().id));
+  },
+  selectAllOnPage(editor) {
+    const changed = selectAllOnPage(editor.activePage(), editor.state.selection);
+    editor.pageSelectedId = null;
+    editor.renderAll({ canvas: false, history: false });
+    return changed;
+  },
 });
 
 export { PasteCommand, DuplicateCommand, AltDragDuplicateCommand, payloadFromIds };
