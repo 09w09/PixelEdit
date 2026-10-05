@@ -5,6 +5,7 @@ import {
   selectAllOnPage as selectAllPageElements,
 } from '../commands/clipboard-commands.js';
 import { FontManager } from '../fonts/font-manager.js';
+import { normalizeFill, normalizeStroke } from '../model/schema.js';
 import {
   DEFAULT_FILENAME,
   loadEditorPreferences,
@@ -213,20 +214,8 @@ class Workspace {
   }
 
   setTool(tool) {
-    if (this.toolController) return this.toolController.setTool(tool);
-    const definition = PE.tools?.registry?.get?.(tool);
-    if (!definition) return false;
-    this.bus?.breakMergeChain?.('tool-change');
-    this.cancelCustomGesture();
-    this.tool = definition.id;
-    document.querySelectorAll('[data-tool]').forEach(button => {
-      button.classList.toggle('active', button.dataset.tool === definition.id);
-    });
-    this.updateInteraction();
-    this.toolOptionsBar?.render?.();
-    this.applyCanvasCursor({ resetNative: true });
-    this.renderOverlay();
-    return definition.id;
+    if (!this.toolController) throw new Error('ToolController is not initialized');
+    return this.toolController.setTool(tool);
   }
 
   setupTopbar() {
@@ -534,8 +523,8 @@ class Workspace {
       node.alignV = ['top', 'middle', 'bottom'].includes(settings.alignV) ? settings.alignV : 'top';
     } else if (['line', 'rectangle', 'circle', 'polygon'].includes(tool)) {
       const settings = this.getToolDefaults(tool);
-      node.stroke = PE.strokeStyle?.normalizeStroke?.(settings) || PE.schemaV17?.normalizeStroke?.(settings) || { width: 1, color: 1, style: 'solid' };
-      if (tool !== 'line') node.fill = PE.schemaV17?.normalizeFill?.(settings.fill) || { mode: 'transparent', color: 1 };
+      node.stroke = normalizeStroke(settings);
+      if (tool !== 'line') node.fill = normalizeFill(settings.fill);
     }
     this.renderCanvas();
     this.renderOverlay();
@@ -642,7 +631,10 @@ class Workspace {
     return null;
   }
 
-  beginPaint(point) { if (this.toolController) return this.toolController.beginPaint(point); return PE.paintBrush?.beginPaintWithBrush?.(this, point) || false; }
+  beginPaint(point) {
+    if (!this.toolController) throw new Error('ToolController is not initialized');
+    return this.toolController.beginPaint(point);
+  }
 
   applyPaintSegment(gesture, a, b) {
     if (!gesture || (gesture.targetKind !== 'page' && gesture.targetKind !== 'raster')) return false;
