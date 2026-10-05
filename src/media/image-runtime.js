@@ -12,9 +12,7 @@ function parseSvgMeta(text) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(String(text), 'image/svg+xml');
   const root = doc.documentElement;
-  if (doc.querySelector('parsererror') || !root || root.localName !== 'svg') {
-    throw new Error('Invalid SVG');
-  }
+  if (doc.querySelector('parsererror') || !root || root.localName !== 'svg') throw new Error('Invalid SVG');
   const raw = root.getAttribute('viewBox');
   const viewBox = raw ? raw.trim().split(/[\s,]+/).map(Number) : null;
   const validViewBox = viewBox?.length === 4 && viewBox.every(Number.isFinite) && viewBox[2] > 0 && viewBox[3] > 0;
@@ -22,11 +20,7 @@ function parseSvgMeta(text) {
   let height = validViewBox ? Math.abs(viewBox[3]) : parseNumericLength(root.getAttribute('height'));
   if (!Number.isFinite(width) || width <= 0) width = 300;
   if (!Number.isFinite(height) || height <= 0) height = 150;
-  return {
-    width: Math.max(1, Math.round(width)),
-    height: Math.max(1, Math.round(height)),
-    viewBox: validViewBox ? viewBox : null,
-  };
+  return { width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)), viewBox: validViewBox ? viewBox : null };
 }
 
 function normalizeSvgText(text, width, height) {
@@ -40,10 +34,7 @@ function normalizeSvgText(text, width, height) {
   return new XMLSerializer().serializeToString(root);
 }
 
-function svgTextToDataUrl(text) {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`;
-}
-
+function svgTextToDataUrl(text) { return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`; }
 function svgTextFromDataUrl(dataUrl) {
   const value = String(dataUrl || '');
   const comma = value.indexOf(',');
@@ -70,10 +61,7 @@ async function createSvgRuntime(text, width, height) {
   const normalizedText = normalizeSvgText(text, width, height);
   const dataUrl = svgTextToDataUrl(normalizedText);
   const image = await loadImage(dataUrl);
-  return {
-    runtime: { kind: SVG_RUNTIME_KIND, width, height, image, rasterCache: new Map() },
-    dataUrl,
-  };
+  return { runtime: { kind: SVG_RUNTIME_KIND, width, height, image, rasterCache: new Map() }, dataUrl };
 }
 
 function imageGeometry(node, sourceWidth, sourceHeight) {
@@ -82,32 +70,19 @@ function imageGeometry(node, sourceWidth, sourceHeight) {
   const cropY = clamp(Math.round(options.cropY || 0), 0, Math.max(0, sourceHeight - 1));
   const cropWidth = clamp(Math.round(options.cropW || sourceWidth), 1, Math.max(1, sourceWidth - cropX));
   const cropHeight = clamp(Math.round(options.cropH || sourceHeight), 1, Math.max(1, sourceHeight - cropY));
-  let drawWidth = node.w;
-  let drawHeight = node.h;
-  let offsetX = 0;
-  let offsetY = 0;
-  if (options.fit === 'original') {
-    drawWidth = cropWidth;
-    drawHeight = cropHeight;
-  } else if (options.fit === 'contain') {
+  let drawWidth = node.w, drawHeight = node.h, offsetX = 0, offsetY = 0;
+  if (options.fit === 'original') { drawWidth = cropWidth; drawHeight = cropHeight; }
+  else if (options.fit === 'contain') {
     const scale = Math.min(node.w / cropWidth, node.h / cropHeight);
-    drawWidth = cropWidth * scale;
-    drawHeight = cropHeight * scale;
-    offsetX = (node.w - drawWidth) / 2;
-    offsetY = (node.h - drawHeight) / 2;
+    drawWidth = cropWidth * scale; drawHeight = cropHeight * scale; offsetX = (node.w - drawWidth) / 2; offsetY = (node.h - drawHeight) / 2;
   } else if (options.fit === 'cover') {
     const scale = Math.max(node.w / cropWidth, node.h / cropHeight);
-    drawWidth = cropWidth * scale;
-    drawHeight = cropHeight * scale;
-    offsetX = (node.w - drawWidth) / 2;
-    offsetY = (node.h - drawHeight) / 2;
+    drawWidth = cropWidth * scale; drawHeight = cropHeight * scale; offsetX = (node.w - drawWidth) / 2; offsetY = (node.h - drawHeight) / 2;
   }
   return { cropX, cropY, cropWidth, cropHeight, drawWidth, drawHeight, offsetX, offsetY };
 }
 
-function cacheKey(node, geometry) {
-  return [node.w, node.h, node.image?.fit || 'stretch', geometry.cropX, geometry.cropY, geometry.cropWidth, geometry.cropHeight].join(':');
-}
+function cacheKey(node, geometry) { return [node.w, node.h, node.image?.fit || 'stretch', geometry.cropX, geometry.cropY, geometry.cropWidth, geometry.cropHeight].join(':'); }
 
 function renderSvgNode(node, runtime) {
   const width = Math.max(1, Math.round(node.w));
@@ -117,8 +92,7 @@ function renderSvgNode(node, runtime) {
   const cached = runtime.rasterCache?.get(key);
   if (cached) return cached;
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = width; canvas.height = height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   context.clearRect(0, 0, width, height);
   context.imageSmoothingEnabled = true;
@@ -130,17 +104,14 @@ function renderSvgNode(node, runtime) {
   return result;
 }
 
-function isSvgAsset(record) {
-  return record?.meta?.mime === 'image/svg+xml' || /^data:image\/svg\+xml/i.test(String(record?.dataUrl || ''));
-}
+function isSvgAsset(record) { return record?.meta?.mime === 'image/svg+xml' || /^data:image\/svg\+xml/i.test(String(record?.dataUrl || '')); }
 
 async function decodeRasterImage(dataUrl) {
   const image = await loadImage(dataUrl);
   const width = Math.max(1, Math.round(image.naturalWidth || image.width));
   const height = Math.max(1, Math.round(image.naturalHeight || image.height));
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = width; canvas.height = height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   context.drawImage(image, 0, 0, width, height);
   return { width, height, data: context.getImageData(0, 0, width, height).data };
@@ -154,41 +125,36 @@ function sourceSizeForAsset(editor, assetId, fallback) {
   return fallback;
 }
 
+async function importSvgText(editor, text, name = 'svg', { replaceTargetId = null } = {}) {
+  const meta = parseSvgMeta(text);
+  const { runtime, dataUrl } = await createSvgRuntime(text, meta.width, meta.height);
+  return editor.addImageAsset(dataUrl, runtime, name, 'image/svg+xml', { sourceType: 'svg', svgViewBox: meta.viewBox, replaceTargetId });
+}
+
+async function hydrateAssets(editor) {
+  for (const font of editor.state.project.fonts || []) await editor.registerFont(font).catch(() => {});
+  for (const record of editor.state.assets.records()) {
+    if (record.type !== 'image' || editor.state.assets.getRuntime(record.id)) continue;
+    try {
+      if (isSvgAsset(record)) {
+        const sourceText = svgTextFromDataUrl(record.dataUrl);
+        const parsed = parseSvgMeta(sourceText);
+        const sourceSize = sourceSizeForAsset(editor, record.id, parsed);
+        const { runtime, dataUrl } = await createSvgRuntime(sourceText, sourceSize.width, sourceSize.height);
+        editor.state.assets.set({ ...record, dataUrl, meta: { ...record.meta, mime: 'image/svg+xml' } });
+        editor.state.assets.setRuntime(record.id, runtime);
+      } else editor.state.assets.setRuntime(record.id, await decodeRasterImage(record.dataUrl));
+    } catch {}
+  }
+}
+
 function installImageRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   if (!PE?.renderer?.ImageRenderer || !PE?.ui?.Workspace) throw new Error('PixelEditor is not initialized');
-  if (PE.svgVectorRuntimeInstalled) return;
+  if (PE.svgVectorRuntimeInstalled) return PE.svgVectorRuntime;
   PE.svgVectorRuntimeInstalled = true;
-
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.importSvgText = async function importSvgText(editor, text, name = 'svg', { replaceTargetId = null } = {}) {
-    const meta = parseSvgMeta(text);
-    const { runtime, dataUrl } = await createSvgRuntime(text, meta.width, meta.height);
-    return editor.addImageAsset(dataUrl, runtime, name, 'image/svg+xml', { sourceType: 'svg', svgViewBox: meta.viewBox, replaceTargetId });
-  };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.hydrateAssets = async function hydrateAssets(editor) {
-    for (const font of editor.state.project.fonts || []) await editor.registerFont(font).catch(() => {});
-    for (const record of editor.state.assets.records()) {
-      if (record.type !== 'image' || editor.state.assets.getRuntime(record.id)) continue;
-      try {
-        if (isSvgAsset(record)) {
-          const sourceText = svgTextFromDataUrl(record.dataUrl);
-          const parsed = parseSvgMeta(sourceText);
-          const sourceSize = sourceSizeForAsset(editor, record.id, parsed);
-          const { runtime, dataUrl } = await createSvgRuntime(sourceText, sourceSize.width, sourceSize.height);
-          editor.state.assets.set({ ...record, dataUrl, meta: { ...record.meta, mime: 'image/svg+xml' } });
-          editor.state.assets.setRuntime(record.id, runtime);
-        } else {
-          editor.state.assets.setRuntime(record.id, await decodeRasterImage(record.dataUrl));
-        }
-      } catch {}
-    }
-  };
-
-  PE.svgVectorRuntime = { kind: SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, renderSvgNode };
+  PE.svgVectorRuntime = { kind: SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, renderSvgNode, importSvgText, hydrateAssets };
+  return PE.svgVectorRuntime;
 }
 
-export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, installImageRuntime };
+export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, importSvgText, hydrateAssets, installImageRuntime };
