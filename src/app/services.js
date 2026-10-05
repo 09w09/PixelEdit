@@ -13,7 +13,7 @@ import * as selectionTransform from '../transforms/selection-transform.js';
 import * as floodFill from '../raster/flood-fill.js';
 import * as paintBrush from '../raster/paint-brush.js';
 import * as tristateRaster from '../raster/tristate-raster.js';
-import * as rasterLayer from '../media/raster-layer.js';
+import { rasterLayer } from '../media/raster-layer.js';
 import { OverlayPipeline } from '../rendering/overlay-pipeline.js';
 import {
   PREVIEW_FILL,
