@@ -23,9 +23,13 @@ import * as fontImport from '../fonts/font-import.js';
 import * as fonts from '../fonts/font-manager.js';
 import * as imageRuntime from '../media/image-runtime.js';
 import * as photopeaTransformUI from '../transforms/photopea-transform-ui.js';
+import { ToolController } from '../tools/tool-controller.js';
+import { ToolRegistry, toolRegistry } from '../tools/tool-registry.js';
+import { PropertyDescriptor, PropertyProvider, PropertySession, normalizeNumber } from '../properties/property-system.js';
 import { Toolbar } from '../ui/toolbar.js';
 import { PageDock } from '../ui/page-dock.js';
 import { HistoryDock } from '../ui/history-dock.js';
+import { Properties } from '../ui/properties.js';
 
 function createServices() {
   const renderer = Object.freeze({
@@ -36,14 +40,17 @@ function createServices() {
     patternPixel,
   });
   const interaction = Object.freeze({ HitTest, rectIntersects, SnapEngine, InteractionController });
-  const ui = Object.freeze({ Toolbar, PageDock, HistoryDock });
-  return Object.freeze({
+  const ui = Object.freeze({ Toolbar, PageDock, HistoryDock, Properties });
+  const tools = Object.freeze({ ToolController, ToolRegistry, registry: toolRegistry });
+  const services = {
     model,
     commands,
     persistence,
     renderer,
     interaction,
     ui,
+    tools,
+    binaryImage: pipeline.binaryImage,
     transformModel,
     selectionGeometry,
     selectionOverlay,
@@ -60,8 +67,19 @@ function createServices() {
     fontImport,
     fonts,
     imageRuntime,
+    svgVectorRuntime: imageRuntime,
     photopeaTransformUI,
+  };
+  const propertyProvider = new PropertyProvider(services);
+  services.propertyProvider = propertyProvider;
+  services.properties = Object.freeze({
+    PropertyDescriptor,
+    PropertyProvider,
+    PropertySession,
+    normalizeNumber,
+    provider: propertyProvider,
   });
+  return Object.freeze(services);
 }
 
 export { createServices };
