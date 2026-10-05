@@ -1,4 +1,5 @@
 import { STROKE_COLOR_OPTIONS, normalizeStrokeColor } from '../model/stroke-values.js';
+import { drawBinaryPreview } from '../rendering/binary-image-preview.js';
 
 const SHAPE_TYPES = new Set(['line', 'rectangle', 'circle', 'polygon']);
 const FILLABLE_SHAPES = new Set(['rectangle', 'circle', 'polygon']);
@@ -732,30 +733,15 @@ class PropertyProvider {
     draw('patternPreview', (x, y) => R.patternPixel(node.pattern, x, y, x, y));
     const canvas = properties.el.querySelector('#imageDitherPreview');
     if (canvas && node.type === 'image') {
-      const rendered = R.ImageRenderer.render(node, properties.editor.state.assets);
-      if (rendered) {
-        const binary = R.ditherImageData(rendered.data, node.w, node.h, { algorithm: node.image?.ditherAlgorithm || 'bayer', bayerMatrix: node.image?.bayerMatrix || 4, invert: Boolean(node.image?.invert) });
-        const temp = document.createElement('canvas');
-        temp.width = node.w; temp.height = node.h;
-        const tempContext = temp.getContext('2d'), image = tempContext.createImageData(node.w, node.h);
-        for (let index = 0; index < binary.length; index += 1) {
-          const value = binary[index] ? 0 : 255, offset = index * 4;
-          image.data[offset] = image.data[offset + 1] = image.data[offset + 2] = value;
-          image.data[offset + 3] = 255;
-        }
-        tempContext.putImageData(image, 0, 0);
-        const context = canvas.getContext('2d');
-        context.imageSmoothingEnabled = false;
-        context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(temp, 0, 0, canvas.width, canvas.height);
-      }
+      const result = this.PE.binaryImage?.binaryImageForNode?.(node, properties.editor.state.assets);
+      if (result) drawBinaryPreview(canvas, result);
     }
   }
 }
 
 function installPropertySystem(target = globalThis) {
   const PE = target.PixelEditor;
-  if (!PE?.ui?.Properties || !PE?.commands?.UpdateNodesCommand || !PE?.model?.TreeModel || !PE?.renderer?.FramebufferRenderer) {
+  if (!PE?.ui?.Properties || !PE?.commands?.UpdateNodesCommand || !PE?.model?.TreeModel || !PE?.renderer?.FramebufferRenderer || !PE?.binaryImage?.binaryImageForNode) {
     throw new Error('PixelEditor property system dependencies are not initialized');
   }
   if (PE.propertiesInstalled) return PE.properties;
