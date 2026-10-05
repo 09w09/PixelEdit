@@ -1,8 +1,18 @@
 import * as model from '../model/index.js';
 import * as commands from '../commands/index.js';
 import * as persistence from '../persistence/index.js';
+import * as primitives from '../rendering/bitmap-primitives.js';
 import { FramebufferRenderer, Renderer, pipeline } from '../rendering/renderer.js';
 import { graphicDitherPixel, patternPixel } from '../rendering/pattern-renderer.js';
+import { TextRenderer } from '../rendering/base-text-renderer.js';
+import { ImageRenderer } from '../rendering/base-image-renderer.js';
+import { OverlayRenderer } from '../rendering/base-overlay-renderer.js';
+import { Framebuffer } from '../rendering/framebuffer.js';
+import { RenderContext } from '../rendering/render-context.js';
+import { rasterThinLine, forEachStrokePixel, lineStrokeBounds } from '../rendering/pixel-stroke.js';
+import * as textLayout from '../rendering/text-layout.js';
+import { hierarchyClip } from '../rendering/hierarchy-clipping.js';
+import { strokeStyle } from '../rendering/stroke-style.js';
 import { HitTest, rectIntersects } from '../interaction/hit-test.js';
 import { SnapEngine } from '../interaction/snap-engine.js';
 import { InteractionController } from '../interaction/interaction-controller.js';
@@ -23,12 +33,15 @@ import {
 } from '../rendering/transparency-overlay.js';
 import * as canvasCursor from '../tools/canvas-cursor.js';
 import { createContextMenuService } from '../ui/context-menu.js';
+import { classifyContextRegion, installNativeContextMenuBoundary } from '../ui/context-menu-boundary.js';
 import * as workspaceLayout from '../preferences/workspace-layout-runtime.js';
+import * as preferences from '../preferences/editor-preferences.js';
 import * as fontOptions from '../fonts/font-options.js';
 import * as fontImport from '../fonts/font-import.js';
 import * as fonts from '../fonts/font-manager.js';
 import * as imageRuntime from '../media/image-runtime.js';
 import * as photopeaTransformModule from '../transforms/photopea-transform-ui.js';
+import { ElementClipboard } from '../clipboard/element-clipboard.js';
 import { ToolController } from '../tools/tool-controller.js';
 import { ToolRegistry, toolRegistry } from '../tools/tool-registry.js';
 import { PropertyDescriptor, PropertyProvider, PropertySession, normalizeNumber } from '../properties/property-system.js';
@@ -37,13 +50,27 @@ import { PageDock } from '../ui/page-dock.js';
 import { HistoryDock } from '../ui/history-dock.js';
 import { Properties } from '../ui/properties.js';
 
+const pixelStroke = Object.freeze({ rasterThinLine, forEachStrokePixel, lineStrokeBounds });
+const clipboard = Object.freeze({ ElementClipboard });
+const contextMenuBoundary = Object.freeze({ classifyContextRegion, installNativeContextMenuBoundary });
+const plotThickLine = (framebuffer, x1, y1, x2, y2, width = 1, value = 1) => (
+  forEachStrokePixel(x1, y1, x2, y2, width, (x, y) => primitives.plotPixel(framebuffer, x, y, value))
+);
+
 function createServices() {
   const renderer = Object.freeze({
+    ...primitives,
     FramebufferRenderer,
     Renderer,
     pipeline,
     graphicDitherPixel,
     patternPixel,
+    TextRenderer,
+    ImageRenderer,
+    OverlayRenderer,
+    Framebuffer,
+    RenderContext,
+    plotThickLine,
   });
   const interaction = Object.freeze({ HitTest, rectIntersects, SnapEngine, InteractionController });
   const ui = Object.freeze({ Toolbar, PageDock, HistoryDock, Properties });
@@ -80,6 +107,7 @@ function createServices() {
     selection: selectionOverlay,
   });
   const services = {
+    version: model.PROJECT_VERSION,
     model,
     commands,
     persistence,
@@ -87,6 +115,7 @@ function createServices() {
     interaction,
     ui,
     tools,
+    clipboard,
     binaryImage: pipeline.binaryImage,
     transformModel,
     selectionGeometry,
@@ -100,13 +129,19 @@ function createServices() {
     transparencyOverlay,
     canvasCursor,
     contextMenu,
+    contextMenuBoundary,
     workspaceLayout,
+    preferences,
     fontOptions,
     fontImport,
     fonts,
     imageRuntime,
     svgVectorRuntime: imageRuntime,
     photopeaTransformUI,
+    textLayout,
+    hierarchyClip,
+    strokeStyle,
+    pixelStroke,
   };
   const propertyProvider = new PropertyProvider(services);
   services.propertyProvider = propertyProvider;
