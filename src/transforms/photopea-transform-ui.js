@@ -80,36 +80,9 @@ function edgeHandlesMarkup(editor, { model, selectionGeometry, selectionOverlay 
   }).join('');
 }
 
-function installPhotopeaTransformUIRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const R = PE?.renderer;
-  const T = PE?.transformModel;
-  const G = PE?.selectionGeometry;
-  const S = PE?.selectionOverlay;
-  const Workspace = PE?.ui?.Workspace;
-  const Properties = PE?.ui?.Properties;
-  if (!M || !R?.FramebufferRenderer || !T || !G || !S || !Workspace || !Properties) {
-    throw new Error('PixelEditor transform UI dependencies are not initialized');
-  }
-  if (PE.photopeaTransformUIInstalled) return;
-  PE.photopeaTransformUIInstalled = true;
-  PE.photopeaTransformUI = {
-    integerVisualBounds,
-    withEdgeHandles,
-    resizeCursorForHandle,
-    edgeHandlesMarkup: editor => edgeHandlesMarkup(editor, {
-      model: M,
-      selectionGeometry: G,
-      selectionOverlay: S,
-    }),
-  };
-}
-
 export {
   integerVisualBounds,
   withEdgeHandles,
   resizeCursorForHandle,
   edgeHandlesMarkup,
-  installPhotopeaTransformUIRuntime,
 };

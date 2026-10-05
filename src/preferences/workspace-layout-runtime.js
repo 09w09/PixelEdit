@@ -75,11 +75,4 @@ function setupDockSplitters(editor, target = globalThis) {
   split('#rightPaneSplitter', 'rightSplit', '#rightSidebar');
 }
 
-function installWorkspaceLayoutRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');
-  PE.workspaceLayout = { updateWorkspaceLayout, applyLayout, setupDockSplitters };
-  return PE.workspaceLayout;
-}
-
-export { updateWorkspaceLayout, applyLayout, setupDockSplitters, installWorkspaceLayoutRuntime };
+export { updateWorkspaceLayout, applyLayout, setupDockSplitters };

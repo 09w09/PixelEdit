@@ -12,13 +12,4 @@ function canPaintSelection(editor, { notify = true } = {}) {
 
 const editBoundaries = Object.freeze({ canPaintSelection });
 
-function installEditBoundariesRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor is not initialized');
-  if (PE.editBoundariesInstalled) return PE.editBoundaries;
-  PE.editBoundariesInstalled = true;
-  PE.editBoundaries = editBoundaries;
-  return editBoundaries;
-}
-
-export { canPaintSelection, editBoundaries, installEditBoundariesRuntime };
+export { canPaintSelection, editBoundaries };

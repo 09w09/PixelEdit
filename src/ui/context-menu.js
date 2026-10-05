@@ -107,13 +107,4 @@ function createContextMenuService({ model: M, commands: C, interaction: I, targe
   });
 }
 
-function installContextMenuRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.model || !PE?.commands || !PE?.interaction || !PE?.ui?.Workspace || !PE?.ui?.PageDock) throw new Error('PixelEditor context-menu dependencies are not initialized');
-  if (PE.contextMenuInstalled) return PE.contextMenu;
-  PE.contextMenuInstalled = true;
-  PE.contextMenu = createContextMenuService({ model: PE.model, commands: PE.commands, interaction: PE.interaction, target });
-  return PE.contextMenu;
-}
-
-export { commandDefinitions, visibleCommands, createContextMenuService, installContextMenuRuntime };
+export { commandDefinitions, visibleCommands, createContextMenuService };
