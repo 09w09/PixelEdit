@@ -28,7 +28,7 @@ import * as fontOptions from '../fonts/font-options.js';
 import * as fontImport from '../fonts/font-import.js';
 import * as fonts from '../fonts/font-manager.js';
 import * as imageRuntime from '../media/image-runtime.js';
-import * as photopeaTransformUI from '../transforms/photopea-transform-ui.js';
+import * as photopeaTransformModule from '../transforms/photopea-transform-ui.js';
 import { ToolController } from '../tools/tool-controller.js';
 import { ToolRegistry, toolRegistry } from '../tools/tool-registry.js';
 import { PropertyDescriptor, PropertyProvider, PropertySession, normalizeNumber } from '../properties/property-system.js';
@@ -61,6 +61,16 @@ function createServices() {
       if (!node || node.type !== 'raster') return '';
       return transparencyPreviewMarkup(node, tristateRaster.decodeTriStatePixels);
     },
+  });
+  const photopeaTransformUI = Object.freeze({
+    integerVisualBounds: photopeaTransformModule.integerVisualBounds,
+    withEdgeHandles: photopeaTransformModule.withEdgeHandles,
+    resizeCursorForHandle: photopeaTransformModule.resizeCursorForHandle,
+    edgeHandlesMarkup: editor => photopeaTransformModule.edgeHandlesMarkup(editor, {
+      model,
+      selectionGeometry,
+      selectionOverlay,
+    }),
   });
   const overlayPipeline = new OverlayPipeline({
     transparencyOverlay,
