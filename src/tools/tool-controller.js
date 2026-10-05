@@ -1,5 +1,4 @@
 import { beginPaintWithBrush } from '../raster/paint-brush.js';
-import { installToolRegistry } from './tool-registry.js';
 
 class ToolController {
   constructor(editor, registry, target = globalThis) {
@@ -91,12 +90,4 @@ class ToolController {
   }
 }
 
-function installToolSystemRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');
-  const registry = installToolRegistry(target);
-  PE.tools.ToolController = ToolController;
-  return { registry, ToolController };
-}
-
-export { ToolController, installToolSystemRuntime };
+export { ToolController };

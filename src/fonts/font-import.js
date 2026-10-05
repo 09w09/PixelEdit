@@ -62,13 +62,4 @@ async function importFonts(editor, files, hashBytes = sha256Bytes) {
   return { imported: records.length, skipped };
 }
 
-function installFontImportRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.model?.sha256Bytes || !PE?.ui?.Workspace) throw new Error('PixelEditor is not initialized');
-  if (PE.fontImportInstalled) return PE.fontImport;
-  PE.fontImportInstalled = true;
-  PE.fontImport = { inferFixedFontSize, importFonts };
-  return PE.fontImport;
-}
-
-export { inferFixedFontSize, importFonts, installFontImportRuntime };
+export { inferFixedFontSize, importFonts };

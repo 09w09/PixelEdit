@@ -198,19 +198,9 @@ function renderTextMask(node) {
   return { w, h, mask };
 }
 
-function installTextLayoutRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.renderer?.TextRenderer?.mask) throw new Error('PixelEditor is not initialized');
-  if (PE.textLayoutInstalled) return PE.textLayout;
-  PE.textLayoutInstalled = true;
-  PE.textLayout = { fontString, measureGlyphRun, layoutText, renderTextMask };
-  return PE.textLayout;
-}
-
 export {
   fontString,
   measureGlyphRun,
   layoutText,
   renderTextMask,
-  installTextLayoutRuntime,
 };

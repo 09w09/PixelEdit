@@ -155,25 +155,10 @@ function renderTextToolOptions(editor, container) {
   return resolved;
 }
 
-function installTextToolOptionsRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.preferences || !PE?.fontOptions) throw new Error('PixelEditor text tool dependencies are not initialized');
-  if (PE.textToolOptionsInstalled) return;
-  PE.textToolOptionsInstalled = true;
-  PE.textToolOptions = {
-    renderTextToolOptions,
-    applyTextToolFamily,
-    applyTextToolSize,
-    applyTextToolAlignment,
-    fallbackRemovedFamily,
-  };
-}
-
 export {
   renderTextToolOptions,
   applyTextToolFamily,
   applyTextToolSize,
   applyTextToolAlignment,
   fallbackRemovedFamily,
-  installTextToolOptionsRuntime,
 };

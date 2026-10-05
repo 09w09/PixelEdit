@@ -207,12 +207,4 @@ function installGlobalToolbar(editor) {
   return toolBar;
 }
 
-function installToolOptionsRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');
-  if (PE.toolOptionsInstalled) return;
-  PE.toolOptionsInstalled = true;
-  PE.toolOptions = { ToolOptionsBar, installGlobalToolbar, actionRequirement, SELECTION_ACTIONS };
-}
-
-export { SELECTION_ACTIONS, ToolOptionsBar, actionRequirement, installGlobalToolbar, installToolOptionsRuntime };
+export { SELECTION_ACTIONS, ToolOptionsBar, actionRequirement, installGlobalToolbar };

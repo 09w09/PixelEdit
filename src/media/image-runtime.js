@@ -141,13 +141,4 @@ const imageRuntime = Object.freeze({
   computeImageGeometry,
 });
 
-function installImageRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor is not initialized');
-  if (PE.svgVectorRuntimeInstalled) return PE.svgVectorRuntime;
-  PE.svgVectorRuntimeInstalled = true;
-  PE.svgVectorRuntime = imageRuntime;
-  return imageRuntime;
-}
-
-export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, importSvgText, hydrateAssets, computeImageGeometry, imageRuntime, installImageRuntime };
+export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, importSvgText, hydrateAssets, computeImageGeometry, imageRuntime };

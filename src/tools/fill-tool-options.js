@@ -143,12 +143,4 @@ function renderFillToolOptions(editor, container, tool = 'bucket') {
   return { fill, dither: normalizeDither(settings.dither), pattern: normalizePattern(settings.pattern) };
 }
 
-function installFillToolOptionsRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.preferences) throw new Error('PixelEditor fill tool option dependencies are not initialized');
-  if (PE.fillToolOptionsInstalled) return;
-  PE.fillToolOptionsInstalled = true;
-  PE.fillToolOptions = { renderFillToolOptions };
-}
-
-export { renderFillToolOptions, installFillToolOptionsRuntime };
+export { renderFillToolOptions };

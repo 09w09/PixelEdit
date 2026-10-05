@@ -88,17 +88,4 @@ function removeImportedFont(editor, family, CommandClass = RemoveImportedFontCom
   return ok;
 }
 
-function installFontManagerRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const C = PE?.commands;
-  const Workspace = PE?.ui?.Workspace;
-  if (!M || !C || !Workspace) throw new Error('PixelEditor is not initialized');
-  if (PE.fontManagerInstalled) return PE.fonts;
-  PE.fontManagerInstalled = true;
-  C.RemoveImportedFontCommand = RemoveImportedFontCommand;
-  PE.fonts = { FontManager, isImportedFamily, RemoveImportedFontCommand, removeImportedFont };
-  return PE.fonts;
-}
-
-export { FontManager, isImportedFamily, RemoveImportedFontCommand, removeImportedFont, installFontManagerRuntime };
+export { FontManager, isImportedFamily, RemoveImportedFontCommand, removeImportedFont };
