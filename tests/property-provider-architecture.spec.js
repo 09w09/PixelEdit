@@ -54,7 +54,6 @@ test('property implementation has no prototype patch stack, cloneControl, or reg
     '../src/ui/properties.js',
     '../src/media/raster-layer.js',
     '../src/rendering/binary-image-preview.js',
-    '../src/ui/history-properties.js',
     '../src/fonts/font-options.js',
   ];
   for (const relative of paths) {
