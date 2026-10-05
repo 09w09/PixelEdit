@@ -39,8 +39,7 @@ function svgTextFromDataUrl(dataUrl) {
   const value = String(dataUrl || '');
   const comma = value.indexOf(',');
   if (comma < 0 || !/^data:image\/svg\+xml/i.test(value)) throw new Error('Invalid SVG data URL');
-  const header = value.slice(0, comma);
-  const payload = value.slice(comma + 1);
+  const header = value.slice(0, comma), payload = value.slice(comma + 1);
   if (/;base64/i.test(header)) {
     const binary = atob(payload);
     return new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
@@ -69,8 +68,7 @@ function cacheKey(node, geometry) {
 }
 
 function renderSvgNode(node, runtime) {
-  const width = Math.max(1, Math.round(node.w));
-  const height = Math.max(1, Math.round(node.h));
+  const width = Math.max(1, Math.round(node.w)), height = Math.max(1, Math.round(node.h));
   const geometry = computeImageGeometry(node, runtime.width, runtime.height);
   const key = cacheKey({ ...node, w: width, h: height }, geometry);
   const cached = runtime.rasterCache?.get(key);
@@ -93,8 +91,7 @@ function isSvgAsset(record) { return record?.meta?.mime === 'image/svg+xml' || /
 
 async function decodeRasterImage(dataUrl) {
   const image = await loadImage(dataUrl);
-  const width = Math.max(1, Math.round(image.naturalWidth || image.width));
-  const height = Math.max(1, Math.round(image.naturalHeight || image.height));
+  const width = Math.max(1, Math.round(image.naturalWidth || image.width)), height = Math.max(1, Math.round(image.naturalHeight || image.height));
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -123,8 +120,7 @@ async function hydrateAssets(editor) {
     if (record.type !== 'image' || editor.state.assets.getRuntime(record.id)) continue;
     try {
       if (isSvgAsset(record)) {
-        const sourceText = svgTextFromDataUrl(record.dataUrl);
-        const parsed = parseSvgMeta(sourceText);
+        const sourceText = svgTextFromDataUrl(record.dataUrl), parsed = parseSvgMeta(sourceText);
         const sourceSize = sourceSizeForAsset(editor, record.id, parsed);
         const { runtime, dataUrl } = await createSvgRuntime(sourceText, sourceSize.width, sourceSize.height);
         editor.state.assets.set({ ...record, dataUrl, meta: { ...record.meta, mime: 'image/svg+xml' } });
@@ -134,13 +130,24 @@ async function hydrateAssets(editor) {
   }
 }
 
+const imageRuntime = Object.freeze({
+  kind: SVG_RUNTIME_KIND,
+  parseSvgMeta,
+  normalizeSvgText,
+  renderSvgNode,
+  importSvgText,
+  hydrateAssets,
+  decodeRasterImage,
+  computeImageGeometry,
+});
+
 function installImageRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  if (!PE?.renderer?.ImageRenderer || !PE?.ui?.Workspace) throw new Error('PixelEditor is not initialized');
+  if (!PE) throw new Error('PixelEditor is not initialized');
   if (PE.svgVectorRuntimeInstalled) return PE.svgVectorRuntime;
   PE.svgVectorRuntimeInstalled = true;
-  PE.svgVectorRuntime = { kind: SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, renderSvgNode, importSvgText, hydrateAssets, decodeRasterImage, computeImageGeometry };
-  return PE.svgVectorRuntime;
+  PE.svgVectorRuntime = imageRuntime;
+  return imageRuntime;
 }
 
-export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, importSvgText, hydrateAssets, computeImageGeometry, installImageRuntime };
+export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, importSvgText, hydrateAssets, computeImageGeometry, imageRuntime, installImageRuntime };
