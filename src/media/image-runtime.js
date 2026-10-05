@@ -1,7 +1,7 @@
+import { computeImageGeometry } from './image-geometry.js';
+
 const SVG_RUNTIME_KIND = 'svg-vector';
 const MAX_CACHE_ENTRIES = 32;
-
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 function parseNumericLength(value) {
   const match = String(value ?? '').trim().match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))/);
@@ -43,7 +43,7 @@ function svgTextFromDataUrl(dataUrl) {
   const payload = value.slice(comma + 1);
   if (/;base64/i.test(header)) {
     const binary = atob(payload);
-    return new TextDecoder().decode(Uint8Array.from(binary, ch => ch.charCodeAt(0)));
+    return new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
   }
   return decodeURIComponent(payload);
 }
@@ -64,35 +64,20 @@ async function createSvgRuntime(text, width, height) {
   return { runtime: { kind: SVG_RUNTIME_KIND, width, height, image, rasterCache: new Map() }, dataUrl };
 }
 
-function imageGeometry(node, sourceWidth, sourceHeight) {
-  const options = node.image || {};
-  const cropX = clamp(Math.round(options.cropX || 0), 0, Math.max(0, sourceWidth - 1));
-  const cropY = clamp(Math.round(options.cropY || 0), 0, Math.max(0, sourceHeight - 1));
-  const cropWidth = clamp(Math.round(options.cropW || sourceWidth), 1, Math.max(1, sourceWidth - cropX));
-  const cropHeight = clamp(Math.round(options.cropH || sourceHeight), 1, Math.max(1, sourceHeight - cropY));
-  let drawWidth = node.w, drawHeight = node.h, offsetX = 0, offsetY = 0;
-  if (options.fit === 'original') { drawWidth = cropWidth; drawHeight = cropHeight; }
-  else if (options.fit === 'contain') {
-    const scale = Math.min(node.w / cropWidth, node.h / cropHeight);
-    drawWidth = cropWidth * scale; drawHeight = cropHeight * scale; offsetX = (node.w - drawWidth) / 2; offsetY = (node.h - drawHeight) / 2;
-  } else if (options.fit === 'cover') {
-    const scale = Math.max(node.w / cropWidth, node.h / cropHeight);
-    drawWidth = cropWidth * scale; drawHeight = cropHeight * scale; offsetX = (node.w - drawWidth) / 2; offsetY = (node.h - drawHeight) / 2;
-  }
-  return { cropX, cropY, cropWidth, cropHeight, drawWidth, drawHeight, offsetX, offsetY };
+function cacheKey(node, geometry) {
+  return [node.w, node.h, node.image?.fit || 'stretch', geometry.cropX, geometry.cropY, geometry.cropWidth, geometry.cropHeight].join(':');
 }
-
-function cacheKey(node, geometry) { return [node.w, node.h, node.image?.fit || 'stretch', geometry.cropX, geometry.cropY, geometry.cropWidth, geometry.cropHeight].join(':'); }
 
 function renderSvgNode(node, runtime) {
   const width = Math.max(1, Math.round(node.w));
   const height = Math.max(1, Math.round(node.h));
-  const geometry = imageGeometry(node, runtime.width, runtime.height);
+  const geometry = computeImageGeometry(node, runtime.width, runtime.height);
   const key = cacheKey({ ...node, w: width, h: height }, geometry);
   const cached = runtime.rasterCache?.get(key);
   if (cached) return cached;
   const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
+  canvas.width = width;
+  canvas.height = height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   context.clearRect(0, 0, width, height);
   context.imageSmoothingEnabled = true;
@@ -111,7 +96,8 @@ async function decodeRasterImage(dataUrl) {
   const width = Math.max(1, Math.round(image.naturalWidth || image.width));
   const height = Math.max(1, Math.round(image.naturalHeight || image.height));
   const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
+  canvas.width = width;
+  canvas.height = height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   context.drawImage(image, 0, 0, width, height);
   return { width, height, data: context.getImageData(0, 0, width, height).data };
@@ -153,8 +139,8 @@ function installImageRuntime(target = globalThis) {
   if (!PE?.renderer?.ImageRenderer || !PE?.ui?.Workspace) throw new Error('PixelEditor is not initialized');
   if (PE.svgVectorRuntimeInstalled) return PE.svgVectorRuntime;
   PE.svgVectorRuntimeInstalled = true;
-  PE.svgVectorRuntime = { kind: SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, renderSvgNode, importSvgText, hydrateAssets };
+  PE.svgVectorRuntime = { kind: SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, renderSvgNode, importSvgText, hydrateAssets, decodeRasterImage, computeImageGeometry };
   return PE.svgVectorRuntime;
 }
 
-export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, importSvgText, hydrateAssets, installImageRuntime };
+export { SVG_RUNTIME_KIND, parseSvgMeta, normalizeSvgText, createSvgRuntime, renderSvgNode, decodeRasterImage, importSvgText, hydrateAssets, computeImageGeometry, installImageRuntime };

@@ -1,3 +1,5 @@
+import { computeImageGeometry } from '../media/image-geometry.js';
+
 const R = globalThis.PixelEditor.renderer;
 
 function sample(source, x, y, mode = 'nearest') {
@@ -36,32 +38,8 @@ function render(node, assets) {
 
   const output = new Uint8ClampedArray(node.w * node.h * 4);
   const settings = node.image || {};
-  const cropX = R.clamp(Math.round(settings.cropX || 0), 0, source.width - 1);
-  const cropY = R.clamp(Math.round(settings.cropY || 0), 0, source.height - 1);
-  const cropWidth = R.clamp(Math.round(settings.cropW || source.width), 1, source.width - cropX);
-  const cropHeight = R.clamp(Math.round(settings.cropH || source.height), 1, source.height - cropY);
-  let drawWidth = node.w;
-  let drawHeight = node.h;
-  let offsetX = 0;
-  let offsetY = 0;
-
-  if (settings.fit === 'original') {
-    drawWidth = cropWidth;
-    drawHeight = cropHeight;
-  } else if (settings.fit === 'contain') {
-    const scale = Math.min(node.w / cropWidth, node.h / cropHeight);
-    drawWidth = cropWidth * scale;
-    drawHeight = cropHeight * scale;
-    offsetX = (node.w - drawWidth) / 2;
-    offsetY = (node.h - drawHeight) / 2;
-  } else if (settings.fit === 'cover') {
-    const scale = Math.max(node.w / cropWidth, node.h / cropHeight);
-    drawWidth = cropWidth * scale;
-    drawHeight = cropHeight * scale;
-    offsetX = (node.w - drawWidth) / 2;
-    offsetY = (node.h - drawHeight) / 2;
-  }
-
+  const geometry = computeImageGeometry(node, source.width, source.height);
+  const { cropX, cropY, cropWidth, cropHeight, drawWidth, drawHeight, offsetX, offsetY } = geometry;
   const nearest = settings.interpolation !== 'bilinear';
   const identity = nearest && offsetX === 0 && offsetY === 0
     && drawWidth === cropWidth && drawHeight === cropHeight
@@ -74,7 +52,6 @@ function render(node, assets) {
         output[target + 3] = 0;
         continue;
       }
-
       let pixel;
       if (identity) {
         const sourceOffset = ((cropY + y) * source.width + (cropX + x)) * 4;
