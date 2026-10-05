@@ -41,6 +41,10 @@ test('V17 source contains no legacy runtime wrapper or compatibility adaptation'
     );
     collectMatches(source, name, 'listener-reset-clone', /\.cloneNode\s*\(/g, offenders);
     collectMatches(source, name, 'image-type-adaptation', /\bnode\.type\s*=\s*['"]image['"]/g, offenders);
+    collectMatches(source, name, 'workspace-capability-registry', /\bworkspaceCapabilities\b/g, offenders);
+    collectMatches(source, name, 'anonymous-class-replacement', /\b(?:P\.ProjectFiles|P\.Autosave|I\.Clipboard|PE\.ui\.Workspace)\s*=\s*class\b/g, offenders);
+    collectMatches(source, name, 'property-preview-replacement', /\bprovider\.renderPreviews\s*=/g, offenders);
+    collectMatches(source, name, 'tool-instance-method-replacement', /\beditor\.(?:setTool|onPointerDown|onPointerMove|onPointerUp|beginPaint)\s*=/g, offenders);
     if (name.startsWith('rendering/')) {
       collectMatches(source, name, 'renderer-project-clone', /structuredClone\s*\(\s*project\s*\)/g, offenders);
     }
