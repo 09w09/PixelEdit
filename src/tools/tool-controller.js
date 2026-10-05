@@ -7,12 +7,6 @@ class ToolController {
     this.editor = editor;
     this.registry = registry;
     this.target = target;
-    const prototype = Object.getPrototypeOf(editor);
-    this.base = {
-      pointerDown: prototype.onPointerDown,
-      pointerMove: prototype.onPointerMove,
-      pointerUp: prototype.onPointerUp,
-    };
     this.installed = false;
     this.boundKeyDown = event => this.keyDown(event);
   }
@@ -20,13 +14,6 @@ class ToolController {
   install() {
     if (this.installed) return this;
     this.installed = true;
-    const editor = this.editor;
-    editor.toolController = this;
-    editor.setTool = this.setTool.bind(this);
-    editor.onPointerDown = this.pointerDown.bind(this);
-    editor.onPointerMove = this.pointerMove.bind(this);
-    editor.onPointerUp = this.pointerUp.bind(this);
-    editor.beginPaint = this.beginPaint.bind(this);
     this.target.addEventListener?.('keydown', this.boundKeyDown);
     return this;
   }
@@ -38,7 +25,7 @@ class ToolController {
     editor.bus?.breakMergeChain?.('tool-change');
     editor.cancelCustomGesture?.();
     editor.tool = definition.id;
-    globalThis.document?.querySelectorAll?.('[data-tool]').forEach(button => {
+    this.target.document?.querySelectorAll?.('[data-tool]').forEach(button => {
       button.classList.toggle('active', button.dataset.tool === definition.id);
     });
     editor.updateInteraction?.();
@@ -52,35 +39,35 @@ class ToolController {
     return beginPaintWithBrush(this.editor, point);
   }
 
-  pointerDown(event) {
+  handlePointerDown(event) {
     const editor = this.editor;
     const definition = this.registry.get(editor.tool);
     if (definition?.kind === 'image') {
       if (event.button === 2) return false;
-      globalThis.document?.querySelector?.('#fileImage')?.click();
+      this.target.document?.querySelector?.('#fileImage')?.click();
       return true;
     }
     if (definition?.kind === 'bucket') {
       if (event.button === 2) return false;
       const point = editor.logicalPoint(event);
       editor.canvas?.setPointerCapture?.(event.pointerId);
-      return editor.bucketFillAt?.(point) ?? false;
+      editor.bucketFillAt?.(point);
+      return true;
     }
-    return this.base.pointerDown?.call(editor, event);
+    return false;
   }
 
-  pointerMove(event) {
+  handlePointerMove(event) {
     const editor = this.editor;
-    const result = this.base.pointerMove?.call(editor, event);
     editor.canvasCursorInside = true;
     editor.canvasCursorPoint = editor.logicalPoint(event);
     this.cursor();
     if (this.registry.get(editor.tool)?.cursor === 'brush') editor.renderOverlay?.();
-    return result;
+    return false;
   }
 
-  pointerUp(event) {
-    return this.base.pointerUp?.call(this.editor, event);
+  handlePointerUp() {
+    return false;
   }
 
   keyDown(event) {
