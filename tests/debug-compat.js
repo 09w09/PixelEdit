@@ -5,11 +5,17 @@ import { ImageRenderer } from '../src/rendering/base-image-renderer.js';
 import { OverlayRenderer } from '../src/rendering/base-overlay-renderer.js';
 import { Framebuffer } from '../src/rendering/framebuffer.js';
 import { RenderContext } from '../src/rendering/render-context.js';
+import { rasterThinLine, forEachStrokePixel, lineStrokeBounds } from '../src/rendering/pixel-stroke.js';
 import * as textLayout from '../src/rendering/text-layout.js';
 import * as preferences from '../src/preferences/editor-preferences.js';
 import { hierarchyClip } from '../src/rendering/hierarchy-clipping.js';
 import { strokeStyle } from '../src/rendering/stroke-style.js';
 import { ElementClipboard } from '../src/clipboard/element-clipboard.js';
+
+const pixelStrokeRuntime = Object.freeze({ rasterThinLine, forEachStrokePixel, lineStrokeBounds });
+const plotThickLine = (framebuffer, x1, y1, x2, y2, width = 1, value = 1) => (
+  forEachStrokePixel(x1, y1, x2, y2, width, (x, y) => primitives.plotPixel(framebuffer, x, y, value))
+);
 
 function legacyDebugView() {
   const debug = globalThis.PixelEditorDebug;
@@ -31,6 +37,7 @@ function legacyDebugView() {
       Framebuffer,
       RenderContext,
       ...services.renderer,
+      plotThickLine,
     },
     interaction: { ...services.interaction, Clipboard: ElementClipboard },
     persistence: services.persistence,
@@ -54,6 +61,7 @@ function legacyDebugView() {
     shapeStyleProperties: {},
     hierarchyClip,
     strokeStyle,
+    pixelStrokeRuntime,
     ElementClipboard,
     elementClipboard: { ElementClipboard },
   };
