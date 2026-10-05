@@ -10,6 +10,7 @@ import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
+import { installWorkspaceLayoutRuntime } from './preferences/workspace-layout-runtime.js';
 import { installPropertySystem } from './properties/property-system.js';
 import { installFloodFillRuntime } from './raster/flood-fill.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
@@ -36,6 +37,7 @@ import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 
 function installRuntimeModules() {
   installEditorPreferencesRuntime(globalThis);
+  installWorkspaceLayoutRuntime(globalThis);
   installFontOptionsRuntime(globalThis);
   installToolStateRuntime(globalThis);
   installTextToolOptionsRuntime(globalThis);
