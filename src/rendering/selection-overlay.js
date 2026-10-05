@@ -63,22 +63,6 @@ function installSelectionOverlayRuntime(target = globalThis) {
     return { x: centerX, y: centerY, w: 0, h: 0 };
   }
 
-  function gesturePivotBounds(gesture, node) {
-    return gesture?.pivotBounds || G.sourceGeometryBounds(gesture?.original || node);
-  }
-
-  function reanchorTransform(editor, node, gesture, anchorLocal, anchorWorld) {
-    const base = T.normalizeTransform(gesture?.original?.transform || node.transform);
-    node.transform = base;
-    const nextPivot = sourcePivotBounds(editor, node) || G.sourceGeometryBounds(node);
-    const currentAnchor = G.localToWorld(node, anchorLocal, nextPivot);
-    node.transform = T.normalizeTransform({
-      ...base,
-      translateX: (base.translateX || 0) + anchorWorld.x - currentAnchor.x,
-      translateY: (base.translateY || 0) + anchorWorld.y - currentAnchor.y,
-    });
-  }
-
   function outlineMarkup(node, dx = 0, dy = 0, pivotBounds = null) {
     const geometry = G.selectionGeometry(node, pivotBounds);
     if (!geometry) return '';
@@ -132,8 +116,7 @@ function installSelectionOverlayRuntime(target = globalThis) {
     return handles.map(point => handleRect(translated(point, dx, dy), editor.zoom)).join('');
   }
 
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.selectionHandleAt = function selectionHandleAt(editor, point) {
+  function selectionHandleAt(editor, point) {
     const ids = editor.state.selection.ids;
     if (ids.length !== 1) return null;
     const page = editor.activePage();
@@ -141,7 +124,7 @@ function installSelectionOverlayRuntime(target = globalThis) {
     const tree = new M.TreeModel(page);
     if (!node || tree.isEffectivelyLocked(node.id)) return null;
     return G.hitHandle(node, point, editor.zoom, sourcePivotBounds(editor, node));
-  };
+  }
 
   PE.selectionOverlay = {
     boxHandlePoints,
@@ -154,6 +137,7 @@ function installSelectionOverlayRuntime(target = globalThis) {
     outlineMarkup,
     selectionMarkup,
     handlesMarkup,
+    selectionHandleAt,
   };
 }
 
