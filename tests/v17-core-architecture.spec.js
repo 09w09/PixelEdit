@@ -84,7 +84,8 @@ test('application boots directly as canonical V17', async ({ page }) => {
     datasetVersion: document.documentElement.dataset.pixelEditor,
     hasCreateProject: typeof window.PixelEditorDebug.services?.model?.createProject === 'function',
     hasSerializer: typeof window.PixelEditorDebug.services?.persistence?.ProjectSerializer?.serialize === 'function',
-    hasWorkspace: typeof window.PixelEditorDebug.services?.ui?.Workspace === 'function',
+    hasWorkspace: typeof window.PixelEditorDebug.app?.constructor === 'function',
+    sameWorkspace: window.PixelEditorDebug.app === window.PixelEditorTest.editor,
   }));
   expect(result).toEqual({
     namespaceVersion: 17,
@@ -93,6 +94,7 @@ test('application boots directly as canonical V17', async ({ page }) => {
     hasCreateProject: true,
     hasSerializer: true,
     hasWorkspace: true,
+    sameWorkspace: true,
   });
 });
 
