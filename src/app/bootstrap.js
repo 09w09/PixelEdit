@@ -1,3 +1,4 @@
+import { exposeDebugApi } from '../debug/debug-api.js';
 import { Workspace } from './workspace.js';
 import { services } from './services.js';
 
@@ -13,6 +14,7 @@ function bootstrapPixelEdit(target = globalThis) {
     editor.toolController = new services.tools.ToolController(editor, services.tools.registry, target);
     editor.toolController.install();
     app = editor.mount();
+    exposeDebugApi(target, { app, services });
     return app;
   };
 
