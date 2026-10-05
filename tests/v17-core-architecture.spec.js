@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+async function sourceFiles(root) {
+  const output = [];
+  for (const entry of await readdir(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) output.push(...await sourceFiles(path));
+    else if (entry.isFile() && entry.name.endsWith('.js')) output.push(path);
+  }
+  return output;
+}
 
 async function openEditor(page) {
   await page.goto('/');
@@ -22,6 +34,28 @@ test('main no longer upgrades a V15 model through installV17SchemaRuntime', asyn
   const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
   expect(main).not.toContain('installV17SchemaRuntime');
   expect(main).toContain("import './core/index.js';");
+});
+
+test('Workspace is defined once without V17 subclass or capability registry', async () => {
+  const root = fileURLToPath(new URL('../src/', import.meta.url));
+  const files = await sourceFiles(root);
+  const capabilityFiles = [];
+  const v17WorkspaceFiles = [];
+  const workspaceAssignments = [];
+
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    const name = relative(root, file).replaceAll('\\', '/');
+    if (source.includes('workspaceCapabilities')) capabilityFiles.push(name);
+    if (name.includes('v17-workspace') || source.includes('v17-workspace.js')) v17WorkspaceFiles.push(name);
+    if (/(?:\bU|\bPE\.ui|\bPixelEditor\.ui)\.Workspace\s*=/.test(source)) workspaceAssignments.push(name);
+  }
+
+  const bootstrap = await readFile(new URL('../src/app/bootstrap.js', import.meta.url), 'utf8');
+  expect(capabilityFiles).toEqual([]);
+  expect(v17WorkspaceFiles).toEqual([]);
+  expect(workspaceAssignments).toEqual(['app/workspace.js']);
+  expect(bootstrap).not.toContain('createToolDelegatingWorkspace');
 });
 
 test('application boots directly as canonical V17', async ({ page }) => {
