@@ -56,7 +56,7 @@ test('all five stroke styles have deterministic pixel patterns', async ({ page }
     const styles = ['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot'];
     return Object.fromEntries(styles.map(style => {
       const node = nodeFor(style);
-      const pixels = PE.strokeStyle.styledStrokePixels(node, R, PE.pixelStrokeRuntime);
+      const pixels = PE.strokeStyle.styledStrokePixels(node, R, PE.pixelStroke);
       return [style, pixels.map(pixel => `${pixel.x},${pixel.y}`)];
     }));
   });
