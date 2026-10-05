@@ -1,3 +1,4 @@
+import { services as PE } from './services.js';
 import { ElementClipboard } from '../clipboard/element-clipboard.js';
 import {
   copySelection as copySelectionToClipboard,
@@ -5,6 +6,7 @@ import {
   selectAllOnPage as selectAllPageElements,
 } from '../commands/clipboard-commands.js';
 import { FontManager } from '../fonts/font-manager.js';
+import { decodeRasterImage } from '../media/image-runtime.js';
 import { normalizeFill, normalizeStroke } from '../model/schema.js';
 import {
   DEFAULT_FILENAME,
@@ -16,7 +18,6 @@ import { installNativeContextMenuBoundary } from '../ui/context-menu-boundary.js
 import { ToolOptionsBar, installGlobalToolbar } from '../tools/tool-options-bar.js';
 import { toolDefaults } from '../tools/tool-state.js';
 
-const PE = globalThis.PixelEditor;
 const M = PE.model;
 const C = PE.commands;
 const R = PE.renderer;
@@ -36,26 +37,6 @@ function dataUrlFromFile(file) {
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
-  });
-}
-
-function decodeImage(dataUrl, targetWidth = null, targetHeight = null) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(targetWidth || image.naturalWidth || image.width));
-      canvas.height = Math.max(1, Math.round(targetHeight || image.naturalHeight || image.height));
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      resolve({
-        width: canvas.width,
-        height: canvas.height,
-        data: context.getImageData(0, 0, canvas.width, canvas.height).data,
-      });
-    };
-    image.onerror = reject;
-    image.src = dataUrl;
   });
 }
 
@@ -159,7 +140,7 @@ class Workspace {
     this.overlay = $('#overlaySvg');
     this.ctx = this.canvas.getContext('2d', { alpha: false });
     this.pageLayers = new U.PageDock(this, $('#pageLayerDock'));
-    this.properties = new U.Properties(this, $('#properties'));
+    this.properties = new U.Properties(this, $('#properties'), PE.propertyProvider);
     this.history = new U.HistoryDock(this, $('#historyDock'));
     this.toolbar = new U.Toolbar(this);
     this.toolbar.mount();
@@ -753,7 +734,7 @@ class Workspace {
   }
 
   async importImageFile(file, { replaceTargetId = null } = {}) {
-    try { if (file.name.toLowerCase().endsWith('.xbm')) return this.importXbmText(await file.text(), file.name, { replaceTargetId }); if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) return this.importSvgText(await file.text(), file.name, { replaceTargetId }); const dataUrl = await dataUrlFromFile(file), runtime = await decodeImage(dataUrl); return this.addImageAsset(dataUrl, runtime, file.name, file.type || 'image', { sourceType: 'bitmap', replaceTargetId }); } finally { if (this.tool === 'image') this.setTool('pointer'); }
+    try { if (file.name.toLowerCase().endsWith('.xbm')) return this.importXbmText(await file.text(), file.name, { replaceTargetId }); if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) return this.importSvgText(await file.text(), file.name, { replaceTargetId }); const dataUrl = await dataUrlFromFile(file), runtime = await decodeRasterImage(dataUrl); return this.addImageAsset(dataUrl, runtime, file.name, file.type || 'image', { sourceType: 'bitmap', replaceTargetId }); } finally { if (this.tool === 'image') this.setTool('pointer'); }
   }
 
   async importSvgText(text, name = 'svg', options = {}) { return PE.svgVectorRuntime?.importSvgText?.(this, text, name, options); }
@@ -836,7 +817,5 @@ class Workspace {
     return { version: 17, editor: this, getZoom: () => this.zoom, getTool: () => this.tool, getSelectionIds: () => [...this.state.selection.ids], getSelectionRects: () => this.selectionRects().map(item => ({ ...item })), getNode: id => structuredClone(M.nodeById(this.activePage(), id)), getNodePositions: () => Object.fromEntries(this.activePage().nodes.map(node => [node.id, { x: node.x ?? node.x1 ?? 0, y: node.y ?? node.y1 ?? 0 }])), historyCount: () => this.bus.entries.length, countType: type => this.countType(type), getActivePage: () => structuredClone(this.activePage()), getState: () => this.state, validateHierarchy: () => new M.TreeModel(this.activePage()).validateHierarchy(), serialize: () => P.ProjectSerializer.serialize(this.state.project, this.state.assets), pixFileType: () => P.PIX_FILE_TYPE, framebufferString: () => Array.from(R.FramebufferRenderer.renderPage(this.state.project, this.activePage().id, this.state.assets)).join(''), previewFramebufferBlackCount: () => this.lastFramebuffer.reduce((sum, bit) => sum + bit, 0), isPixelGridVisible: () => this.overlay.classList.contains('pixel-grid'), createNode: (type, props = {}) => { const node = M.createNode(type, { ...props, parentId: props.parentId ?? this.activePage().id }); this.exec(new C.AddNodesCommand([node], this.activePage().id)); this.state.selection.replace([node.id]); this.pageSelectedId = null; this.renderAll(); return node.id; } };
   }
 }
-
-PE.ui.Workspace = Workspace;
 
 export { Workspace };
