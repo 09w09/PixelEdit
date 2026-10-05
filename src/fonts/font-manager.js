@@ -1,3 +1,5 @@
+import { fallbackRemovedFamily } from '../tools/text-tool-options.js';
+
 function isImportedFamily(project, family) {
   return Boolean((project?.fonts || []).some(record => record.family === family));
 }
@@ -48,13 +50,36 @@ class FontManager {
   }
 }
 
-function removeImportedFont(editor, family, CommandClass = globalThis.PixelEditor?.fonts?.RemoveImportedFontCommand) {
-  const PE = globalThis.PixelEditor;
+class RemoveImportedFontCommand {
+  constructor(family) {
+    this.family = family;
+    this.label = '移除字体';
+  }
+
+  execute(state) {
+    const fonts = state.project.fonts || [];
+    const record = fonts.find(item => item.family === this.family);
+    if (!record) return false;
+    for (const page of state.project.pages || []) {
+      for (const node of page.nodes || []) {
+        if (node.type !== 'text' || node.fontFamily !== this.family) continue;
+        const effectiveSize = Math.max(1, Math.round(Number(node.fixedFontSize ?? node.fontSize ?? 16) || 16));
+        node.fontFamily = 'sans-serif';
+        node.fontSize = effectiveSize;
+        node.fixedFontSize = null;
+      }
+    }
+    state.project.fonts = fonts.filter(item => item.family !== this.family);
+    return true;
+  }
+}
+
+function removeImportedFont(editor, family, CommandClass = RemoveImportedFontCommand) {
   const record = (editor.state.project.fonts || []).find(item => item.family === family);
   if (!record || !CommandClass) return false;
   const ok = editor.exec(new CommandClass(family));
   if (ok) {
-    PE.textToolOptions?.fallbackRemovedFamily?.(editor, family);
+    fallbackRemovedFamily(editor, family);
     editor.fontManager?.unregister(record);
     editor.fontManager?.sync(editor.state.project.fonts || []);
     editor.properties?.render();
@@ -71,33 +96,9 @@ function installFontManagerRuntime(target = globalThis) {
   if (!M || !C || !Workspace) throw new Error('PixelEditor is not initialized');
   if (PE.fontManagerInstalled) return PE.fonts;
   PE.fontManagerInstalled = true;
-
-  class RemoveImportedFontCommand {
-    constructor(family) {
-      this.family = family;
-      this.label = '移除字体';
-    }
-
-    execute(state) {
-      const fonts = state.project.fonts || [];
-      const record = fonts.find(item => item.family === this.family);
-      if (!record) return false;
-      for (const page of state.project.pages || []) {
-        for (const node of page.nodes || []) {
-          if (node.type !== 'text' || node.fontFamily !== this.family) continue;
-          const effectiveSize = Math.max(1, Math.round(Number(node.fixedFontSize ?? node.fontSize ?? 16) || 16));
-          node.fontFamily = 'sans-serif';
-          node.fontSize = effectiveSize;
-          node.fixedFontSize = null;
-        }
-      }
-      state.project.fonts = fonts.filter(item => item.family !== this.family);
-      return true;
-    }
-  }
   C.RemoveImportedFontCommand = RemoveImportedFontCommand;
   PE.fonts = { FontManager, isImportedFamily, RemoveImportedFontCommand, removeImportedFont };
   return PE.fonts;
 }
 
-export { FontManager, isImportedFamily, removeImportedFont, installFontManagerRuntime };
+export { FontManager, isImportedFamily, RemoveImportedFontCommand, removeImportedFont, installFontManagerRuntime };
