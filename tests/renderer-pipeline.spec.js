@@ -38,11 +38,11 @@ test('renderPage never clones the full project', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const R = window.PixelEditor.renderer;
+    const { renderer: R, model: M } = window.PixelEditorDebug.services;
     editor.newProject({ force: true });
     const project = editor.state.project;
     const pageModel = editor.activePage();
-    const node = window.PixelEditor.model.createNode('rectangle', {
+    const node = M.createNode('rectangle', {
       parentId: pageModel.id,
       x: 20, y: 20, w: 40, h: 30,
       fill: { mode: 'solid', color: 1 },
@@ -77,7 +77,7 @@ test('nested transformed child is clipped by transformed parent visual bounds', 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const { model: M, renderer: R } = window.PixelEditor;
+    const { model: M, renderer: R } = window.PixelEditorDebug.services;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const parent = M.createNode('rectangle', {
