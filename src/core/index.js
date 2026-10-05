@@ -1,6 +1,7 @@
 import './namespace.js';
 import './model-bridge.js';
 import './rendering-bridge.js';
+import './selection-bridge.js';
 import './command-bridge.js';
 import './persistence-bridge.js';
 import './interaction-bridge.js';
