@@ -1,2 +1,37 @@
-(()=>{const U=globalThis.PixelEditor.ui;class HistoryDock{constructor(editor,el){this.editor=editor;this.el=el;}
- render(){const b=this.editor.bus;this.el.innerHTML=b.entries.map((e,i)=>`<button class="history-item ${i===b.cursor?'active':''}" data-history-index="${i}">${i?i:''} ${this.escape(e.label)}</button>`).join('');this.el.querySelectorAll('[data-history-index]').forEach(x=>x.onclick=()=>{b.jump(Number(x.dataset.historyIndex));this.editor.state.selection.clear();this.editor.renderAll();});}escape(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}}U.HistoryDock=HistoryDock;})();
+const U = globalThis.PixelEditor.ui;
+
+class HistoryDock {
+  constructor(editor, el) {
+    this.editor = editor;
+    this.el = el;
+  }
+
+  render() {
+    const bus = this.editor.bus;
+    const entries = bus.entries.map((entry, index) => ({ entry, index })).reverse();
+    this.el.innerHTML = entries.map(({ entry, index }) =>
+      `<button class="history-item ${index === bus.cursor ? 'active' : ''}" data-history-index="${index}">${index ? index : ''} ${this.escape(entry.label)}</button>`,
+    ).join('');
+    this.el.querySelectorAll('[data-history-index]').forEach(button => {
+      button.onclick = () => {
+        bus.jump(Number(button.dataset.historyIndex));
+        this.editor.state.selection.clear();
+        this.editor.renderAll();
+      };
+    });
+  }
+
+  escape(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[char]);
+  }
+}
+
+U.HistoryDock = HistoryDock;
+
+export { HistoryDock };
