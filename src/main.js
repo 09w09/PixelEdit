@@ -15,7 +15,6 @@ import { installPropertySystem } from './properties/property-system.js';
 import { installFloodFillRuntime } from './raster/flood-fill.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
-import { installBinaryImagePreviewRuntime } from './rendering/binary-image-preview.js';
 import { installBinaryImageRuntime } from './rendering/binary-image.js';
 import { installOverlayPipelineRuntime } from './rendering/overlay-pipeline.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
@@ -67,7 +66,6 @@ function installRuntimeModules() {
   installFontManagerRuntime(globalThis);
   installFontImportRuntime(globalThis);
   installPropertySystem(globalThis);
-  installBinaryImagePreviewRuntime(globalThis);
   installToolSystemRuntime(globalThis);
 }
 
