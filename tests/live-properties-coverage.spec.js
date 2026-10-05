@@ -24,8 +24,8 @@ async function createImage(page) {
   return page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     editor.newProject({ force: true });
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     const p = editor.activePage();
     const rgba = new Uint8ClampedArray(4 * 4 * 4);
     for (let i = 0; i < 16; i += 1) {
@@ -61,8 +61,8 @@ async function createRaster(page) {
   return page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     editor.newProject({ force: true });
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     const p = editor.activePage();
     const node = M.createNode('raster', { parentId: p.id, x: 20, y: 20, w: 12, h: 8 });
     editor.exec(new C.AddNodesCommand([node], p.id));

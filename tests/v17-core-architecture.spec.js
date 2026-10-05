@@ -79,12 +79,12 @@ test('Workspace is defined once without V17 subclass, capability registry, or gl
 test('application boots directly as canonical V17', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => ({
-    namespaceVersion: window.PixelEditor?.version,
+    namespaceVersion: window.PixelEditorDebug.services?.version,
     testVersion: window.PixelEditorTest?.version,
     datasetVersion: document.documentElement.dataset.pixelEditor,
-    hasCreateProject: typeof window.PixelEditor?.model?.createProject === 'function',
-    hasSerializer: typeof window.PixelEditor?.persistence?.ProjectSerializer?.serialize === 'function',
-    hasWorkspace: typeof window.PixelEditor?.ui?.Workspace === 'function',
+    hasCreateProject: typeof window.PixelEditorDebug.services?.model?.createProject === 'function',
+    hasSerializer: typeof window.PixelEditorDebug.services?.persistence?.ProjectSerializer?.serialize === 'function',
+    hasWorkspace: typeof window.PixelEditorDebug.services?.ui?.Workspace === 'function',
   }));
   expect(result).toEqual({
     namespaceVersion: 17,
@@ -109,7 +109,7 @@ test('canonical project/page schema is V17 without legacy workspaceLayout or fil
       pageFill: pageModel.fill,
       pageFillHasValue: Object.hasOwn(pageModel.fill || {}, 'value'),
       nodeTypes: ['line', 'rectangle', 'circle', 'polygon', 'text', 'image', 'raster'].map(type => {
-        const node = window.PixelEditor.model.createNode(type, { parentId: pageModel.id, w: 4, h: 4 });
+        const node = window.PixelEditorDebug.services.model.createNode(type, { parentId: pageModel.id, w: 4, h: 4 });
         return {
           type: node.type,
           hasTransform: Boolean(node.transform),
@@ -139,8 +139,8 @@ test('workspace uses the canonical persistence constructors', async ({ page }) =
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     return {
-      filesMatch: editor.files?.constructor === window.PixelEditor.persistence.ProjectFiles,
-      autosaveMatches: editor.autosave?.constructor === window.PixelEditor.persistence.Autosave,
+      filesMatch: editor.files?.constructor === window.PixelEditorDebug.services.persistence.ProjectFiles,
+      autosaveMatches: editor.autosave?.constructor === window.PixelEditorDebug.services.persistence.Autosave,
       hasSaveAs: typeof editor.files?.saveAs === 'function',
       hasAutosaveRun: typeof editor.autosave?.run === 'function',
     };

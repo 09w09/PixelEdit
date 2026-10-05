@@ -9,9 +9,9 @@ test('mixed box selection size updates raster and vector nodes together', async 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const rectangle = M.createNode('rectangle', { parentId: active.id, x: 5, y: 5, w: 4, h: 3, stroke: { width: 1, color: 1, style: 'solid' } });

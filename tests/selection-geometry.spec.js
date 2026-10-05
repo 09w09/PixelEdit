@@ -36,8 +36,8 @@ const transforms = [
 test('box selection outline is perimeter ordered for every visual box type and transform', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(transforms => {
-    const M = window.PixelEditor.model;
-    const G = window.PixelEditor.selectionGeometry;
+    const M = window.PixelEditorDebug.services.model;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
     const types = ['rectangle', 'circle', 'text', 'image', 'raster'];
     return types.flatMap((type, typeIndex) => transforms.map((transform, index) => {
       const props = {
@@ -69,8 +69,8 @@ test('box selection outline is perimeter ordered for every visual box type and t
 test('canonical selection geometry maps line endpoints and polygon vertices through transforms', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
-    const G = window.PixelEditor.selectionGeometry;
+    const M = window.PixelEditorDebug.services.model;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
     const line = M.createNode('line', {
       parentId: 'p', x1: 10, y1: 10, x2: 30, y2: 20,
       stroke: { width: 1, color: 1, style: 'solid' },
@@ -99,8 +99,8 @@ test('canonical selection geometry maps line endpoints and polygon vertices thro
 test('world/local mapping is reversible and semantic handle hit-testing survives mirror and rotation', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
-    const G = window.PixelEditor.selectionGeometry;
+    const M = window.PixelEditorDebug.services.model;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
     const node = M.createNode('rectangle', {
       parentId: 'p', x: 100, y: 80, w: 40, h: 20,
       transform: { rotation: 31, flipX: true, flipY: false },
@@ -124,8 +124,8 @@ test('world/local mapping is reversible and semantic handle hit-testing survives
 test('degenerate geometry stays finite and non-self-intersecting', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
-    const G = window.PixelEditor.selectionGeometry;
+    const M = window.PixelEditorDebug.services.model;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
     const nodes = [
       M.createNode('line', { parentId: 'p', x1: 20, y1: 20, x2: 20, y2: 20, stroke: { width: 1, color: 1, style: 'solid' }, transform: { rotation: 43 } }),
       M.createNode('rectangle', { parentId: 'p', x: 30, y: 30, w: 1, h: 1, transform: { rotation: 67, flipX: true } }),
@@ -148,15 +148,15 @@ test('rendered transformed selection polygon follows canonical perimeter order a
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 100, y: 80, w: 60, h: 30, transform: { rotation: 23, flipX: true, flipY: false } });
     editor.exec(new C.AddNodesCommand([node], p.id));
     editor.state.selection.replace([node.id]);
     editor.renderOverlay();
-    const geometry = window.PixelEditor.selectionGeometry?.selectionGeometry(node);
+    const geometry = window.PixelEditorDebug.services.selectionGeometry?.selectionGeometry(node);
     const polygon = editor.overlay.querySelector('polygon.selection-box');
     const points = (polygon?.getAttribute('points') || '').trim().split(/\s+/).filter(Boolean).map(pair => {
       const [x, y] = pair.split(',').map(Number); return { x, y };

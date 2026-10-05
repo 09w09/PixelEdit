@@ -12,8 +12,8 @@ test('V16 shape nodes use stroke only and never serialize top-level lineWidth', 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const P = window.PixelEditor.persistence;
+    const M = window.PixelEditorDebug.services.model;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const pageModel = editor.activePage();
     const common = { parentId: pageModel.id, stroke: { width: 3, color: 0, style: 'dash-dot' } };
@@ -43,8 +43,8 @@ test('all five stroke styles render deterministically for all shape primitives',
   await openEditor(page);
   const result = await page.evaluate(({ styles }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer;
     const out = {};
     const make = (type, style) => {
       const pageModel = editor.activePage();
@@ -80,8 +80,8 @@ test('white dash pixels cover lower black content while dash gaps preserve it', 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const base = M.createNode('rectangle', {
@@ -104,8 +104,8 @@ test('element properties edit stroke independently from remembered tool defaults
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     editor.setToolDefault('line', 'width', 4);
     editor.setToolDefault('line', 'color', 0);

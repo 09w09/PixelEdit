@@ -23,8 +23,8 @@ test('Ctrl+A selects every ordinary node including hidden and locked nodes', asy
   await openEditor(page);
   await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const nodes = [
@@ -51,8 +51,8 @@ test('structured copy stores selected roots once and pastes 0/+8/+16 with fresh 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const source = editor.activePage();
     const parent = M.createNode('rectangle', { parentId: source.id, x: 10, y: 20, w: 20, h: 20 });
@@ -113,8 +113,8 @@ test('clipboard survives page changes and carries image/font resources needed by
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const source = editor.activePage();
     const imageAssetId = editor.state.assets.add('image', 'data:image/png;base64,AA==', { name: 'copy.png', mime: 'image/png' });
@@ -159,8 +159,8 @@ test('copy context command creates nothing until paste and one paste is atomic i
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 10, h: 10 });
@@ -195,8 +195,8 @@ test('canvas and layer right-click preserve/replace selection identically and ex
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 10, h: 10 });
@@ -234,8 +234,8 @@ test('shared context delete and transform skip locked selected nodes', async ({ 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const open = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 10, h: 10 });

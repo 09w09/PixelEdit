@@ -8,8 +8,8 @@ async function openEditor(page) {
 test('V16 shape nodes use stroke objects and never lineWidth', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
-    const P = window.PixelEditor.persistence;
+    const M = window.PixelEditorDebug.services.model;
+    const P = window.PixelEditorDebug.services.persistence;
     const editor = window.PixelEditorTest.editor;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
@@ -46,7 +46,7 @@ test('V16 shape nodes use stroke objects and never lineWidth', async ({ page }) 
 test('all five stroke styles have deterministic pixel patterns', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     const M = PE.model;
     const R = PE.renderer;
     const nodeFor = style => M.createNode('line', {
@@ -79,7 +79,7 @@ test('active shape tool snapshots defaults into newly created stroke', async ({ 
     editor.setToolDefault('rectangle', 'style', 'long-dash');
     editor.setTool('rectangle');
     editor.beginLiveDraw('rectangle', { x: 15, y: 18 });
-    const node = window.PixelEditor.model.nodeById(editor.activePage(), editor.customGesture.nodeId);
+    const node = window.PixelEditorDebug.services.model.nodeById(editor.activePage(), editor.customGesture.nodeId);
     const snapshot = structuredClone(node.stroke);
     editor.setToolDefault('rectangle', 'width', 2);
     const unchanged = structuredClone(node.stroke);
@@ -95,8 +95,8 @@ test('element properties edit stroke width color and style independently of tool
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const node = M.createNode('rectangle', {

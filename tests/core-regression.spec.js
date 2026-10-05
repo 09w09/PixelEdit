@@ -9,7 +9,7 @@ test('page lifecycle keeps a valid active page and unique hierarchy', async ({ p
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     editor.exec(new C.CreatePageCommand('第二页'));
     const secondId = editor.activePage().id;
@@ -38,8 +38,8 @@ test('layer hierarchy rejects cycles and inherited locks prevent child edits', a
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const parent = M.createNode('rectangle', { parentId: activePage.id, name: 'parent', x: 10, y: 10, w: 40, h: 40 });
@@ -70,9 +70,9 @@ test('rectangle, circle, line, polygon and text all render into the 1-bit frameb
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const nodes = [
@@ -98,7 +98,7 @@ test('rectangle, circle, line, polygon and text all render into the 1-bit frameb
 test('dither and pattern primitives preserve deterministic black/white semantics', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const R = window.PixelEditor.renderer;
+    const R = window.PixelEditorDebug.services.renderer;
     const ditherZero = [];
     const ditherFull = [];
     const pattern = [];
@@ -124,8 +124,8 @@ test('move, align and distribute commands keep editable geometry consistent', as
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const nodes = [
@@ -155,8 +155,8 @@ test('clipboard duplication preserves complete parent-child subtrees with new ID
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const parent = M.createNode('rectangle', { parentId: activePage.id, name: 'parent', x: 10, y: 10, w: 30, h: 30 });
@@ -191,9 +191,9 @@ test('project serialization round-trip preserves referenced image assets and hie
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const P = window.PixelEditor.persistence;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const assetId = editor.state.assets.add('image', 'data:image/png;base64,AA==', { name: 'test.png', mime: 'image/png' });

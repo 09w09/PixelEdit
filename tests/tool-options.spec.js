@@ -90,8 +90,8 @@ test('per-tool defaults persist locally and never mutate existing nodes', async 
   await openEditor(page);
   const first = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const existing = M.createNode('line', {

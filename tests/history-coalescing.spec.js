@@ -8,8 +8,8 @@ async function openEditor(page) {
 async function seedTwoNodes(page) {
   return page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 10, h: 10 });
@@ -22,7 +22,7 @@ async function seedTwoNodes(page) {
 test('merge descriptors normalize target order and duplicates', async ({ page }) => {
   await openEditor(page);
   const normalized = await page.evaluate(() => {
-    const H = window.PixelEditor.commandCoalescing;
+    const H = window.PixelEditorDebug.services.commands;
     const value = H.normalizeMergeDescriptor({ operation: 'move', targets: ['b', 'a', 'b'], channel: 'geometry' });
     return { value, key: H.mergeDescriptorKey(value) };
   });
@@ -35,7 +35,7 @@ test('matching moves coalesce without a time window and ignore target order', as
   const seed = await seedTwoNodes(page);
   const result = await page.evaluate(async ({ pageId, a, b, cursor }) => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
+    const C = window.PixelEditorDebug.services.commands;
     editor.exec(new C.MoveSelectionCommand([b, a], 1, 0, pageId, { mergeKey: 'legacy-nudge' }));
     await new Promise(resolve => setTimeout(resolve, 650));
     editor.exec(new C.MoveSelectionCommand([a, b], 1, 0, pageId, { mergeKey: 'legacy-nudge' }));
@@ -60,7 +60,7 @@ test('property edits merge by semantic channel and split when channel changes', 
   const seed = await seedTwoNodes(page);
   const result = await page.evaluate(({ pageId, a, cursor }) => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
+    const C = window.PixelEditorDebug.services.commands;
     const edit = (patch, channel, label) => editor.exec(new C.UpdateNodesCommand(
       [a], patch, pageId, label, { historyChannel: channel },
     ));
@@ -90,8 +90,8 @@ test('selection, tool, and page changes explicitly break a matching move chain',
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
 
     const setup = () => {
       editor.newProject({ force: true });
@@ -139,8 +139,8 @@ test('create delete and paste are nonmergeable boundaries', async ({ page }) => 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
 
     const setup = () => {
       editor.newProject({ force: true });
@@ -185,7 +185,7 @@ test('undo redo jump and undo-then-edit break merge continuity and truncate redo
   const seed = await seedTwoNodes(page);
   const result = await page.evaluate(({ pageId, a, cursor }) => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
+    const C = window.PixelEditorDebug.services.commands;
     const move = () => editor.exec(new C.MoveSelectionCommand([a], 1, 0, pageId, { mergeKey: 'same' }));
 
     move();

@@ -42,7 +42,7 @@ test('image property preview uses binaryImage directly without executing legacy 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     editor.newProject({ force: true });
     const state = editor.state;
     const rgba = new Uint8ClampedArray([
@@ -96,10 +96,10 @@ test('visible runtime branding and schema are V17 only', async ({ page }) => {
     editor.renderAll();
     const invalid = JSON.stringify({ ...structuredClone(editor.state.project), version: 16, assets: [] });
     let oldProjectMessage = '';
-    try { window.PixelEditor.persistence.ProjectSerializer.deserialize(invalid); }
+    try { window.PixelEditorDebug.services.persistence.ProjectSerializer.deserialize(invalid); }
     catch (error) { oldProjectMessage = String(error?.message || error); }
     return {
-      runtimeVersion: window.PixelEditor.version,
+      runtimeVersion: window.PixelEditorDebug.services.version,
       testVersion: window.PixelEditorTest.version,
       dataset: document.documentElement.dataset.pixelEditor,
       status: document.querySelector('#statusText')?.textContent,

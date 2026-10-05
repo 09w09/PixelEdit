@@ -9,9 +9,9 @@ test('raster pencil snapshots width and color and paints a square pixel brush', 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const raster = M.createNode('raster', { parentId: p.id, x: 10, y: 10, w: 7, h: 7 });
@@ -44,9 +44,9 @@ test('raster eraser width writes transparent while page eraser width writes opaq
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const raster = M.createNode('raster', { parentId: p.id, x: 20, y: 20, w: 5, h: 5, pixels: new Uint8Array(25).fill(T.RASTER_BLACK) });

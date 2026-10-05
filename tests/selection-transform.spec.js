@@ -9,8 +9,8 @@ test('multi-selection rotation uses union center and is one undoable command', a
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 10, h: 10 });
@@ -48,9 +48,9 @@ test('group flip reflects transformed visual centers to the nearest pixel and co
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 10, y: 20, w: 10, h: 10, transform: { rotation: 30, flipX: false, flipY: true } });
@@ -99,8 +99,8 @@ test('locked selected nodes remain selected but are skipped by transforms', asyn
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const open = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 10, h: 10 });
@@ -134,9 +134,9 @@ test('align and distribute keep source geometry on integer pixels while approxim
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const nodes = [

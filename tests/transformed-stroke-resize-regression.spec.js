@@ -15,7 +15,7 @@ function comparePixelSets(actual, expected) {
 async function exerciseRectangle(page, finalRotation) {
   return page.evaluate(finalRotation => {
     const editor = window.PixelEditorTest.editor;
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     const M = PE.model;
     const C = PE.commands;
     const R = PE.renderer;

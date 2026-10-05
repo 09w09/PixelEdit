@@ -9,9 +9,9 @@ test('inverse rotation and flip sequences return to identity without mutating so
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const nodes = [
@@ -73,8 +73,8 @@ test('world-space flip composition is deterministic after arbitrary rotation', a
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 40, y: 50, w: 17, h: 9 });
@@ -109,9 +109,9 @@ test('undo and redo restore composed transform exactly while source geometry rem
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const pageId = p.id;

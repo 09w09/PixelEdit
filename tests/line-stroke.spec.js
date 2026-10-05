@@ -8,7 +8,7 @@ async function openEditor(page) {
 async function rasterLine(page, x1, y1, x2, y2, lineWidth) {
   return page.evaluate(
     ({ x1, y1, x2, y2, lineWidth }) => {
-      const R = window.PixelEditor.renderer;
+      const R = window.PixelEditorDebug.services.renderer;
       const fb = new Uint8Array(400 * 300);
       R.plotThickLine(fb, x1, y1, x2, y2, lineWidth, 1);
       const pixels = [];

@@ -9,8 +9,8 @@ test('screenPointToRasterPixel inverts rotation and flips through one mapping he
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const S = window.PixelEditor.selectionTransform;
+    const M = window.PixelEditorDebug.services.model;
+    const S = window.PixelEditorDebug.services.selectionTransform;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const rotated = M.createNode('raster', { parentId: p.id, x: 100, y: 100, w: 5, h: 5, transform: { rotation: 90, flipX: false, flipY: false } });
@@ -28,9 +28,9 @@ test('pencil edits rotated raster local pixels instead of its screen-space AABB'
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const raster = M.createNode('raster', {
@@ -58,10 +58,10 @@ test('three-pixel brush expands in raster-local axes after arbitrary transform',
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
-    const S = window.PixelEditor.selectionTransform;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
+    const S = window.PixelEditorDebug.services.selectionTransform;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const raster = M.createNode('raster', {

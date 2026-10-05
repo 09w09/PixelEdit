@@ -9,7 +9,7 @@ async function openEditor(page) {
 test('properties are owned by one PropertyProvider and PropertySession', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const system = window.PixelEditor.properties;
+    const system = window.PixelEditorDebug.services.properties;
     const editor = window.PixelEditorTest.editor;
     return {
       hasDescriptor: typeof system?.PropertyDescriptor === 'function',

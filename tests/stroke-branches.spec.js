@@ -14,8 +14,8 @@ for (const style of STYLES) {
         await openEditor(page);
         const result = await page.evaluate(({ style, width, color }) => {
           const editor = window.PixelEditorTest.editor;
-          const M = window.PixelEditor.model;
-          const R = window.PixelEditor.renderer;
+          const M = window.PixelEditorDebug.services.model;
+          const R = window.PixelEditorDebug.services.renderer;
           editor.newProject({ force: true });
           const p = editor.activePage();
           p.fill = { mode: 'solid', color: color ? 0 : 1 };
@@ -25,7 +25,7 @@ for (const style of STYLES) {
             stroke: { width, color, style },
           });
           p.nodes.push(node);
-          const pixels = window.PixelEditor.strokeStyle.styledStrokePixels(node, R, window.PixelEditor.pixelStrokeRuntime);
+          const pixels = window.PixelEditorDebug.services.strokeStyle.styledStrokePixels(node, R, window.PixelEditorDebug.services.pixelStroke);
           const framebuffer = R.FramebufferRenderer.renderPage(editor.state.project, p.id, editor.state.assets);
           const first = pixels[0];
           return {
@@ -50,8 +50,8 @@ for (const type of ['rectangle', 'circle', 'polygon']) {
     await openEditor(page);
     const result = await page.evaluate(type => {
       const editor = window.PixelEditorTest.editor;
-      const M = window.PixelEditor.model;
-      const R = window.PixelEditor.renderer.FramebufferRenderer;
+      const M = window.PixelEditorDebug.services.model;
+      const R = window.PixelEditorDebug.services.renderer.FramebufferRenderer;
       const geometry = type === 'polygon'
         ? { points: [{ x: 40, y: 40 }, { x: 80, y: 40 }, { x: 80, y: 80 }, { x: 40, y: 80 }] }
         : { x: 40, y: 40, w: 41, h: 41 };

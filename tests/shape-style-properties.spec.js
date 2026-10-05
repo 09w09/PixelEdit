@@ -8,8 +8,8 @@ async function openEditor(page) {
 async function seedShape(page, type, props = {}) {
   return page.evaluate(({ type, props }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const geometry = type === 'line'
@@ -94,7 +94,7 @@ test('stroke and solid fill controls write canonical fields with semantic histor
   const id = await seedShape(page, 'rectangle');
   const result = await page.evaluate(nodeId => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     const before = editor.bus.cursor;
 
     const change = (selector, value) => {
@@ -148,8 +148,8 @@ test('dither and pattern modes keep their rendering independent from fill.color'
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer.FramebufferRenderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer.FramebufferRenderer;
 
     const render = (mode, color) => {
       editor.newProject({ force: true });

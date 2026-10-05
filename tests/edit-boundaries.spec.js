@@ -9,8 +9,8 @@ test('selected source image blocks pencil editing and explains rasterization req
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const assetId = editor.state.assets.add('image', '', { name: 'source.png', mime: 'image/png' });
@@ -30,8 +30,8 @@ test('raster and page background remain paintable', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const raster = M.createNode('raster', { parentId: active.id, x: 10, y: 10, w: 3, h: 3 });

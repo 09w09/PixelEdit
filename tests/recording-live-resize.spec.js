@@ -30,8 +30,8 @@ test('recorded 90 degree resize keeps the grabbed corner under the real pointer 
   await openEditor(page);
   await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     editor.setZoom(2);
     const p = editor.activePage();

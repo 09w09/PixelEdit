@@ -13,8 +13,8 @@ test('UpdateNodesCommand canonicalizes fractional geometry in the actual page mo
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const box = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 20, h: 20 });
@@ -49,8 +49,8 @@ test('generic commands are normalized before their history snapshot is committed
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const box = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 20, h: 20 });
@@ -100,9 +100,9 @@ test('serializer rejects a corrupted project containing fractional editable geom
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const P = window.PixelEditor.persistence;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 20, h: 20 });

@@ -9,8 +9,8 @@ test('native context menu is prevented everywhere while custom menu appears only
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 5, y: 5, w: 20, h: 20 });
@@ -59,9 +59,9 @@ test('nested descendants are classified by ancestor and still suppress native me
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const B = window.PixelEditor.contextMenuBoundary;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const B = window.PixelEditorDebug.services.contextMenuBoundary;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 5, y: 5, w: 20, h: 20 });

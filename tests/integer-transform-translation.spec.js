@@ -14,8 +14,8 @@ test('node creation and UpdateNodesCommand canonicalize transform translation to
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', {
@@ -40,8 +40,8 @@ test('arbitrary multi-selection rotate and flip keep transform translation on in
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const nodes = [
@@ -66,7 +66,7 @@ test('rotated live resize compensation never introduces fractional transform tra
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     const M = PE.model;
     const C = PE.commands;
     const G = PE.selectionGeometry;
@@ -101,9 +101,9 @@ test('serializer rejects fractional transform translation in a corrupted project
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const P = window.PixelEditor.persistence;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 20, h: 20 });

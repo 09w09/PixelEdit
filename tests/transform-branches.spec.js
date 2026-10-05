@@ -24,8 +24,8 @@ test('90-degree box selection uses perimeter outline and semantic corner handles
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', {
@@ -59,10 +59,10 @@ test('line and polygon control handles follow the rendered transform pivot', asy
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.transformModel;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.transformModel;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const cases = [];
@@ -105,9 +105,9 @@ test('horizontal flip changes raster presentation without mutating source pixels
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const T = window.PixelEditor.tristateRaster;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const T = window.PixelEditorDebug.services.tristateRaster;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const raster = M.createNode('raster', {
@@ -123,7 +123,7 @@ test('horizontal flip changes raster presentation without mutating source pixels
       sourceBefore,
       sourceAfter,
       visible: [fb[50 * 400 + 100], fb[50 * 400 + 101], fb[50 * 400 + 102]],
-      normalizedFourTurns: window.PixelEditor.transformModel.normalizeRotation(90 * 4),
+      normalizedFourTurns: window.PixelEditorDebug.services.transformModel.normalizeRotation(90 * 4),
     };
   });
   expect(result.sourceBefore).toEqual([2, 0, 0]);
@@ -136,9 +136,9 @@ test('transformed bounds remain outside canvas while rendering clips and propert
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', {

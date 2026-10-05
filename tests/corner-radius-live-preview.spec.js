@@ -90,7 +90,7 @@ test('one corner edit session is one undo step and a later session starts a new 
   const undone = await page.evaluate(nodeId => {
     const editor = window.PixelEditorTest.editor;
     editor.bus.undo();
-    return window.PixelEditor.model.nodeById(editor.activePage(), nodeId)?.rBL;
+    return window.PixelEditorDebug.services.model.nodeById(editor.activePage(), nodeId)?.rBL;
   }, id);
   expect(undone).toBe(6);
 });
@@ -99,8 +99,8 @@ test('live corner radius editing applies to every selected rectangle and clamps 
   await openEditor(page);
   const ids = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 20, y: 20, w: 60, h: 50, rBR: 0, fill: { mode: 'solid', color: 1 } });

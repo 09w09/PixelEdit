@@ -8,7 +8,7 @@ async function openEditor(page) {
 test('normal visual nodes carry editable transform state', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     return ['rectangle', 'circle', 'line', 'polygon', 'text', 'image', 'raster'].map(type => {
       const props = type === 'line' ? { x1: 0, y1: 0, x2: 10, y2: 0 } : type === 'polygon' ? { points: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 10 }] } : { x: 0, y: 0, w: 10, h: 6 };
       const node = M.createNode(type, { ...props, transform: { rotation: 23, flipX: true, flipY: false } });
@@ -22,8 +22,8 @@ test('rotated visual bounds and render output share the same canonical transform
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const rect = M.createNode('rectangle', {
@@ -48,9 +48,9 @@ test('arbitrary rotation updates hit testing beyond the untransformed box', asyn
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const I = window.PixelEditor.interaction;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const I = window.PixelEditorDebug.services.interaction;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const rect = M.createNode('rectangle', {
@@ -74,8 +74,8 @@ test('transform is serialized as integer-pixel artwork state and remains editabl
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const P = window.PixelEditor.persistence;
+    const M = window.PixelEditorDebug.services.model;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('circle', {

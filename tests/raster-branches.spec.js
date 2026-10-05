@@ -10,9 +10,9 @@ test('every supported visual node type rasterizes into non-empty fixed tri-state
   const result = await page.evaluate(async () => {
     window.confirm = () => true;
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     const results = {};
 
     const makeProps = type => {
@@ -50,8 +50,8 @@ test('already-flat raster refuses redundant rasterization and raster properties 
   const result = await page.evaluate(async () => {
     window.confirm = () => true;
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const raster = M.createNode('raster', { parentId: active.id, x: 2, y: 3, w: 4, h: 4, pixels: Uint8Array.from([2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2]) });
@@ -78,9 +78,9 @@ test('live northwest raster resize preserves black pixels by translation and par
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const raster = M.createNode('raster', { parentId: active.id, x: 10, y: 10, w: 2, h: 2, pixels: Uint8Array.from([2, 0, 0, 2]) });

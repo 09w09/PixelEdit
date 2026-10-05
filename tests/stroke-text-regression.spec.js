@@ -9,7 +9,7 @@ test('zero transparent tool defaults are snapshotted into newly drawn shapes', a
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     const output = {};
     for (const type of ['line', 'rectangle', 'circle', 'polygon']) {
       editor.newProject({ force: true });
@@ -36,8 +36,8 @@ test('invisible line and polygon strokes retain source geometry bounds for selec
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer.FramebufferRenderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer.FramebufferRenderer;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const line = M.createNode('line', {
@@ -67,8 +67,8 @@ test('text editing creates one undo step per focus session and restores each ses
   await openEditor(page);
   const seed = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const node = M.createNode('text', {
@@ -93,7 +93,7 @@ test('text editing creates one undo step per focus session and restores each ses
   const beforeUndo = await page.evaluate(id => {
     const editor = window.PixelEditorTest.editor;
     return {
-      text: window.PixelEditor.model.nodeById(editor.activePage(), id).text,
+      text: window.PixelEditorDebug.services.model.nodeById(editor.activePage(), id).text,
       cursor: editor.bus.cursor,
     };
   }, seed.id);
@@ -101,7 +101,7 @@ test('text editing creates one undo step per focus session and restores each ses
 
   const states = await page.evaluate(id => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     editor.bus.undo();
     const afterFirstUndo = M.nodeById(editor.activePage(), id).text;
     editor.bus.undo();

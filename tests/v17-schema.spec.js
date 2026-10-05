@@ -12,11 +12,11 @@ test('V17 runtime owns version, filenames, preference namespace, and creation de
     editor.newProject({ force: true });
     return {
       projectVersion: editor.state.project.version,
-      runtimeVersion: window.PixelEditor.version,
+      runtimeVersion: window.PixelEditorDebug.services.version,
       testVersion: window.PixelEditorTest.version,
-      preferenceKey: window.PixelEditor.preferences?.PREFERENCE_KEY,
-      autosaveKey: window.PixelEditor.preferences?.AUTOSAVE_KEY,
-      defaultFilename: window.PixelEditor.preferences?.DEFAULT_FILENAME,
+      preferenceKey: window.PixelEditorDebug.services.preferences?.PREFERENCE_KEY,
+      autosaveKey: window.PixelEditorDebug.services.preferences?.AUTOSAVE_KEY,
+      defaultFilename: window.PixelEditorDebug.services.preferences?.DEFAULT_FILENAME,
       text: editor.getToolDefaults('text'),
       rectangle: editor.getToolDefaults('rectangle'),
       pageFill: structuredClone(editor.activePage().fill),
@@ -44,7 +44,7 @@ test('V17 serializer rejects V16 input instead of migrating it', async ({ page }
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const P = window.PixelEditor.persistence;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const raw = JSON.stringify({ ...structuredClone(editor.state.project), version: 16, assets: [] });
     try {
@@ -62,8 +62,8 @@ test('V17 schema rejects deprecated lineWidth and fill.value fields', async ({ p
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const serializer = window.PixelEditor.persistence.ProjectSerializer;
+    const M = window.PixelEditorDebug.services.model;
+    const serializer = window.PixelEditorDebug.services.persistence.ProjectSerializer;
     editor.newProject({ force: true });
     const base = structuredClone(editor.state.project);
     const pageId = base.pages[0].id;
@@ -108,8 +108,8 @@ test('V17 page background may not be transparent and shape fill is canonical', a
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const serializer = window.PixelEditor.persistence.ProjectSerializer;
+    const M = window.PixelEditorDebug.services.model;
+    const serializer = window.PixelEditorDebug.services.persistence.ProjectSerializer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('circle', {

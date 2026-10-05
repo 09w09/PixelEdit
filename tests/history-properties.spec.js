@@ -117,8 +117,8 @@ test('element stroke and transform edits create history without changing tool de
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     editor.setToolDefault('rectangle', 'width', 5);
     editor.setToolDefault('rectangle', 'color', 0);
@@ -178,8 +178,8 @@ test('selection tool buttons refresh enabled state from modifiable selection car
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     editor.setTool('pointer');
     const p = editor.activePage();

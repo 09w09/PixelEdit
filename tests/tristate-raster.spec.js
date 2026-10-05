@@ -8,7 +8,7 @@ async function openEditor(page) {
 test('tri-state packing preserves transparent, white and black distinctly', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const T = window.PixelEditor.tristateRaster;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     const input = Uint8Array.from([0, 1, 2, 0, 2, 1, 0, 2]);
     const encoded = T?.encodeTriStatePixels?.(input);
     const decoded = encoded ? T.decodeTriStatePixels(encoded, 4, 2) : null;
@@ -30,8 +30,8 @@ test('tri-state packing preserves transparent, white and black distinctly', asyn
 test('raster creation, paint, erase and resize preserve all three states', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     const raster = M.createNode('raster', { x: 10, y: 10, w: 2, h: 2, pixels: Uint8Array.from([2, 1, 0, 2]) });
     const initial = T ? [...T.decodeTriStatePixels(raster.raster.data, 2, 2)] : null;
     const white = T?.paintTriStateRaster?.(raster, [{ x: 0, y: 0 }], T.RASTER_WHITE);
@@ -58,8 +58,8 @@ test('raster transparent pixels reveal lower layers while white pixels cover bla
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     p.fill = { mode: 'solid', value: 0 };
@@ -82,8 +82,8 @@ test('selected-raster transparency preview uses uniform translucent blue and nev
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const raster = M.createNode('raster', { parentId: p.id, x: 20, y: 20, w: 2, h: 1, pixels: Uint8Array.from([0, 2]) });
@@ -121,10 +121,10 @@ test('page eraser stays opaque white and tri-state raster round-trip is byte exa
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const P = window.PixelEditor.persistence;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const P = window.PixelEditorDebug.services.persistence;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const p = editor.activePage();
     p.overlay['5,5'] = 1;

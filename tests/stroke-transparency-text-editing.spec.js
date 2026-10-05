@@ -17,8 +17,8 @@ test('all stroked shape models preserve zero width and transparent stroke color'
   await openEditor(page);
   const result = await page.evaluate(({ shapeTypes }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const P = window.PixelEditor.persistence;
+    const M = window.PixelEditorDebug.services.model;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const geometry = type => {
@@ -49,8 +49,8 @@ test('zero width or transparent color produces no stroke pixels for every shape 
   await openEditor(page);
   const result = await page.evaluate(({ shapeTypes }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer.FramebufferRenderer;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer.FramebufferRenderer;
     const geometry = type => {
       if (type === 'line') return { x1: 20, y1: 20, x2: 60, y2: 20 };
       if (type === 'polygon') return { points: [{ x: 20, y: 50 }, { x: 40, y: 20 }, { x: 60, y: 50 }] };
@@ -83,8 +83,8 @@ test('element stroke properties and shape tool defaults expose zero width and tr
   await openEditor(page);
   const result = await page.evaluate(({ shapeTypes }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     const snapshots = {};
 
     for (const type of shapeTypes) {
@@ -150,8 +150,8 @@ test('text property keeps focus across consecutive edits and coalesces them into
   await openEditor(page);
   const seed = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const node = M.createNode('text', {
@@ -175,7 +175,7 @@ test('text property keeps focus across consecutive edits and coalesces them into
     return {
       activeId: document.activeElement?.id || '',
       value: document.querySelector('#propText')?.value,
-      text: window.PixelEditor.model.nodeById(editor.activePage(), id)?.text,
+      text: window.PixelEditorDebug.services.model.nodeById(editor.activePage(), id)?.text,
       cursor: editor.bus.cursor,
     };
   }, seed.id);
@@ -212,7 +212,7 @@ test('text property keeps focus across consecutive edits and coalesces them into
     return {
       activeId: document.activeElement?.id || '',
       value: document.querySelector('#propText')?.value,
-      text: window.PixelEditor.model.nodeById(editor.activePage(), id)?.text,
+      text: window.PixelEditorDebug.services.model.nodeById(editor.activePage(), id)?.text,
       cursor: editor.bus.cursor,
       entries: editor.bus.entries.slice(-2).map(entry => entry.label),
     };
