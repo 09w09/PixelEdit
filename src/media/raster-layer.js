@@ -32,34 +32,34 @@ function validateRasterProject(project) {
   return project;
 }
 
+async function rasterizeSelected(editor, target = globalThis) {
+  const PE = target.PixelEditor;
+  const M = PE.model;
+  const R = PE.renderer;
+  const page = editor.activePage(), id = editor.state.selection.primaryId, node = M.nodeById(page, id), tree = new M.TreeModel(page);
+  if (!node || tree.isEffectivelyLocked(id)) return false;
+  if (node.type === 'raster' && tree.childrenOf(id).length === 0) return false;
+  if (typeof target.confirm === 'function' && !target.confirm('确认将该图层及其所有子图层栅格化为固定像素图层吗？')) return false;
+  const cut = rasterizeSubtree({ project: editor.state.project, pageId: page.id, nodeId: id, assets: editor.state.assets, framebufferRenderer: R.FramebufferRenderer });
+  const replacement = M.createNode('raster', {
+    id: node.id, parentId: node.parentId, name: node.name, visible: node.visible, locked: node.locked,
+    x: cut.x, y: cut.y, w: cut.w, h: cut.h, pixels: cut.pixels, transform: node.transform,
+  });
+  const ids = new Set([id, ...tree.descendantsOf(id).map(item => item.id)]), index = page.nodes.findIndex(item => item.id === id);
+  return editor.exec({ label: '栅格化图层', execute: () => {
+    page.nodes = page.nodes.filter(item => !ids.has(item.id));
+    page.nodes.splice(Math.min(index, page.nodes.length), 0, replacement);
+    editor.state.selection.replace([replacement.id]);
+    return true;
+  } });
+}
+
 function installRasterLayerRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  const M = PE?.model, C = PE?.commands, R = PE?.renderer;
-  const Workspace = PE?.ui?.Workspace;
-  if (!M?.createNode || !R?.FramebufferRenderer || !Workspace || !PE?.tristateRaster) throw new Error('PixelEditor tri-state raster dependencies are not initialized');
-  if (PE.rasterLayerInstalled) return;
+  const M = PE?.model, R = PE?.renderer;
+  if (!M?.createNode || !R?.FramebufferRenderer || !PE?.ui?.Workspace || !PE?.tristateRaster) throw new Error('PixelEditor tri-state raster dependencies are not initialized');
+  if (PE.rasterLayerInstalled) return PE.rasterLayer;
   PE.rasterLayerInstalled = true;
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.rasterizeSelected = async function rasterizeSelected(editor) {
-    const page = editor.activePage(), id = editor.state.selection.primaryId, node = M.nodeById(page, id), tree = new M.TreeModel(page);
-    if (!node || tree.isEffectivelyLocked(id)) return false;
-    if (node.type === 'raster' && tree.childrenOf(id).length === 0) return false;
-    if (typeof confirm === 'function' && !confirm('确认将该图层及其所有子图层栅格化为固定像素图层吗？')) return false;
-    const cut = rasterizeSubtree({ project: editor.state.project, pageId: page.id, nodeId: id, assets: editor.state.assets, framebufferRenderer: R.FramebufferRenderer });
-    const replacement = M.createNode('raster', {
-      id: node.id, parentId: node.parentId, name: node.name, visible: node.visible, locked: node.locked,
-      x: cut.x, y: cut.y, w: cut.w, h: cut.h, pixels: cut.pixels, transform: node.transform,
-    });
-    const ids = new Set([id, ...tree.descendantsOf(id).map(item => item.id)]), index = page.nodes.findIndex(item => item.id === id);
-    return editor.exec({ label: '栅格化图层', execute: () => {
-      page.nodes = page.nodes.filter(item => !ids.has(item.id));
-      page.nodes.splice(Math.min(index, page.nodes.length), 0, replacement);
-      editor.state.selection.replace([replacement.id]);
-      return true;
-    } });
-  };
-
   PE.rasterLayer = {
     encoding: RASTER_ENCODING,
     decodeRasterPixels: decodeTriStatePixels,
@@ -68,7 +68,9 @@ function installRasterLayerRuntime(target = globalThis) {
     resizeRaster: resizeTriStateRaster,
     rasterizeSubtree,
     validateRasterProject,
+    rasterizeSelected,
   };
+  return PE.rasterLayer;
 }
 
-export { RASTER_ENCODING, rasterizeSubtree, validateRasterProject, installRasterLayerRuntime };
+export { RASTER_ENCODING, rasterizeSubtree, validateRasterProject, rasterizeSelected, installRasterLayerRuntime };
