@@ -14,7 +14,13 @@ import * as floodFill from '../raster/flood-fill.js';
 import * as paintBrush from '../raster/paint-brush.js';
 import * as tristateRaster from '../raster/tristate-raster.js';
 import * as rasterLayer from '../media/raster-layer.js';
-import * as overlayPipeline from '../rendering/overlay-pipeline.js';
+import { OverlayPipeline } from '../rendering/overlay-pipeline.js';
+import {
+  PREVIEW_FILL,
+  PREVIEW_OPACITY,
+  transparentPixelRects,
+  transparencyPreviewMarkup,
+} from '../rendering/transparency-overlay.js';
 import * as canvasCursor from '../tools/canvas-cursor.js';
 import * as contextMenu from '../ui/context-menu.js';
 import * as workspaceLayout from '../preferences/workspace-layout-runtime.js';
@@ -42,6 +48,26 @@ function createServices() {
   const interaction = Object.freeze({ HitTest, rectIntersects, SnapEngine, InteractionController });
   const ui = Object.freeze({ Toolbar, PageDock, HistoryDock, Properties });
   const tools = Object.freeze({ ToolController, ToolRegistry, registry: toolRegistry });
+  const transparencyOverlay = Object.freeze({
+    PREVIEW_FILL,
+    PREVIEW_OPACITY,
+    transparentPixelRects: node => transparentPixelRects(node, tristateRaster.decodeTriStatePixels),
+    transparencyPreviewMarkup: node => transparencyPreviewMarkup(node, tristateRaster.decodeTriStatePixels),
+    markup(editor) {
+      if (!editor?.editorPreferences?.transparencyPreview) return '';
+      const id = editor.state.selection.primaryId;
+      if (!id) return '';
+      const node = model.nodeById(editor.activePage(), id);
+      if (!node || node.type !== 'raster') return '';
+      return transparencyPreviewMarkup(node, tristateRaster.decodeTriStatePixels);
+    },
+  });
+  const overlayPipeline = new OverlayPipeline({
+    transparencyOverlay,
+    photopeaTransformUI,
+    canvasCursor,
+    selection: selectionOverlay,
+  });
   const services = {
     model,
     commands,
@@ -60,6 +86,7 @@ function createServices() {
     tristateRaster,
     rasterLayer,
     overlayPipeline,
+    transparencyOverlay,
     canvasCursor,
     contextMenu,
     workspaceLayout,
