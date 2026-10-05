@@ -22,7 +22,7 @@ import {
   transparencyPreviewMarkup,
 } from '../rendering/transparency-overlay.js';
 import * as canvasCursor from '../tools/canvas-cursor.js';
-import * as contextMenu from '../ui/context-menu.js';
+import { createContextMenuService } from '../ui/context-menu.js';
 import * as workspaceLayout from '../preferences/workspace-layout-runtime.js';
 import * as fontOptions from '../fonts/font-options.js';
 import * as fontImport from '../fonts/font-import.js';
@@ -48,6 +48,7 @@ function createServices() {
   const interaction = Object.freeze({ HitTest, rectIntersects, SnapEngine, InteractionController });
   const ui = Object.freeze({ Toolbar, PageDock, HistoryDock, Properties });
   const tools = Object.freeze({ ToolController, ToolRegistry, registry: toolRegistry });
+  const contextMenu = createContextMenuService({ model, commands, interaction, target: globalThis });
   const transparencyOverlay = Object.freeze({
     PREVIEW_FILL,
     PREVIEW_OPACITY,
