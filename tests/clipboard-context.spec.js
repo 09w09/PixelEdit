@@ -8,13 +8,15 @@ async function openEditor(page) {
 
 test('clipboard production entrypoints use one canonical implementation', async () => {
   const elementClipboard = await readFile(new URL('../src/clipboard/element-clipboard.js', import.meta.url), 'utf8');
-  const core = await readFile(new URL('../src/core/index.js', import.meta.url), 'utf8');
+  const workspace = await readFile(new URL('../src/app/workspace.js', import.meta.url), 'utf8');
   const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
   expect(elementClipboard).not.toContain('I.Clipboard =');
   expect(elementClipboard).not.toContain('workspaceCapabilities');
   expect(elementClipboard).not.toContain('version: 16');
-  expect(core).not.toContain("../interaction/clipboard.js");
+  expect(workspace).toContain("import { ElementClipboard } from '../clipboard/element-clipboard.js';");
+  expect(workspace).not.toContain("../interaction/clipboard.js");
   expect(main).not.toContain('installElementClipboardRuntime');
+  expect(main).not.toContain("./core/index.js");
 });
 
 test('Ctrl+A selects every ordinary node including hidden and locked nodes', async ({ page }) => {
