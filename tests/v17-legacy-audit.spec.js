@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 async function openEditor(page) {
   await page.goto('/');
@@ -29,6 +30,12 @@ test('V17 page background properties read and write fill.color only', async ({ p
   expect(result.before).toBe('1');
   expect(result.after).toEqual({ mode: 'solid', color: 0 });
   expect(result.hasValue).toBe(false);
+});
+
+test('binary image preview does not replace PropertyProvider methods at runtime', async () => {
+  const source = await readFile(new URL('../src/rendering/binary-image-preview.js', import.meta.url), 'utf8');
+  expect(source).not.toContain('provider.renderPreviews =');
+  expect(source).not.toContain('provider.renderPreviews.bind');
 });
 
 test('image property preview uses binaryImage directly without executing legacy dither preview', async ({ page }) => {
