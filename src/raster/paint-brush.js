@@ -86,17 +86,4 @@ function beginPaintWithBrush(editor, point) {
   return false;
 }
 
-function installPaintBrushRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const C = PE?.commands;
-  const Workspace = PE?.ui?.Workspace;
-  const T = PE?.tristateRaster;
-  if (!M || !C || !Workspace || !T) throw new Error('PixelEditor paint brush dependencies are not initialized');
-  if (PE.paintBrushInstalled) return;
-  PE.paintBrushInstalled = true;
-
-  PE.paintBrush = { brushWidth, expandBrushPoints, beginPaintWithBrush };
-}
-
-export { brushWidth, expandBrushPoints, beginPaintWithBrush, installPaintBrushRuntime };
+export { brushWidth, expandBrushPoints, beginPaintWithBrush };

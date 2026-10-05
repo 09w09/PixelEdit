@@ -42,16 +42,5 @@ function createBinaryImagePipeline(renderer) {
   return { thresholdToBinary, ditherToBinary, applyFinalBinaryInvert, binaryImageForNode };
 }
 function binaryResultToRgba(result) { const data = new Uint8ClampedArray(result.width * result.height * 4); for (let index = 0; index < result.bits.length; index += 1) { const offset = index * 4, value = result.bits[index] ? 0 : 255; data[offset] = data[offset + 1] = data[offset + 2] = value; data[offset + 3] = result.alpha[index] ? 255 : 0; } return data; }
-function installBinaryImageRuntime(target = globalThis) {
-  const PE = target.PixelEditor, R = PE?.renderer;
-  const pipeline = R?.pipeline?.binaryImage;
-  if (!pipeline) throw new Error('PixelEditor image pipeline is not initialized');
-  if (PE.binaryImageInstalled) return PE.binaryImage;
-  PE.binaryImageInstalled = true;
-  PE.binaryImage = pipeline;
-  R.thresholdRgba = function thresholdRgba(r, g, b, a = 255, threshold = 128, invert = false) { return pipeline.applyFinalBinaryInvert(thresholdToBinary(new Uint8ClampedArray([r, g, b, a]), 1, 1, threshold), invert).bits[0]; };
-  R.ditherImageData = function ditherImageData(rgba, width, height, options = {}) { return pipeline.applyFinalBinaryInvert(pipeline.ditherToBinary(rgba, width, height, options), options.invert === true).bits; };
-  return pipeline;
-}
 
-export { thresholdToBinary, createBinaryImagePipeline, binaryResultToRgba, installBinaryImageRuntime };
+export { thresholdToBinary, createBinaryImagePipeline, binaryResultToRgba };

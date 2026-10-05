@@ -193,13 +193,4 @@ function bucketFillAt(editor, point, PE = floodFillDependencies) {
   return bucketFillImage(editor, info.node, point, settings, PE);
 }
 
-function installFloodFillRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.model || !PE?.commands || !PE?.renderer?.FramebufferRenderer || !PE?.tristateRaster || !PE?.ui?.Workspace) throw new Error('PixelEditor flood fill dependencies are not initialized');
-  if (PE.floodFillInstalled) return PE.floodFill;
-  PE.floodFillInstalled = true;
-  PE.floodFill = { collectFloodRegion, sampledBit, bucketFillTarget, bucketFillRaster, bucketFillPage, bucketFillImage, bucketFillAt };
-  return PE.floodFill;
-}
-
-export { collectFloodRegion, bucketFillTarget, bucketFillRaster, bucketFillPage, bucketFillImage, bucketFillAt, installFloodFillRuntime };
+export { collectFloodRegion, bucketFillTarget, bucketFillRaster, bucketFillPage, bucketFillImage, bucketFillAt };

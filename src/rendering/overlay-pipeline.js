@@ -56,20 +56,4 @@ function renderOverlay(editor, pipeline = activeOverlayPipeline) {
   return pipeline.render(editor);
 }
 
-function installOverlayPipelineRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace || !PE?.transparencyOverlay || !PE?.canvasCursor) {
-    throw new Error('PixelEditor overlay layer dependencies are not initialized');
-  }
-  if (PE.overlayPipelineInstalled) return PE.overlayPipeline;
-  PE.overlayPipelineInstalled = true;
-  activeOverlayPipeline = new OverlayPipeline({
-    transparencyOverlay: PE.transparencyOverlay,
-    photopeaTransformUI: PE.photopeaTransformUI,
-    canvasCursor: PE.canvasCursor,
-  });
-  PE.overlayPipeline = activeOverlayPipeline;
-  return activeOverlayPipeline;
-}
-
-export { DEFAULT_LAYER_ORDER, OverlayPipeline, renderOverlay, installOverlayPipelineRuntime };
+export { DEFAULT_LAYER_ORDER, OverlayPipeline, renderOverlay };

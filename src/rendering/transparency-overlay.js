@@ -19,36 +19,9 @@ function transparencyPreviewMarkup(node, decodePixels) {
   ).join('');
 }
 
-function installTransparencyOverlayRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const decode = PE?.tristateRaster?.decodeTriStatePixels;
-  if (!M || !decode) throw new Error('PixelEditor transparency dependencies are not initialized');
-  if (PE.transparencyOverlayInstalled) return;
-  PE.transparencyOverlayInstalled = true;
-
-  const markup = editor => {
-    if (!editor?.editorPreferences?.transparencyPreview) return '';
-    const id = editor.state.selection.primaryId;
-    if (!id) return '';
-    const node = M.nodeById(editor.activePage(), id);
-    if (!node || node.type !== 'raster') return '';
-    return transparencyPreviewMarkup(node, decode);
-  };
-
-  PE.transparencyOverlay = {
-    PREVIEW_FILL,
-    PREVIEW_OPACITY,
-    transparentPixelRects: node => transparentPixelRects(node, decode),
-    transparencyPreviewMarkup: node => transparencyPreviewMarkup(node, decode),
-    markup,
-  };
-}
-
 export {
   PREVIEW_FILL,
   PREVIEW_OPACITY,
   transparentPixelRects,
   transparencyPreviewMarkup,
-  installTransparencyOverlayRuntime,
 };
