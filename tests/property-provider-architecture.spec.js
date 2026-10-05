@@ -64,17 +64,15 @@ test('property implementation has no prototype patch stack, cloneControl, or reg
   }
 });
 
-test('main installs one native property system instead of layered property runtimes', async () => {
-  const source = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
-  for (const legacy of [
-    'installLivePropertyRuntime',
-    'installLivePositionPropertiesRuntime',
-    'installLiveTextPropertiesRuntime',
-    'installLiveImageStructuralPropertiesRuntime',
-    'installLiveTransformPropertiesRuntime',
-    'installPageFillPropertiesRuntime',
-    'installShapeStylePropertiesRuntime',
-    'installTextFontActionsRuntime',
-  ]) expect(source).not.toContain(legacy);
-  expect(source).toContain('installPropertySystem');
+test('bootstrap wires one explicit property provider without runtime installers', async () => {
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  const services = await readFile(new URL('../src/app/services.js', import.meta.url), 'utf8');
+  const propertySystem = await readFile(new URL('../src/properties/property-system.js', import.meta.url), 'utf8');
+
+  expect(main).toContain('bootstrapPixelEdit');
+  expect(main).not.toContain('installPropertySystem');
+  expect(services).toContain("import { PropertyDescriptor, PropertyProvider, PropertySession, normalizeNumber } from '../properties/property-system.js';");
+  expect(services.match(/new PropertyProvider\(services\)/g) || []).toHaveLength(1);
+  expect(propertySystem).not.toMatch(/\binstall[A-Za-z0-9_$]*Runtime\b/);
+  expect(propertySystem).not.toContain('installPropertySystem');
 });
