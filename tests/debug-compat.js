@@ -10,9 +10,11 @@ import * as textLayout from '../src/rendering/text-layout.js';
 import * as preferences from '../src/preferences/editor-preferences.js';
 import { hierarchyClip } from '../src/rendering/hierarchy-clipping.js';
 import { strokeStyle } from '../src/rendering/stroke-style.js';
+import { classifyContextRegion, installNativeContextMenuBoundary } from '../src/ui/context-menu-boundary.js';
 import { ElementClipboard } from '../src/clipboard/element-clipboard.js';
 
 const pixelStrokeRuntime = Object.freeze({ rasterThinLine, forEachStrokePixel, lineStrokeBounds });
+const contextMenuBoundary = Object.freeze({ classifyContextRegion, installNativeContextMenuBoundary });
 const plotThickLine = (framebuffer, x1, y1, x2, y2, width = 1, value = 1) => (
   forEachStrokePixel(x1, y1, x2, y2, width, (x, y) => primitives.plotPixel(framebuffer, x, y, value))
 );
@@ -62,6 +64,7 @@ function legacyDebugView() {
     hierarchyClip,
     strokeStyle,
     pixelStrokeRuntime,
+    contextMenuBoundary,
     ElementClipboard,
     elementClipboard: { ElementClipboard },
   };
