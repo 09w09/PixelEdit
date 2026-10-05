@@ -125,7 +125,7 @@ Commit: `refactor: 统一图片属性预览路径`
 - Modify: `src/main.js`
 - Delete: `src/interaction/clipboard.js`
 - Test: existing clipboard specs
-- Test: `tests/v17-full-workflow.spec.js` after Task 7 rename
+- Test: `tests/v16-full-workflow.spec.js`（Task 7 再重命名）
 
 **Interfaces:**
 - Produces: `ElementClipboard`（或重命名后的 `Clipboard`）作为唯一正式 clipboard 类；`CLIPBOARD_FORMAT_VERSION = 1`；payload 字段 `formatVersion`。
@@ -154,7 +154,7 @@ Expected: 当前 `version: 16` / runtime registration 相关断言 FAIL。
 
 - [ ] **Step 4: 运行 clipboard 与 round-trip 测试并提交**
 
-Run: `npx playwright test tests/*clipboard*.spec.js tests/*workflow*.spec.js`
+Run: `npx playwright test tests/*clipboard*.spec.js tests/v16-full-workflow.spec.js`
 
 Expected: PASS
 
