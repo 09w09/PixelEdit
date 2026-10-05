@@ -1,13 +1,13 @@
 import { fontOptions, fontRecordForFamily, resolveTextToolSelection } from '../fonts/font-options.js';
+import { updateEditorPreferences, saveEditorPreferences } from '../preferences/editor-preferences.js';
 
 const clampSize = value => Math.max(1, Math.min(200, Math.round(Number(value) || 16)));
 const ALIGN_H = new Set(['left', 'center', 'right']);
 const ALIGN_V = new Set(['top', 'middle', 'bottom']);
 
 function saveTextPreferences(editor, patch) {
-  const preferences = globalThis.PixelEditor?.preferences;
-  editor.editorPreferences = preferences.updateEditorPreferences(editor.editorPreferences, { tools: { text: patch } });
-  preferences.saveEditorPreferences(editor.editorPreferences);
+  editor.editorPreferences = updateEditorPreferences(editor.editorPreferences, { tools: { text: patch } });
+  saveEditorPreferences(editor.editorPreferences);
   editor.toolOptionsBar?.render?.();
   return editor.getToolDefaults('text');
 }
