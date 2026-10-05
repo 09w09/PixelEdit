@@ -1,7 +1,6 @@
 import './core/index.js';
 import { bootstrapPixelEdit } from './app/bootstrap.js';
 import { installV17WorkspaceClass } from './app/v17-workspace.js';
-import { installElementClipboardRuntime } from './clipboard/element-clipboard.js';
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
 import { installFontOptionsRuntime } from './fonts/font-options.js';
@@ -53,7 +52,6 @@ function installRuntimeModules() {
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
   installFloodFillRuntime(globalThis);
-  installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
   installContextMenuBoundaryRuntime(globalThis);
   installHistoryPropertiesRuntime(globalThis);
