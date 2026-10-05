@@ -57,3 +57,20 @@ test('V17 source contains no legacy runtime wrapper or compatibility adaptation'
 
   expect(offenders).toEqual([]);
 });
+
+test('ToolController does not replace Workspace instance methods or capture its prototype', async () => {
+  const source = await readFile(new URL('../src/tools/tool-controller.js', import.meta.url), 'utf8');
+  for (const forbidden of [
+    'Object.getPrototypeOf(editor)',
+    'editor.setTool =',
+    'editor.onPointerDown =',
+    'editor.onPointerMove =',
+    'editor.onPointerUp =',
+    'editor.beginPaint =',
+  ]) {
+    expect(source, forbidden).not.toContain(forbidden);
+  }
+  for (const method of ['handlePointerDown', 'handlePointerMove', 'handlePointerUp']) {
+    expect(source).toContain(`${method}(`);
+  }
+});
