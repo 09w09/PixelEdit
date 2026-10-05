@@ -35,11 +35,5 @@ class Properties{
   patternFields(nodes,locked=false){return this.provider.patternFields(nodes,locked);}
   fillFields(nodes,locked=false,textOnly=false){return this.provider.fillFields(nodes,locked,textOnly);}
   fontOptionsArray(){return this.provider.fontOptionsArray(this);}
-  bind(){/* binding is owned by PropertyProvider descriptors */}
-  bindPage(){/* binding is owned by PropertyProvider descriptors */}
-  bindDither(){/* binding is owned by PropertyProvider descriptors */}
-  bindPattern(){/* binding is owned by PropertyProvider descriptors */}
-  bindText(){/* binding is owned by PropertyProvider descriptors */}
-  bindImage(){/* binding is owned by PropertyProvider descriptors */}
 }
 U.Properties=Properties;})();

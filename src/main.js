@@ -6,7 +6,6 @@ import { installFontOptionsRuntime } from './fonts/font-options.js';
 import { installEditBoundariesRuntime } from './media/edit-boundaries.js';
 import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
-import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
 import { installWorkspaceLayoutRuntime } from './preferences/workspace-layout-runtime.js';
 import { installPropertySystem } from './properties/property-system.js';
@@ -30,7 +29,6 @@ import { installPhotopeaTransformUIRuntime } from './transforms/photopea-transfo
 import { installSelectionTransformRuntime } from './transforms/selection-transform.js';
 import { installContextMenuRuntime } from './ui/context-menu.js';
 import { installContextMenuBoundaryRuntime } from './ui/context-menu-boundary.js';
-import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 
 function installRuntimeModules() {
   installEditorPreferencesRuntime(globalThis);
@@ -46,14 +44,12 @@ function installRuntimeModules() {
   installTriStateRasterRuntime(globalThis);
   installRasterLayerRuntime(globalThis);
   installPaintBrushRuntime(globalThis);
-  installRasterSizingRuntime(globalThis);
   installEditBoundariesRuntime(globalThis);
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
   installFloodFillRuntime(globalThis);
   installContextMenuRuntime(globalThis);
   installContextMenuBoundaryRuntime(globalThis);
-  installHistoryPropertiesRuntime(globalThis);
   installSelectionOverlayRuntime(globalThis);
   installPhotopeaTransformUIRuntime(globalThis);
   installTransparencyOverlayRuntime(globalThis);

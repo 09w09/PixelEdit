@@ -1,3 +1,4 @@
+import { normalizeFill } from '../model/schema.js';
 import { STROKE_COLOR_OPTIONS, normalizeStrokeWidth, normalizeStrokeColor } from '../model/stroke-values.js';
 
 const SHAPE_TOOLS = new Set(['line', 'rectangle', 'circle', 'polygon']);
@@ -50,13 +51,8 @@ function group(...children) {
   return element;
 }
 
-function normalizedFill(editor, value) {
-  const normalize = globalThis.PixelEditor?.schemaV17?.normalizeFill;
-  if (typeof normalize === 'function') return normalize(value);
-  return {
-    mode: value?.mode === 'solid' ? 'solid' : 'transparent',
-    color: Number(value?.color) === 0 ? 0 : 1,
-  };
+function normalizedFill(_editor, value) {
+  return normalizeFill(value);
 }
 
 function renderShapeToolOptions(editor, container, tool) {

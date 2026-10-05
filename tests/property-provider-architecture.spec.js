@@ -50,17 +50,10 @@ test('live property editing keeps the original DOM control instead of cloning it
 
 test('property implementation has no prototype patch stack, cloneControl, or regex UI surgery', async () => {
   const paths = [
-    '../src/properties/live-property-runtime.js',
-    '../src/properties/live-position-properties.js',
-    '../src/properties/live-transform-properties.js',
-    '../src/properties/live-text-properties.js',
-    '../src/properties/live-image-structural-properties.js',
-    '../src/properties/shape-style-properties.js',
-    '../src/properties/page-fill-properties.js',
-    '../src/properties/text-font-actions.js',
+    '../src/properties/property-system.js',
+    '../src/ui/properties.js',
     '../src/media/raster-layer.js',
     '../src/rendering/binary-image-preview.js',
-    '../src/ui/history-properties.js',
     '../src/fonts/font-options.js',
   ];
   for (const relative of paths) {

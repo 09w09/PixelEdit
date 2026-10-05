@@ -43,6 +43,20 @@ test('V17 source contains no legacy runtime wrapper or compatibility adaptation'
     collectMatches(source, name, 'image-type-adaptation', /\bnode\.type\s*=\s*['"]image['"]/g, offenders);
     collectMatches(source, name, 'workspace-capability-registry', /\bworkspaceCapabilities\b/g, offenders);
     collectMatches(source, name, 'anonymous-class-replacement', /\b(?:P\.ProjectFiles|P\.Autosave|I\.Clipboard|PE\.ui\.Workspace)\s*=\s*class\b/g, offenders);
+    collectMatches(
+      source,
+      name,
+      'runtime-class-replacement',
+      /\b(?:PE\.ui|U|PixelEditor\.ui)\.[A-Za-z_$][\w$]*\s*=\s*(?:V\d+|Base)[A-Za-z_$][\w$]*/g,
+      offenders,
+    );
+    collectMatches(
+      source,
+      name,
+      'renderer-method-replacement',
+      /\b(?:renderer|R)\.(?:TextRenderer|ImageRenderer|OverlayRenderer)\.[A-Za-z_$][\w$]*\s*=/g,
+      offenders,
+    );
     collectMatches(source, name, 'property-preview-replacement', /\bprovider\.renderPreviews\s*=/g, offenders);
     collectMatches(source, name, 'tool-instance-method-replacement', /\beditor\.(?:setTool|onPointerDown|onPointerMove|onPointerUp|beginPaint)\s*=/g, offenders);
     if (name.startsWith('rendering/')) {

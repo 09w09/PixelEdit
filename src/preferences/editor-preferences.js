@@ -138,8 +138,8 @@ function updateEditorPreferences(current, patch) {
 
 function installEditorPreferencesRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  if (!PE?.model || !PE?.persistence || !PE?.ui?.Workspace || !PE?.schemaV17) {
-    throw new Error('PixelEditor V17 schema is not initialized');
+  if (!PE?.model || !PE?.persistence || !PE?.ui?.Workspace) {
+    throw new Error('PixelEditor editor preference dependencies are not initialized');
   }
   if (PE.editorPreferencesInstalled) return;
   PE.editorPreferencesInstalled = true;

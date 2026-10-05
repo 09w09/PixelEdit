@@ -63,7 +63,7 @@ test('V17 schema rejects deprecated lineWidth and fill.value fields', async ({ p
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     const M = window.PixelEditor.model;
-    const schema = window.PixelEditor.schemaV17;
+    const serializer = window.PixelEditor.persistence.ProjectSerializer;
     editor.newProject({ force: true });
     const base = structuredClone(editor.state.project);
     const pageId = base.pages[0].id;
@@ -84,20 +84,20 @@ test('V17 schema rejects deprecated lineWidth and fill.value fields', async ({ p
 
     const check = project => {
       try {
-        schema?.validateV17Project(project);
+        serializer.validate(project);
         return { threw: false, message: '' };
       } catch (error) {
         return { threw: true, message: String(error?.message || error) };
       }
     };
     return {
-      schemaPresent: Boolean(schema?.validateV17Project),
+      validatorPresent: typeof serializer?.validate === 'function',
       stroke: check(deprecatedStroke),
       fill: check(deprecatedFill),
     };
   });
 
-  expect(result.schemaPresent).toBe(true);
+  expect(result.validatorPresent).toBe(true);
   expect(result.stroke.threw).toBe(true);
   expect(result.stroke.message).toMatch(/lineWidth|V17/);
   expect(result.fill.threw).toBe(true);
@@ -109,7 +109,7 @@ test('V17 page background may not be transparent and shape fill is canonical', a
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     const M = window.PixelEditor.model;
-    const schema = window.PixelEditor.schemaV17;
+    const serializer = window.PixelEditor.persistence.ProjectSerializer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('circle', {
@@ -124,7 +124,7 @@ test('V17 page background may not be transparent and shape fill is canonical', a
     const invalidBackground = structuredClone(editor.state.project);
     invalidBackground.pages[0].fill = { mode: 'transparent', color: 0 };
     let backgroundRejected = false;
-    try { schema?.validateV17Project(invalidBackground); } catch { backgroundRejected = true; }
+    try { serializer.validate(invalidBackground); } catch { backgroundRejected = true; }
     return {
       node: {
         stroke: structuredClone(node.stroke),

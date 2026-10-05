@@ -1,3 +1,4 @@
+import { normalizeFill, normalizeStroke } from '../model/schema.js';
 import { STROKE_COLOR_OPTIONS, normalizeStrokeColor } from '../model/stroke-values.js';
 import { drawBinaryPreview } from '../rendering/binary-image-preview.js';
 
@@ -331,7 +332,6 @@ class PropertyProvider {
   }
 
   fillFields(nodes, locked, textOnly = false) {
-    const normalizeFill = this.PE.schemaV17.normalizeFill;
     const mode = common(nodes, node => normalizeFill(node.fill).mode);
     const color = common(nodes, node => normalizeFill(node.fill).color);
     const options = textOnly ? [['solid', '纯色'], ['dither', '抖动'], ['pattern', '图案']] : [['transparent', '透明'], ['solid', '纯色'], ['dither', '抖动'], ['pattern', '图案']];
@@ -342,7 +342,7 @@ class PropertyProvider {
   }
 
   pageMarkup({ page }) {
-    const fill = this.PE.schemaV17.normalizeFill(page.fill, { background: true });
+    const fill = normalizeFill(page.fill, { background: true });
     const locked = Boolean(page.locked);
     let html = section('页面', `${field('propPageName', '名称', page.name, { type: 'text' })}<label class="check"><input id="propPageLocked" type="checkbox" ${locked ? 'checked' : ''}> 锁定页面</label>`)
       + section('背景', `${select('propFill', '填充', [['solid', '纯色'], ['dither', '抖动'], ['pattern', '图案']], fill.mode, { disabled: locked })}${fill.mode === 'solid' ? select('propBgSolid', '颜色', [[0, '白'], [1, '黑']], fill.color, { disabled: locked }) : ''}`);
@@ -374,7 +374,6 @@ class PropertyProvider {
   shapeMarkup({ properties, nodes, allLocked }) {
     const node = nodes[0];
     const get = key => common(nodes, item => item[key]);
-    const normalizeStroke = this.PE.strokeStyle?.normalizeStroke || this.PE.schemaV17.normalizeStroke;
     let html = '';
     if (node.type === 'line') html += section('直线', `<div class="row">${field('propX1', 'X1', get('x1') ?? '', { disabled: allLocked, mixed: get('x1') == null })}${field('propY1', 'Y1', get('y1') ?? '', { disabled: allLocked, mixed: get('y1') == null })}</div><div class="row">${field('propX2', 'X2', get('x2') ?? '', { disabled: allLocked, mixed: get('x2') == null })}${field('propY2', 'Y2', get('y2') ?? '', { disabled: allLocked, mixed: get('y2') == null })}</div>`);
     if (node.type === 'rectangle') html += section('圆角', `<div class="corner-grid"><div class="row">${field('propRTL', '左上', get('rTL') ?? '', { min: 0, max: 200, disabled: allLocked, mixed: get('rTL') == null })}${field('propRTR', '右上', get('rTR') ?? '', { min: 0, max: 200, disabled: allLocked, mixed: get('rTR') == null })}</div><div class="row">${field('propRBL', '左下', get('rBL') ?? '', { min: 0, max: 200, disabled: allLocked, mixed: get('rBL') == null })}${field('propRBR', '右下', get('rBR') ?? '', { min: 0, max: 200, disabled: allLocked, mixed: get('rBR') == null })}</div></div>`);
@@ -505,7 +504,7 @@ class PropertyProvider {
 
   bindPage(context) {
     const { editor, page, session } = context;
-    const M = this.PE.model, C = this.PE.commands, normalizeFill = this.PE.schemaV17.normalizeFill;
+    const M = this.PE.model, C = this.PE.commands;
     const current = () => M.pageById(editor.state.project, page.id);
     const command = (patch, label, channel) => new C.UpdatePageCommand(page.id, patch, label, { historyChannel: channel });
     const name = session.claim('propPageName');
@@ -577,8 +576,6 @@ class PropertyProvider {
     if (allLocked) return;
     const C = this.PE.commands, M = this.PE.model;
     const type = nodes[0].type;
-    const normalizeStroke = this.PE.strokeStyle?.normalizeStroke || this.PE.schemaV17.normalizeStroke;
-    const normalizeFill = this.PE.schemaV17.normalizeFill;
     const current = () => ids.map(id => M.nodeById(editor.activePage(), id)).filter(Boolean);
     const update = (patch, label, channel) => new C.UpdateNodesCommand(ids, patch, page.id, label, { historyChannel: channel });
     if (type === 'line') for (const [controlId, key] of [['propX1', 'x1'], ['propY1', 'y1'], ['propX2', 'x2'], ['propY2', 'y2']]) {
@@ -652,7 +649,7 @@ class PropertyProvider {
   bindText(context) {
     const { editor, page, nodes, ids, session, allLocked } = context;
     if (allLocked) return;
-    const M = this.PE.model, C = this.PE.commands, normalizeFill = this.PE.schemaV17.normalizeFill;
+    const M = this.PE.model, C = this.PE.commands;
     const current = () => ids.map(id => M.nodeById(editor.activePage(), id)).filter(Boolean);
     const update = (patch, label, channel) => new C.UpdateNodesCommand(ids, patch, page.id, label, { historyChannel: channel });
     const text = session.claim('propText');

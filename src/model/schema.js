@@ -72,7 +72,4 @@ function validateProject(project) {
   return project;
 }
 
-const schemaV17 = { PROJECT_VERSION, WIDTH, HEIGHT, normalizeStroke, normalizeFill, validateV17Project: validateProject, referencedAssetIds };
-globalThis.PixelEditor.schemaV17 = schemaV17;
-
-export { PROJECT_VERSION, WIDTH, HEIGHT, normalizeStroke, normalizeFill, validateProject, referencedAssetIds, schemaV17 };
+export { PROJECT_VERSION, WIDTH, HEIGHT, normalizeStroke, normalizeFill, validateProject, referencedAssetIds };
