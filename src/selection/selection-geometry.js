@@ -79,11 +79,4 @@ function createSelectionGeometry(model = transformModel) {
 
 const selectionGeometry = createSelectionGeometry(transformModel);
 
-function installSelectionGeometryRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor is not initialized');
-  PE.selectionGeometry = selectionGeometry;
-  return selectionGeometry;
-}
-
-export { BOX_TYPES, pointBounds, sourceGeometryBounds, sourceHandles, createSelectionGeometry, selectionGeometry, installSelectionGeometryRuntime };
+export { BOX_TYPES, pointBounds, sourceGeometryBounds, sourceHandles, createSelectionGeometry, selectionGeometry };

@@ -93,11 +93,4 @@ function createSelectionOverlay({ geometry = selectionGeometry, transforms = tra
 
 const selectionOverlay = createSelectionOverlay();
 
-function installSelectionOverlayRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor is not initialized');
-  PE.selectionOverlay = selectionOverlay;
-  return selectionOverlay;
-}
-
-export { handleVisualSize, handleHitTolerance, createSelectionOverlay, selectionOverlay, installSelectionOverlayRuntime };
+export { handleVisualSize, handleHitTolerance, createSelectionOverlay, selectionOverlay };

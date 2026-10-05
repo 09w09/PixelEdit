@@ -32,13 +32,4 @@ class ToolRegistry {
 
 const toolRegistry = new ToolRegistry(TOOL_DEFINITIONS);
 
-function installToolRegistry(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor core is not initialized');
-  PE.tools = PE.tools || {};
-  PE.tools.ToolRegistry = ToolRegistry;
-  PE.tools.registry = toolRegistry;
-  return toolRegistry;
-}
-
-export { TOOL_DEFINITIONS, ToolRegistry, toolRegistry, installToolRegistry };
+export { TOOL_DEFINITIONS, ToolRegistry, toolRegistry };

@@ -77,13 +77,4 @@ const rasterLayer = Object.freeze({
   rasterizeSelected,
 });
 
-function installRasterLayerRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor is not initialized');
-  if (PE.rasterLayerInstalled) return PE.rasterLayer;
-  PE.rasterLayerInstalled = true;
-  PE.rasterLayer = rasterLayer;
-  return rasterLayer;
-}
-
-export { RASTER_ENCODING, rasterizeSubtree, validateRasterProject, rasterizeSelected, rasterLayer, installRasterLayerRuntime };
+export { RASTER_ENCODING, rasterizeSubtree, validateRasterProject, rasterizeSelected, rasterLayer };
