@@ -17,7 +17,6 @@ class ToolRegistry {
     this.definitions = new Map();
     for (const definition of definitions) this.register(definition);
   }
-
   register(definition) {
     const id = String(definition?.id || '');
     if (!id) throw new Error('Tool definition requires an id');
@@ -25,31 +24,21 @@ class ToolRegistry {
     this.definitions.set(id, normalized);
     return normalized;
   }
-
-  get(id) {
-    return this.definitions.get(String(id || '')) || null;
-  }
-
-  has(id) {
-    return this.definitions.has(String(id || ''));
-  }
-
-  ids() {
-    return [...this.definitions.keys()];
-  }
-
-  values() {
-    return [...this.definitions.values()];
-  }
+  get(id) { return this.definitions.get(String(id || '')) || null; }
+  has(id) { return this.definitions.has(String(id || '')); }
+  ids() { return [...this.definitions.keys()]; }
+  values() { return [...this.definitions.values()]; }
 }
+
+const toolRegistry = new ToolRegistry(TOOL_DEFINITIONS);
 
 function installToolRegistry(target = globalThis) {
   const PE = target.PixelEditor;
   if (!PE) throw new Error('PixelEditor core is not initialized');
   PE.tools = PE.tools || {};
   PE.tools.ToolRegistry = ToolRegistry;
-  if (!PE.tools.registry) PE.tools.registry = new ToolRegistry(TOOL_DEFINITIONS);
-  return PE.tools.registry;
+  PE.tools.registry = toolRegistry;
+  return toolRegistry;
 }
 
-export { TOOL_DEFINITIONS, ToolRegistry, installToolRegistry };
+export { TOOL_DEFINITIONS, ToolRegistry, toolRegistry, installToolRegistry };
