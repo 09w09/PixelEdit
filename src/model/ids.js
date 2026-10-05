@@ -1,1 +1,12 @@
-(()=>{const PE=globalThis.PixelEditor; let seq=0; PE.model.nextId=(prefix='id')=>`${prefix}-${Date.now().toString(36)}-${(++seq).toString(36)}`; PE.model.resetIdSequenceForTest=()=>{seq=0;};})();
+let sequence = 0;
+
+function nextId(prefix = 'id') {
+  sequence += 1;
+  return `${prefix}-${Date.now().toString(36)}-${sequence.toString(36)}`;
+}
+
+function resetIdSequenceForTest() {
+  sequence = 0;
+}
+
+export { nextId, resetIdSequenceForTest };

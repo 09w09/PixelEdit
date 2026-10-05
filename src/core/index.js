@@ -1,14 +1,5 @@
 import './namespace.js';
-import '../model/ids.js';
-import '../model/hash.js';
-import '../model/asset-store.js';
-import '../model/schema.js';
-import '../model/node.js';
-import '../model/page.js';
-import '../model/project.js';
-import '../model/tree-model.js';
-import '../model/selection-set.js';
-import '../model/invariants.js';
+import './model-bridge.js';
 import '../rendering/bitmap-primitives.js';
 import '../rendering/pattern-renderer.js';
 import '../rendering/base-text-renderer.js';
