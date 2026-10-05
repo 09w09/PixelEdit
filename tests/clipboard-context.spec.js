@@ -1,9 +1,21 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 async function openEditor(page) {
   await page.goto('/');
   await page.waitForFunction(() => Boolean(window.PixelEditorTest?.editor));
 }
+
+test('clipboard production entrypoints use one canonical implementation', async () => {
+  const elementClipboard = await readFile(new URL('../src/clipboard/element-clipboard.js', import.meta.url), 'utf8');
+  const core = await readFile(new URL('../src/core/index.js', import.meta.url), 'utf8');
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  expect(elementClipboard).not.toContain('I.Clipboard =');
+  expect(elementClipboard).not.toContain('workspaceCapabilities');
+  expect(elementClipboard).not.toContain('version: 16');
+  expect(core).not.toContain("../interaction/clipboard.js");
+  expect(main).not.toContain('installElementClipboardRuntime');
+});
 
 test('Ctrl+A selects every ordinary node including hidden and locked nodes', async ({ page }) => {
   await openEditor(page);
@@ -62,6 +74,8 @@ test('structured copy stores selected roots once and pastes 0/+8/+16 with fresh 
     const thirdRoot = M.nodeById(source, editor.state.selection.primaryId);
 
     return {
+      formatVersion: payload.formatVersion,
+      legacyVersion: Object.hasOwn(payload, 'version'),
       beforeCount, afterCopyCount,
       copyRoots, copyNodeIds,
       first, second, third,
@@ -73,6 +87,8 @@ test('structured copy stores selected roots once and pastes 0/+8/+16 with fresh 
     };
   });
 
+  expect(result.formatVersion).toBe(1);
+  expect(result.legacyVersion).toBe(false);
   expect(result.afterCopyCount).toBe(result.beforeCount);
   expect(result.copyRoots).toHaveLength(1);
   expect(result.copyNodeIds).toHaveLength(2);
