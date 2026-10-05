@@ -69,3 +69,34 @@ test('renderer path never deep-clones the whole project', async () => {
   }
   expect(violations).toEqual([]);
 });
+
+test('architecture convergence residues cannot return to production source', async () => {
+  const all = await sources();
+  const files = all.map(item => item.file);
+  const violations = [];
+
+  expect(files).not.toContain('src/app/v17-workspace.js');
+  expect(files).not.toContain('src/model/v17-schema.js');
+  expect(files).not.toContain('src/interaction/clipboard.js');
+
+  for (const { file, text } of all) {
+    const checks = [
+      ['workspace capability registry', /\bworkspaceCapabilities\b/],
+      ['V17 workspace subclass', /\b(?:BaseWorkspace|V17Workspace)\b/],
+      ['legacy schema installer', /\binstallV17SchemaRuntime\b/],
+      ['runtime anonymous class replacement', /\b(?:PE(?:\.[A-Za-z_$][\w$]*)+|P|I|U)\.[A-Za-z_$][\w$]*\s*=\s*class\b/],
+      ['tool instance method replacement', /\beditor\.(?:setTool|onPointerDown|onPointerMove|onPointerUp|beginPaint)\s*=/],
+      ['property preview method replacement', /\bprovider\.renderPreviews\s*=/],
+      ['clipboard constructor replacement', /\bI\.Clipboard\s*=/],
+      ['base workspace export', /\b(?:PE\.ui|U)\.BaseWorkspace\s*=/],
+    ];
+    if (file.startsWith('src/clipboard/') || file.startsWith('src/commands/clipboard')) {
+      checks.push(['legacy clipboard project-version field', /\bversion\s*:\s*16\b/]);
+    }
+    for (const [label, pattern] of checks) {
+      for (const line of matchingLines(text, pattern)) violations.push(`${label}: ${file}:${line}`);
+    }
+  }
+
+  expect(violations).toEqual([]);
+});
