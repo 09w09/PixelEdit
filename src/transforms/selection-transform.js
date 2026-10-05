@@ -392,20 +392,6 @@ const selectionTransform = Object.freeze({
   distribute,
 });
 
-function installSelectionTransformRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const C = PE?.commands;
-  const Workspace = PE?.ui?.Workspace;
-  if (!C || !Workspace) throw new Error('PixelEditor selection transform dependencies are not initialized');
-  if (PE.selectionTransformInstalled) return PE.selectionTransform;
-  PE.selectionTransformInstalled = true;
-  C.SelectionTransformCommand = SelectionTransformCommand;
-  C.VisualAlignCommand = VisualAlignCommand;
-  C.VisualDistributeCommand = VisualDistributeCommand;
-  PE.selectionTransform = selectionTransform;
-  return selectionTransform;
-}
-
 export {
   unionBounds,
   centerOf,
@@ -429,5 +415,4 @@ export {
   align,
   distribute,
   selectionTransform,
-  installSelectionTransformRuntime,
 };
