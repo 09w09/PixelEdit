@@ -62,3 +62,19 @@ test('canonical project/page schema is V17 without legacy workspaceLayout or fil
   expect(result.nodeTypes.map(item => item.type)).toEqual(['line', 'rectangle', 'circle', 'polygon', 'text', 'image', 'raster']);
   expect(result.nodeTypes.every(item => item.hasTransform)).toBe(true);
 });
+
+test('preferences do not replace persistence classes or register workspace capabilities', async () => {
+  const source = await readFile(new URL('../src/preferences/editor-preferences.js', import.meta.url), 'utf8');
+  expect(source).not.toContain('P.ProjectFiles = class');
+  expect(source).not.toContain('P.Autosave = class');
+  expect(source).not.toContain('workspaceCapabilities');
+});
+
+test('persistence exposes canonical ProjectFiles and Autosave classes', async ({ page }) => {
+  await openEditor(page);
+  const names = await page.evaluate(() => ({
+    projectFiles: window.PixelEditor.persistence.ProjectFiles.name,
+    autosave: window.PixelEditor.persistence.Autosave.name,
+  }));
+  expect(names).toEqual({ projectFiles: 'ProjectFiles', autosave: 'Autosave' });
+});
