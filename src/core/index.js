@@ -1,12 +1,6 @@
 import './namespace.js';
 import './model-bridge.js';
-import '../rendering/bitmap-primitives.js';
-import '../rendering/pattern-renderer.js';
-import '../rendering/base-text-renderer.js';
-import '../rendering/base-image-renderer.js';
-import '../rendering/hierarchy-clipping.js';
-import '../rendering/renderer.js';
-import '../rendering/base-overlay-renderer.js';
+import './rendering-bridge.js';
 import './command-bridge.js';
 import './persistence-bridge.js';
 import '../interaction/hit-test.js';

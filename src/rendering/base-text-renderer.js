@@ -1,6 +1,5 @@
 import { renderTextMask } from './text-layout.js';
 
-const R = globalThis.PixelEditor.renderer;
-R.TextRenderer = { mask: renderTextMask };
+const TextRenderer = Object.freeze({ mask: renderTextMask });
 
-export { renderTextMask };
+export { renderTextMask, TextRenderer };
