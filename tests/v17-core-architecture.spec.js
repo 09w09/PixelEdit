@@ -67,14 +67,21 @@ test('preferences do not replace persistence classes or register workspace capab
   const source = await readFile(new URL('../src/preferences/editor-preferences.js', import.meta.url), 'utf8');
   expect(source).not.toContain('P.ProjectFiles = class');
   expect(source).not.toContain('P.Autosave = class');
+  expect(source).not.toContain('ProjectFilesV17');
+  expect(source).not.toContain('AutosaveV17');
   expect(source).not.toContain('workspaceCapabilities');
 });
 
-test('persistence exposes canonical ProjectFiles and Autosave classes', async ({ page }) => {
+test('workspace uses the canonical persistence constructors', async ({ page }) => {
   await openEditor(page);
-  const names = await page.evaluate(() => ({
-    projectFiles: window.PixelEditor.persistence.ProjectFiles.name,
-    autosave: window.PixelEditor.persistence.Autosave.name,
-  }));
-  expect(names).toEqual({ projectFiles: 'ProjectFiles', autosave: 'Autosave' });
+  const result = await page.evaluate(() => {
+    const editor = window.PixelEditorTest.editor;
+    return {
+      filesMatch: editor.files?.constructor === window.PixelEditor.persistence.ProjectFiles,
+      autosaveMatches: editor.autosave?.constructor === window.PixelEditor.persistence.Autosave,
+      hasSaveAs: typeof editor.files?.saveAs === 'function',
+      hasAutosaveRun: typeof editor.autosave?.run === 'function',
+    };
+  });
+  expect(result).toEqual({ filesMatch: true, autosaveMatches: true, hasSaveAs: true, hasAutosaveRun: true });
 });
