@@ -27,7 +27,7 @@ import '../commands/transform-commands.js';
 import '../commands/arrange-commands.js';
 import '../interaction/hit-test.js';
 import '../interaction/snap-engine.js';
-import '../interaction/clipboard.js';
+import '../clipboard/element-clipboard.js';
 import '../commands/clipboard-commands.js';
 import '../commands/page-commands.js';
 import '../interaction/interaction-controller.js';

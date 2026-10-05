@@ -1,7 +1,5 @@
 import './core/index.js';
 import { bootstrapPixelEdit } from './app/bootstrap.js';
-import { installV17WorkspaceClass } from './app/v17-workspace.js';
-import { installElementClipboardRuntime } from './clipboard/element-clipboard.js';
 import { installFontImportRuntime } from './fonts/font-import.js';
 import { installFontManagerRuntime } from './fonts/font-manager.js';
 import { installFontOptionsRuntime } from './fonts/font-options.js';
@@ -10,11 +8,11 @@ import { installImageRuntime } from './media/image-runtime.js';
 import { installRasterLayerRuntime } from './media/raster-layer.js';
 import { installRasterSizingRuntime } from './media/raster-sizing.js';
 import { installEditorPreferencesRuntime } from './preferences/editor-preferences.js';
+import { installWorkspaceLayoutRuntime } from './preferences/workspace-layout-runtime.js';
 import { installPropertySystem } from './properties/property-system.js';
 import { installFloodFillRuntime } from './raster/flood-fill.js';
 import { installPaintBrushRuntime } from './raster/paint-brush.js';
 import { installTriStateRasterRuntime } from './raster/tristate-raster.js';
-import { installBinaryImagePreviewRuntime } from './rendering/binary-image-preview.js';
 import { installBinaryImageRuntime } from './rendering/binary-image.js';
 import { installOverlayPipelineRuntime } from './rendering/overlay-pipeline.js';
 import { installPixelStrokeRuntime } from './rendering/pixel-stroke.js';
@@ -36,6 +34,7 @@ import { installHistoryPropertiesRuntime } from './ui/history-properties.js';
 
 function installRuntimeModules() {
   installEditorPreferencesRuntime(globalThis);
+  installWorkspaceLayoutRuntime(globalThis);
   installFontOptionsRuntime(globalThis);
   installToolStateRuntime(globalThis);
   installTextToolOptionsRuntime(globalThis);
@@ -52,7 +51,6 @@ function installRuntimeModules() {
   installSelectionGeometryRuntime(globalThis);
   installSelectionTransformRuntime(globalThis);
   installFloodFillRuntime(globalThis);
-  installElementClipboardRuntime(globalThis);
   installContextMenuRuntime(globalThis);
   installContextMenuBoundaryRuntime(globalThis);
   installHistoryPropertiesRuntime(globalThis);
@@ -65,12 +63,10 @@ function installRuntimeModules() {
   installFontManagerRuntime(globalThis);
   installFontImportRuntime(globalThis);
   installPropertySystem(globalThis);
-  installBinaryImagePreviewRuntime(globalThis);
   installToolSystemRuntime(globalThis);
 }
 
 installRuntimeModules();
-installV17WorkspaceClass(globalThis);
 bootstrapPixelEdit(globalThis);
 
 export { installRuntimeModules };

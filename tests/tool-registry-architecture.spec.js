@@ -35,7 +35,7 @@ test('ToolRegistry and ToolController own every supported tool without Workspace
       registry: Boolean(tools?.registry),
       controller: Boolean(editor.toolController),
       registered: ids.map(id => Boolean(tools?.registry?.get?.(id))),
-      controllerMethods: ['setTool', 'pointerDown', 'pointerMove', 'pointerUp', 'keyDown', 'renderOptions', 'cursor']
+      controllerMethods: ['setTool', 'handlePointerDown', 'handlePointerMove', 'handlePointerUp', 'keyDown', 'renderOptions', 'cursor']
         .map(name => typeof editor.toolController?.[name] === 'function'),
     };
   }, TOOL_IDS);
@@ -44,6 +44,36 @@ test('ToolRegistry and ToolController own every supported tool without Workspace
   expect(state.controller).toBe(true);
   expect(state.registered).toEqual(TOOL_IDS.map(() => true));
   expect(state.controllerMethods).toEqual([true, true, true, true, true, true, true]);
+});
+
+test('Workspace dynamically delegates tool switching and pointer dispatch exactly once', async ({ page }) => {
+  await openEditor(page);
+  const result = await page.evaluate(() => {
+    const editor = window.PixelEditorTest.editor;
+    const controller = editor.toolController;
+    const originalSetTool = controller.setTool;
+    const originalPointerDown = controller.handlePointerDown;
+    let setToolCalls = 0;
+    let pointerDownCalls = 0;
+
+    controller.setTool = tool => {
+      setToolCalls += 1;
+      return tool;
+    };
+    controller.handlePointerDown = () => {
+      pointerDownCalls += 1;
+      return true;
+    };
+
+    const setToolResult = editor.setTool('select');
+    editor.onPointerDown({ button: 2, pointerId: 1 });
+
+    controller.setTool = originalSetTool;
+    controller.handlePointerDown = originalPointerDown;
+    return { setToolCalls, pointerDownCalls, setToolResult };
+  });
+
+  expect(result).toEqual({ setToolCalls: 1, pointerDownCalls: 1, setToolResult: 'select' });
 });
 
 test('every tool switch terminates the active CommandBus edit session before the new tool becomes active', async ({ page }) => {

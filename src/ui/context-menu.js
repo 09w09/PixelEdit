@@ -45,88 +45,73 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 
-function installContextMenuRuntime(target = globalThis) {
+function createContextMenuService(target = globalThis) {
   const PE = target.PixelEditor;
-  const M = PE?.model;
-  const C = PE?.commands;
-  const I = PE?.interaction;
-  const Workspace = PE?.ui?.Workspace;
-  const PageDock = PE?.ui?.PageDock;
-  if (!M || !C || !I || !Workspace || !PageDock) throw new Error('PixelEditor context-menu dependencies are not initialized');
-  if (PE.contextMenuInstalled) return;
-  PE.contextMenuInstalled = true;
+  const M = PE.model;
+  const C = PE.commands;
+  const I = PE.interaction;
 
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.contextCommands = function contextCommands(editor) {
-    return visibleCommands(editor, M, C);
-  };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.executeContextCommand = function executeContextCommand(editor, id, value) {
-    const command = editor.contextCommands().find(item => item.id === id);
+  const contextCommands = editor => visibleCommands(editor, M, C);
+  const executeContextCommand = (editor, id, value) => {
+    const command = contextCommands(editor).find(item => item.id === id);
     if (!command || !command.enabled) return false;
     return command.run(value);
   };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.renderContextMenu = function renderContextMenu(editor) {
-    const menu = document.querySelector('#contextMenu');
+  const renderContextMenu = editor => {
+    const menu = target.document?.querySelector?.('#contextMenu');
     if (!menu) return;
-    menu.innerHTML = editor.contextCommands().map(command => (
+    menu.innerHTML = contextCommands(editor).map(command => (
       `<button type="button" data-context-command="${escapeHtml(command.id)}" ${command.enabled ? '' : 'disabled'} class="${command.danger ? 'danger' : ''}">${escapeHtml(command.label)}</button>`
     )).join('');
   };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.openContextMenu = function openContextMenu(editor, { source = 'canvas', nodeId = null, event = null, clientX = null, clientY = null } = {}) {
+  const openContextMenu = (editor, { source = 'canvas', nodeId = null, event = null, clientX = null, clientY = null } = {}) => {
     if (nodeId && !editor.state.selection.has(nodeId)) editor.state.selection.replace([nodeId]);
     if (nodeId) editor.pageSelectedId = null;
     editor.renderAll({ canvas: false, history: false });
-    const menu = document.querySelector('#contextMenu');
+    const menu = target.document?.querySelector?.('#contextMenu');
     if (!menu) return false;
-    editor.renderContextMenu();
+    renderContextMenu(editor);
     menu.dataset.source = source;
     menu.dataset.nodeId = nodeId || '';
-    const x = clientX ?? event?.clientX ?? 0;
-    const y = clientY ?? event?.clientY ?? 0;
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
+    menu.style.left = `${clientX ?? event?.clientX ?? 0}px`;
+    menu.style.top = `${clientY ?? event?.clientY ?? 0}px`;
     menu.classList.add('open');
     return true;
   };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.closeContextMenu = function closeContextMenu(editor) {
-    document.querySelector('#contextMenu')?.classList.remove('open');
-  };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.onContextMenu = function onContextMenu(editor, event) {
+  const closeContextMenu = () => target.document?.querySelector?.('#contextMenu')?.classList.remove('open');
+  const onContextMenu = (editor, event) => {
     const point = editor.logicalPoint(event);
     const hit = new I.HitTest(editor.state.project, editor.activePage().id, editor.state.assets).topmostAt(point.x, point.y, { ignoreLocked: false });
-    return editor.openContextMenu({ source: 'canvas', nodeId: hit?.id || null, event });
+    return openContextMenu(editor, { source: 'canvas', nodeId: hit?.id || null, event });
   };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.setupContextMenu = function setupContextMenu(editor) {
-    document.addEventListener('pointerdown', event => {
-      if (!event.target.closest('#contextMenu') && event.button !== 2) editor.closeContextMenu();
+  const setupContextMenu = editor => {
+    target.document?.addEventListener?.('pointerdown', event => {
+      if (!event.target.closest('#contextMenu') && event.button !== 2) closeContextMenu();
     });
-    document.querySelector('#contextMenu')?.addEventListener('click', event => {
+    target.document?.querySelector?.('#contextMenu')?.addEventListener('click', event => {
       const button = event.target.closest('[data-context-command]');
       if (!button || button.disabled) return;
       const id = button.dataset.contextCommand;
-      editor.closeContextMenu();
-      const result = editor.executeContextCommand(id);
+      closeContextMenu();
+      const result = executeContextCommand(editor, id);
       if (result && typeof result.then === 'function') result.catch(error => editor.notice?.(String(error?.message || error)));
     });
   };
-
-
-  PE.contextMenu = {
-    commandDefinitions: editor => commandDefinitions(editor, M, C),
-    visibleCommands: editor => visibleCommands(editor, M, C),
-  };
+  return { contextCommands, executeContextCommand, renderContextMenu, openContextMenu, closeContextMenu, onContextMenu, setupContextMenu };
 }
 
-export { commandDefinitions, visibleCommands, installContextMenuRuntime };
+function installContextMenuRuntime(target = globalThis) {
+  const PE = target.PixelEditor;
+  if (!PE?.model || !PE?.commands || !PE?.interaction || !PE?.ui?.Workspace || !PE?.ui?.PageDock) throw new Error('PixelEditor context-menu dependencies are not initialized');
+  if (PE.contextMenuInstalled) return PE.contextMenu;
+  PE.contextMenuInstalled = true;
+  const service = createContextMenuService(target);
+  PE.contextMenu = {
+    commandDefinitions: editor => commandDefinitions(editor, PE.model, PE.commands),
+    visibleCommands: editor => visibleCommands(editor, PE.model, PE.commands),
+    ...service,
+  };
+  return PE.contextMenu;
+}
+
+export { commandDefinitions, visibleCommands, createContextMenuService, installContextMenuRuntime };

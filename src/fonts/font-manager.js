@@ -48,13 +48,28 @@ class FontManager {
   }
 }
 
+function removeImportedFont(editor, family, CommandClass = globalThis.PixelEditor?.fonts?.RemoveImportedFontCommand) {
+  const PE = globalThis.PixelEditor;
+  const record = (editor.state.project.fonts || []).find(item => item.family === family);
+  if (!record || !CommandClass) return false;
+  const ok = editor.exec(new CommandClass(family));
+  if (ok) {
+    PE.textToolOptions?.fallbackRemovedFamily?.(editor, family);
+    editor.fontManager?.unregister(record);
+    editor.fontManager?.sync(editor.state.project.fonts || []);
+    editor.properties?.render();
+    editor.toolOptionsBar?.render?.();
+  }
+  return ok;
+}
+
 function installFontManagerRuntime(target = globalThis) {
   const PE = target.PixelEditor;
   const M = PE?.model;
   const C = PE?.commands;
   const Workspace = PE?.ui?.Workspace;
   if (!M || !C || !Workspace) throw new Error('PixelEditor is not initialized');
-  if (PE.fontManagerInstalled) return;
+  if (PE.fontManagerInstalled) return PE.fonts;
   PE.fontManagerInstalled = true;
 
   class RemoveImportedFontCommand {
@@ -81,23 +96,8 @@ function installFontManagerRuntime(target = globalThis) {
     }
   }
   C.RemoveImportedFontCommand = RemoveImportedFontCommand;
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.removeImportedFont = function removeImportedFont(editor, family) {
-    const record = (editor.state.project.fonts || []).find(item => item.family === family);
-    if (!record) return false;
-    const ok = editor.exec(new RemoveImportedFontCommand(family));
-    if (ok) {
-      PE.textToolOptions?.fallbackRemovedFamily?.(editor, family);
-      editor.fontManager?.unregister(record);
-      editor.fontManager?.sync(editor.state.project.fonts || []);
-      editor.properties?.render();
-      editor.toolOptionsBar?.render?.();
-    }
-    return ok;
-  };
-
-  PE.fonts = { FontManager, isImportedFamily, RemoveImportedFontCommand };
+  PE.fonts = { FontManager, isImportedFamily, RemoveImportedFontCommand, removeImportedFont };
+  return PE.fonts;
 }
 
-export { FontManager, isImportedFamily, installFontManagerRuntime };
+export { FontManager, isImportedFamily, removeImportedFont, installFontManagerRuntime };

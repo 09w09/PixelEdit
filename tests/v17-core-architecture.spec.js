@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+async function sourceFiles(root) {
+  const output = [];
+  for (const entry of await readdir(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) output.push(...await sourceFiles(path));
+    else if (entry.isFile() && entry.name.endsWith('.js')) output.push(path);
+  }
+  return output;
+}
 
 async function openEditor(page) {
   await page.goto('/');
@@ -24,14 +36,59 @@ test('main no longer upgrades a V15 model through installV17SchemaRuntime', asyn
   expect(main).toContain("import './core/index.js';");
 });
 
+test('legacy V17 schema runtime source is removed from production', async () => {
+  const root = fileURLToPath(new URL('../src/', import.meta.url));
+  const names = (await sourceFiles(root)).map(file => relative(root, file).replaceAll('\\', '/'));
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  const core = await readFile(new URL('../src/core/index.js', import.meta.url), 'utf8');
+
+  expect(names).not.toContain('model/v17-schema.js');
+  expect(main).not.toContain('v17-schema');
+  expect(core).not.toContain('v17-schema');
+  expect(main).not.toContain('installV17SchemaRuntime');
+  expect(core).not.toContain('installV17SchemaRuntime');
+});
+
+test('Workspace is defined once without V17 subclass or capability registry', async () => {
+  const root = fileURLToPath(new URL('../src/', import.meta.url));
+  const files = await sourceFiles(root);
+  const capabilityFiles = [];
+  const v17WorkspaceFiles = [];
+  const workspaceAssignments = [];
+
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    const name = relative(root, file).replaceAll('\\', '/');
+    if (source.includes('workspaceCapabilities')) capabilityFiles.push(name);
+    if (name.includes('v17-workspace') || source.includes('v17-workspace.js')) v17WorkspaceFiles.push(name);
+    if (/(?:\bU|\bPE\.ui|\bPixelEditor\.ui)\.Workspace\s*=/.test(source)) workspaceAssignments.push(name);
+  }
+
+  const bootstrap = await readFile(new URL('../src/app/bootstrap.js', import.meta.url), 'utf8');
+  expect(capabilityFiles).toEqual([]);
+  expect(v17WorkspaceFiles).toEqual([]);
+  expect(workspaceAssignments).toEqual(['app/workspace.js']);
+  expect(bootstrap).not.toContain('createToolDelegatingWorkspace');
+});
+
 test('application boots directly as canonical V17', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => ({
     namespaceVersion: window.PixelEditor?.version,
     testVersion: window.PixelEditorTest?.version,
     datasetVersion: document.documentElement.dataset.pixelEditor,
+    hasCreateProject: typeof window.PixelEditor?.model?.createProject === 'function',
+    hasSerializer: typeof window.PixelEditor?.persistence?.ProjectSerializer?.serialize === 'function',
+    hasWorkspace: typeof window.PixelEditor?.ui?.Workspace === 'function',
   }));
-  expect(result).toEqual({ namespaceVersion: 17, testVersion: 17, datasetVersion: 'v17' });
+  expect(result).toEqual({
+    namespaceVersion: 17,
+    testVersion: 17,
+    datasetVersion: 'v17',
+    hasCreateProject: true,
+    hasSerializer: true,
+    hasWorkspace: true,
+  });
 });
 
 test('canonical project/page schema is V17 without legacy workspaceLayout or fill.value', async ({ page }) => {
@@ -61,4 +118,27 @@ test('canonical project/page schema is V17 without legacy workspaceLayout or fil
   expect(result.pageFill).toMatchObject({ mode: 'solid', color: expect.any(Number) });
   expect(result.nodeTypes.map(item => item.type)).toEqual(['line', 'rectangle', 'circle', 'polygon', 'text', 'image', 'raster']);
   expect(result.nodeTypes.every(item => item.hasTransform)).toBe(true);
+});
+
+test('preferences do not replace persistence classes or register workspace capabilities', async () => {
+  const source = await readFile(new URL('../src/preferences/editor-preferences.js', import.meta.url), 'utf8');
+  expect(source).not.toContain('P.ProjectFiles = class');
+  expect(source).not.toContain('P.Autosave = class');
+  expect(source).not.toContain('ProjectFilesV17');
+  expect(source).not.toContain('AutosaveV17');
+  expect(source).not.toContain('workspaceCapabilities');
+});
+
+test('workspace uses the canonical persistence constructors', async ({ page }) => {
+  await openEditor(page);
+  const result = await page.evaluate(() => {
+    const editor = window.PixelEditorTest.editor;
+    return {
+      filesMatch: editor.files?.constructor === window.PixelEditor.persistence.ProjectFiles,
+      autosaveMatches: editor.autosave?.constructor === window.PixelEditor.persistence.Autosave,
+      hasSaveAs: typeof editor.files?.saveAs === 'function',
+      hasAutosaveRun: typeof editor.autosave?.run === 'function',
+    };
+  });
+  expect(result).toEqual({ filesMatch: true, autosaveMatches: true, hasSaveAs: true, hasAutosaveRun: true });
 });

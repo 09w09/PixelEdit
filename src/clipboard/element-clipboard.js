@@ -1,3 +1,5 @@
+const CLIPBOARD_FORMAT_VERSION = 1;
+
 function selectedPayloadArgs(input, pageId, selection, assets) {
   if (input?.project) return input;
   return { project: input, pageId, selection, assets };
@@ -17,8 +19,8 @@ function collectSubtreeIds(page, roots, Model) {
   return ids;
 }
 
-function createClipboardPayload({ project, pageId, selection, assets }, Model) {
-  const page = Model.pageById(project, pageId || project.activePageId);
+function createClipboardPayload({ project, pageId, selection, assets }, Model = globalThis.PixelEditor?.model) {
+  const page = Model?.pageById(project, pageId || project.activePageId);
   if (!page || !selection) return null;
   const tree = new Model.TreeModel(page);
   const roots = selection.transformRoots(tree);
@@ -38,7 +40,7 @@ function createClipboardPayload({ project, pageId, selection, assets }, Model) {
   }
 
   return {
-    version: 16,
+    formatVersion: CLIPBOARD_FORMAT_VERSION,
     sourcePageId: page.id,
     roots: [...roots],
     nodes,
@@ -61,7 +63,13 @@ function restoreClipboardResources(payload, { assets, project } = {}) {
   }
 }
 
-function cloneClipboardPayload(payload, targetPage, { offsetIndex = 0, assets = null, project = null, Model, TransformModel } = {}) {
+function cloneClipboardPayload(payload, targetPage, {
+  offsetIndex = 0,
+  assets = null,
+  project = null,
+  Model = globalThis.PixelEditor?.model,
+  TransformModel = globalThis.PixelEditor?.transformModel,
+} = {}) {
   if (!payload?.nodes?.length || !targetPage || !Model) return { nodes: [], rootIds: [], idMap: new Map() };
   restoreClipboardResources(payload, { assets, project });
   const idMap = new Map(payload.nodes.map(node => [node.id, Model.nextId(node.type)]));
@@ -81,7 +89,8 @@ function cloneClipboardPayload(payload, targetPage, { offsetIndex = 0, assets = 
 }
 
 class ElementClipboard {
-  constructor(Model, TransformModel) {
+  constructor(Model = globalThis.PixelEditor?.model, TransformModel = globalThis.PixelEditor?.transformModel) {
+    if (!Model) throw new Error('ElementClipboard requires the model API');
     this.Model = Model;
     this.TransformModel = TransformModel;
     this.payload = null;
@@ -116,139 +125,25 @@ function selectAllOnPage(page, selection) {
   return page.nodes.length > 0;
 }
 
-function installElementClipboardRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const C = PE?.commands;
-  const I = PE?.interaction;
-  const Workspace = PE?.ui?.Workspace;
-  const T = PE?.transformModel;
-  if (!M || !C || !I || !Workspace || !T) throw new Error('PixelEditor clipboard dependencies are not initialized');
-  if (PE.elementClipboardInstalled) return;
-  PE.elementClipboardInstalled = true;
-
-  class RuntimeElementClipboard extends ElementClipboard {
-    constructor() { super(M, T); }
-  }
-  I.Clipboard = RuntimeElementClipboard;
-  PE.ElementClipboard = RuntimeElementClipboard;
-
-  class PasteCommand {
-    constructor(payload, offsetIndex = 0, pageId = null) {
-      this.payload = structuredClone(payload);
-      this.offsetIndex = offsetIndex;
-      this.pageId = pageId;
-      this.label = '粘贴';
-      this.createdIds = [];
-    }
-    execute(state) {
-      const page = M.pageById(state.project, this.pageId || state.project.activePageId);
-      if (!page || page.locked || !this.payload?.nodes?.length) return false;
-      const cloned = cloneClipboardPayload(this.payload, page, {
-        offsetIndex: this.offsetIndex,
-        assets: state.assets,
-        project: state.project,
-        Model: M,
-        TransformModel: T,
-      });
-      if (!cloned.nodes.length) return false;
-      page.nodes.push(...cloned.nodes);
-      new M.TreeModel(page).validateHierarchy();
-      state.selection?.replace(cloned.rootIds);
-      this.createdIds = cloned.nodes.map(node => node.id);
-      return true;
-    }
-  }
-
-  class AltDragDuplicateCommand {
-    constructor(ids, dx, dy, pageId = null) {
-      this.ids = [...ids];
-      this.dx = Number(dx) || 0;
-      this.dy = Number(dy) || 0;
-      this.pageId = pageId;
-      this.label = '复制并移动';
-      this.createdIds = [];
-    }
-    execute(state) {
-      const page = M.pageById(state.project, this.pageId || state.project.activePageId);
-      if (!page || page.locked) return false;
-      const selection = new M.SelectionSet(this.ids);
-      const payload = createClipboardPayload({ project: state.project, pageId: page.id, selection, assets: state.assets }, M);
-      if (!payload) return false;
-      const cloned = cloneClipboardPayload(payload, page, {
-        offsetIndex: 0,
-        assets: state.assets,
-        project: state.project,
-        Model: M,
-        TransformModel: T,
-      });
-      for (const node of cloned.nodes) T.moveNodeGeometry(node, this.dx, this.dy);
-      page.nodes.push(...cloned.nodes);
-      new M.TreeModel(page).validateHierarchy();
-      state.selection?.replace(cloned.rootIds);
-      this.createdIds = cloned.nodes.map(node => node.id);
-      return true;
-    }
-  }
-
-  C.PasteCommand = PasteCommand;
-  C.AltDragDuplicateCommand = AltDragDuplicateCommand;
-  C.cloneClipboardPayload = (payload, page, offsetIndex = 0) => cloneClipboardPayload(payload, page, {
-    offsetIndex,
-    Model: M,
-    TransformModel: T,
-  });
-  C.payloadFromIds = (project, page, ids, assets = null) => createClipboardPayload({
-    project,
-    pageId: page.id,
-    selection: new M.SelectionSet(ids),
-    assets,
-  }, M);
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.copySelection = function copySelection(editor) {
-    if (!editor.state.selection.ids.length) return null;
-    return editor.clipboard.copy({
-      project: editor.state.project,
-      pageId: editor.activePage().id,
-      selection: editor.state.selection,
-      assets: editor.state.assets,
-    });
-  };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.pasteClipboard = function pasteClipboard(editor) {
-    const next = editor.clipboard.nextPaste();
-    if (!next) return false;
-    return editor.exec(new PasteCommand(next.payload, next.offsetIndex, editor.activePage().id));
-  };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.selectAllOnPage = function selectAllOnPageCapability(editor) {
-    const changed = selectAllOnPage(editor.activePage(), editor.state.selection);
-    editor.pageSelectedId = null;
-    editor.renderAll({ canvas: false, history: false });
-    return changed;
-  };
-
+const PE = globalThis.PixelEditor;
+if (PE?.interaction) Object.assign(PE.interaction, { Clipboard: ElementClipboard });
+if (PE) {
+  PE.ElementClipboard = ElementClipboard;
   PE.elementClipboard = {
-    ElementClipboard: RuntimeElementClipboard,
-    createClipboardPayload: args => createClipboardPayload(args, M),
-    cloneClipboardPayload: (payload, targetPage, options = {}) => cloneClipboardPayload(payload, targetPage, {
-      ...options,
-      Model: M,
-      TransformModel: T,
-    }),
+    CLIPBOARD_FORMAT_VERSION,
+    ElementClipboard,
+    createClipboardPayload,
+    cloneClipboardPayload,
     restoreClipboardResources,
     selectAllOnPage,
   };
 }
 
 export {
+  CLIPBOARD_FORMAT_VERSION,
   ElementClipboard,
   createClipboardPayload,
   cloneClipboardPayload,
   restoreClipboardResources,
   selectAllOnPage,
-  installElementClipboardRuntime,
 };

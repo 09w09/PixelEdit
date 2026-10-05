@@ -47,22 +47,22 @@ class OverlayPipeline {
   }
 }
 
+function renderOverlay(editor, pipeline = globalThis.PixelEditor?.overlayPipeline) {
+  if (!pipeline) return '';
+  editor.overlayPipeline = pipeline;
+  return pipeline.render(editor);
+}
+
 function installOverlayPipelineRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  const Workspace = PE?.ui?.Workspace;
-  if (!Workspace || !PE?.selectionOverlay || !PE?.transparencyOverlay || !PE?.canvasCursor) {
+  if (!PE?.ui?.Workspace || !PE?.selectionOverlay || !PE?.transparencyOverlay || !PE?.canvasCursor) {
     throw new Error('PixelEditor overlay layer dependencies are not initialized');
   }
   if (PE.overlayPipelineInstalled) return PE.overlayPipeline;
   PE.overlayPipelineInstalled = true;
   const pipeline = new OverlayPipeline(target);
   PE.overlayPipeline = pipeline;
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.renderOverlay = function renderOverlay(editor) {
-    editor.overlayPipeline = pipeline;
-    return pipeline.render(editor);
-  };
   return pipeline;
 }
 
-export { DEFAULT_LAYER_ORDER, OverlayPipeline, installOverlayPipelineRuntime };
+export { DEFAULT_LAYER_ORDER, OverlayPipeline, renderOverlay, installOverlayPipelineRuntime };

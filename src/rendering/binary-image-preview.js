@@ -20,25 +20,4 @@ function drawBinaryPreview(canvas, result) {
   context.drawImage(source, 0, 0, canvas.width, canvas.height);
 }
 
-function installBinaryImagePreviewRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const binaryImage = PE?.binaryImage;
-  const provider = PE?.properties?.provider;
-  if (!binaryImage?.binaryImageForNode || !provider?.renderPreviews) throw new Error('PixelEditor binary image preview dependencies are not initialized');
-  if (PE.binaryImagePreviewInstalled) return;
-  PE.binaryImagePreviewInstalled = true;
-
-  const renderPreviews = provider.renderPreviews.bind(provider);
-  provider.renderPreviews = function renderCanonicalImagePreview(properties, nodes) {
-    const node = nodes?.length === 1 ? nodes[0] : null;
-    if (!node || node.type !== 'image') return renderPreviews(properties, nodes);
-    const canvas = properties.el?.querySelector?.('#imageDitherPreview');
-    if (!canvas) return;
-    const result = binaryImage.binaryImageForNode(node, properties.editor.state.assets);
-    if (result) drawBinaryPreview(canvas, result);
-  };
-
-  PE.binaryImagePreview = { drawBinaryPreview };
-}
-
-export { drawBinaryPreview, installBinaryImagePreviewRuntime };
+export { drawBinaryPreview };

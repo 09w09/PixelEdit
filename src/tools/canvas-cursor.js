@@ -40,11 +40,24 @@ function brushCursorMarkup(editor) {
     + `</g>`;
 }
 
+function applyCanvasCursor(editor, { resetNative = false } = {}) {
+  if (!editor.canvas) return;
+  const mode = cursorModeForTool(editor.tool);
+  if (mode === 'brush') {
+    editor.canvas.style.cursor = 'none';
+    return;
+  }
+  if (mode === 'crosshair') {
+    editor.canvas.style.cursor = 'crosshair';
+    return;
+  }
+  if (resetNative) editor.canvas.style.cursor = 'default';
+}
+
 function installCanvasCursorRuntime(target = globalThis) {
   const PE = target.PixelEditor;
-  const Workspace = PE?.ui?.Workspace;
-  if (!Workspace) throw new Error('PixelEditor workspace is not initialized');
-  if (PE.canvasCursorInstalled) return;
+  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');
+  if (PE.canvasCursorInstalled) return PE.canvasCursor;
   PE.canvasCursorInstalled = true;
 
   PE.canvasCursor = {
@@ -53,24 +66,9 @@ function installCanvasCursorRuntime(target = globalThis) {
     cursorModeForTool,
     brushCursorBounds,
     brushCursorMarkup,
+    applyCanvasCursor,
   };
-
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.applyCanvasCursor = function applyCanvasCursor(editor, { resetNative = false } = {}) {
-    if (!editor.canvas) return;
-    const mode = cursorModeForTool(editor.tool);
-    if (mode === 'brush') {
-      editor.canvas.style.cursor = 'none';
-      return;
-    }
-    if (mode === 'crosshair') {
-      editor.canvas.style.cursor = 'crosshair';
-      return;
-    }
-    if (resetNative) editor.canvas.style.cursor = 'default';
-  };
-
-
+  return PE.canvasCursor;
 }
 
 export {
@@ -79,5 +77,6 @@ export {
   cursorModeForTool,
   brushCursorBounds,
   brushCursorMarkup,
+  applyCanvasCursor,
   installCanvasCursorRuntime,
 };

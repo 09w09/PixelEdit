@@ -22,12 +22,14 @@ test('OverlayPipeline is the single owner of overlay composition', async ({ page
     expect(source, `${relative} must not append overlay markup after another renderer`).not.toContain('insertAdjacentHTML');
   }
 
-  const pipelineSource = await readFile(new URL('../src/rendering/overlay-pipeline.js', import.meta.url), 'utf8').catch(() => '');
-  const workspaceSource = await readFile(new URL('../src/app/v17-workspace.js', import.meta.url), 'utf8').catch(() => '');
+  const pipelineSource = await readFile(new URL('../src/rendering/overlay-pipeline.js', import.meta.url), 'utf8');
+  const workspaceSource = await readFile(new URL('../src/app/workspace.js', import.meta.url), 'utf8');
   expect(pipelineSource).toContain('class OverlayPipeline');
   expect(pipelineSource).not.toMatch(/Workspace\.prototype\.renderOverlay\s*=/);
-  expect(pipelineSource).toContain('PE.workspaceCapabilities.renderOverlay');
-  expect(workspaceSource).toContain("renderOverlay() { return capability('renderOverlay', this); }");
+  expect(pipelineSource).toContain('function renderOverlay(editor');
+  expect(pipelineSource).not.toContain('workspaceCapabilities');
+  expect(workspaceSource).toContain("renderOverlay() { return PE.overlayPipeline?.render?.(this) || ''; }");
+  expect(workspaceSource).not.toContain('workspaceCapabilities');
 
   await openEditor(page);
   const state = await page.evaluate(() => {
