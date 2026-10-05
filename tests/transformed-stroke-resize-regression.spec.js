@@ -22,7 +22,7 @@ async function exerciseRectangle(page, finalRotation) {
     const T = PE.transformModel;
     const G = PE.selectionGeometry;
     const S = PE.selectionOverlay;
-    const P = PE.pixelStrokeRuntime;
+    const P = PE.pixelStroke;
 
     editor.newProject({ force: true });
     editor.setZoom(3);
