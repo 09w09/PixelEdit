@@ -1,5 +1,6 @@
 import { normalizeFill, normalizeStroke } from '../model/schema.js';
 import { STROKE_COLOR_OPTIONS, normalizeStrokeColor } from '../model/stroke-values.js';
+import { attachSelectionBoundary } from '../commands/edit-session.js';
 import { drawBinaryPreview } from '../rendering/binary-image-preview.js';
 
 const SHAPE_TYPES = new Set(['line', 'rectangle', 'circle', 'polygon']);
@@ -112,7 +113,7 @@ class PropertySession {
 
   execute(command, refresh = DEFAULT_REFRESH, afterFrame = null) {
     if (!command) return false;
-    globalThis.PixelEditor?.commandCoalescing?.attachSelectionBoundary?.(this.editor);
+    attachSelectionBoundary(this.editor);
     const changed = this.editor.bus.execute(command);
     if (changed) this.schedule(refresh, afterFrame);
     return changed;
@@ -736,17 +737,4 @@ class PropertyProvider {
   }
 }
 
-function installPropertySystem(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Properties || !PE?.commands?.UpdateNodesCommand || !PE?.model?.TreeModel || !PE?.renderer?.FramebufferRenderer || !PE?.binaryImage?.binaryImageForNode) {
-    throw new Error('PixelEditor property system dependencies are not initialized');
-  }
-  if (PE.propertiesInstalled) return PE.properties;
-  const provider = new PropertyProvider(PE);
-  PE.propertiesInstalled = true;
-  PE.properties = { PropertyDescriptor, PropertyProvider, PropertySession, provider, normalizeNumber };
-  PE.shapeStyleProperties = { SHAPE_TYPES, FILLABLE_SHAPES };
-  return PE.properties;
-}
-
-export { PropertyDescriptor, PropertyProvider, PropertySession, normalizeNumber, installPropertySystem };
+export { PropertyDescriptor, PropertyProvider, PropertySession, normalizeNumber };
