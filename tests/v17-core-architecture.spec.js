@@ -36,6 +36,19 @@ test('main no longer upgrades a V15 model through installV17SchemaRuntime', asyn
   expect(main).toContain("import './core/index.js';");
 });
 
+test('legacy V17 schema runtime source is removed from production', async () => {
+  const root = fileURLToPath(new URL('../src/', import.meta.url));
+  const names = (await sourceFiles(root)).map(file => relative(root, file).replaceAll('\\', '/'));
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  const core = await readFile(new URL('../src/core/index.js', import.meta.url), 'utf8');
+
+  expect(names).not.toContain('model/v17-schema.js');
+  expect(main).not.toContain('v17-schema');
+  expect(core).not.toContain('v17-schema');
+  expect(main).not.toContain('installV17SchemaRuntime');
+  expect(core).not.toContain('installV17SchemaRuntime');
+});
+
 test('Workspace is defined once without V17 subclass or capability registry', async () => {
   const root = fileURLToPath(new URL('../src/', import.meta.url));
   const files = await sourceFiles(root);
@@ -64,8 +77,18 @@ test('application boots directly as canonical V17', async ({ page }) => {
     namespaceVersion: window.PixelEditor?.version,
     testVersion: window.PixelEditorTest?.version,
     datasetVersion: document.documentElement.dataset.pixelEditor,
+    hasCreateProject: typeof window.PixelEditor?.model?.createProject === 'function',
+    hasSerializer: typeof window.PixelEditor?.persistence?.ProjectSerializer?.serialize === 'function',
+    hasWorkspace: typeof window.PixelEditor?.ui?.Workspace === 'function',
   }));
-  expect(result).toEqual({ namespaceVersion: 17, testVersion: 17, datasetVersion: 'v17' });
+  expect(result).toEqual({
+    namespaceVersion: 17,
+    testVersion: 17,
+    datasetVersion: 'v17',
+    hasCreateProject: true,
+    hasSerializer: true,
+    hasWorkspace: true,
+  });
 });
 
 test('canonical project/page schema is V17 without legacy workspaceLayout or fill.value', async ({ page }) => {
