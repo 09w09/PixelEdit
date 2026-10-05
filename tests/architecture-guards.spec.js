@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'src');
+const TESTS = path.join(ROOT, 'tests');
 
 async function sourceFiles(dir = SRC) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -74,25 +75,29 @@ test('architecture convergence residues cannot return to production source', asy
   const all = await sources();
   const files = all.map(item => item.file);
   const violations = [];
+  const testFiles = (await readdir(TESTS)).filter(name => name.endsWith('.js')).sort();
 
   expect(files).not.toContain('src/app/v17-workspace.js');
   expect(files).not.toContain('src/model/v17-schema.js');
   expect(files).not.toContain('src/interaction/clipboard.js');
+  expect(testFiles).not.toContain('v16-full-workflow.spec.js');
+  expect(testFiles).toContain('v17-full-workflow.spec.js');
 
   for (const { file, text } of all) {
     const checks = [
       ['workspace capability registry', /\bworkspaceCapabilities\b/],
+      ['legacy workspace module reference', /\bv17-workspace(?:\.js)?\b/],
+      ['legacy schema module reference', /\bv17-schema(?:\.js)?\b/],
       ['V17 workspace subclass', /\b(?:BaseWorkspace|V17Workspace)\b/],
+      ['legacy persistence wrapper', /\b(?:ProjectFilesV17|AutosaveV17|BaseProjectFiles)\b/],
       ['legacy schema installer', /\binstallV17SchemaRuntime\b/],
       ['runtime anonymous class replacement', /\b(?:PE(?:\.[A-Za-z_$][\w$]*)+|P|I|U)\.[A-Za-z_$][\w$]*\s*=\s*class\b/],
       ['tool instance method replacement', /\beditor\.(?:setTool|onPointerDown|onPointerMove|onPointerUp|beginPaint)\s*=/],
       ['property preview method replacement', /\bprovider\.renderPreviews\s*=/],
       ['clipboard constructor replacement', /\bI\.Clipboard\s*=/],
       ['base workspace export', /\b(?:PE\.ui|U)\.BaseWorkspace\s*=/],
+      ['legacy clipboard project-version field', /\bversion\s*:\s*16\b/],
     ];
-    if (file.startsWith('src/clipboard/') || file.startsWith('src/commands/clipboard')) {
-      checks.push(['legacy clipboard project-version field', /\bversion\s*:\s*16\b/]);
-    }
     for (const [label, pattern] of checks) {
       for (const line of matchingLines(text, pattern)) violations.push(`${label}: ${file}:${line}`);
     }
