@@ -12,64 +12,61 @@ function inferFixedFontSize(name) {
   return match ? Number(match[1]) : null;
 }
 
-function installFontImportRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const Workspace = PE?.ui?.Workspace;
-  if (!M?.sha256Bytes || !Workspace) throw new Error('PixelEditor is not initialized');
-  if (PE.fontImportInstalled) return;
-  PE.fontImportInstalled = true;
+async function importFonts(editor, files, Model = globalThis.PixelEditor?.model) {
+  const records = [];
+  let skipped = 0;
+  const knownSha = new Set((editor.state.project.fonts || []).map(record => record.sha256).filter(Boolean));
 
-  PE.workspaceCapabilities = PE.workspaceCapabilities || {};
-  PE.workspaceCapabilities.importFonts = async function importFonts(editor, files) {
-    const records = [];
-    let skipped = 0;
-    const knownSha = new Set((editor.state.project.fonts || []).map(record => record.sha256).filter(Boolean));
-
-    for (const file of files || []) {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const sha256 = await M.sha256Bytes(bytes);
-      if (knownSha.has(sha256)) {
-        skipped += 1;
-        continue;
-      }
-      knownSha.add(sha256);
-
-      let asset = editor.state.assets.findBySha256('font', sha256);
-      let assetId = asset?.id || null;
-      if (!assetId) {
-        const mime = file.type || 'font/ttf';
-        assetId = editor.state.assets.add('font', bytesToDataUrl(bytes, mime), {
-          name: file.name,
-          mime,
-          sha256,
-        });
-      }
-
-      const record = {
-        name: file.name,
-        family: `Imported_${sha256.slice(0, 16)}`,
-        fixedSize: inferFixedFontSize(file.name),
-        assetId,
-        sha256,
-      };
-      await editor.registerFont(record).catch(() => {});
-      records.push(record);
+  for (const file of files || []) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const sha256 = await Model.sha256Bytes(bytes);
+    if (knownSha.has(sha256)) {
+      skipped += 1;
+      continue;
     }
+    knownSha.add(sha256);
 
-    if (records.length) {
-      editor.exec({
-        label: '导入字体',
-        execute: state => {
-          state.project.fonts.push(...records.map(record => structuredClone(record)));
-          return true;
-        },
+    let asset = editor.state.assets.findBySha256('font', sha256);
+    let assetId = asset?.id || null;
+    if (!assetId) {
+      const mime = file.type || 'font/ttf';
+      assetId = editor.state.assets.add('font', bytesToDataUrl(bytes, mime), {
+        name: file.name,
+        mime,
+        sha256,
       });
     }
-    return { imported: records.length, skipped };
-  };
 
-  PE.fontImport = { inferFixedFontSize };
+    const record = {
+      name: file.name,
+      family: `Imported_${sha256.slice(0, 16)}`,
+      fixedSize: inferFixedFontSize(file.name),
+      assetId,
+      sha256,
+    };
+    await editor.registerFont(record).catch(() => {});
+    records.push(record);
+  }
+
+  if (records.length) {
+    editor.exec({
+      label: '导入字体',
+      execute: state => {
+        state.project.fonts.push(...records.map(record => structuredClone(record)));
+        return true;
+      },
+    });
+  }
+  return { imported: records.length, skipped };
 }
 
-export { inferFixedFontSize, installFontImportRuntime };
+function installFontImportRuntime(target = globalThis) {
+  const PE = target.PixelEditor;
+  if (!PE?.model?.sha256Bytes || !PE?.ui?.Workspace) throw new Error('PixelEditor is not initialized');
+  if (PE.fontImportInstalled) return PE.fontImport;
+  PE.fontImportInstalled = true;
+  PE.fontImport = { inferFixedFontSize, importFonts };
+  return PE.fontImport;
+}
+
+export { inferFixedFontSize, importFonts, installFontImportRuntime };
