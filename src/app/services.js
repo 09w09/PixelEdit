@@ -82,4 +82,6 @@ function createServices() {
   return Object.freeze(services);
 }
 
-export { createServices };
+const services = createServices();
+
+export { createServices, services };
