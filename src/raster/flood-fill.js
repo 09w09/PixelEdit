@@ -1,4 +1,32 @@
 import { normalizeToolFill, normalizeDither, normalizePattern } from '../model/fill-values.js';
+import { nodeById, TreeModel } from '../model/index.js';
+import { UpdateNodesCommand, UpdatePageCommand } from '../commands/index.js';
+import { FramebufferRenderer } from '../rendering/renderer.js';
+import { graphicDitherPixel, patternPixel } from '../rendering/pattern-renderer.js';
+import { selectionGeometry } from '../selection/selection-geometry.js';
+import { selectionOverlay } from '../rendering/selection-overlay.js';
+import {
+  RASTER_TRANSPARENT,
+  RASTER_WHITE,
+  RASTER_BLACK,
+  pixelsFromRasterNode,
+  createTriStateRaster,
+} from './tristate-raster.js';
+
+const floodFillDependencies = Object.freeze({
+  model: Object.freeze({ nodeById, TreeModel }),
+  commands: Object.freeze({ UpdateNodesCommand, UpdatePageCommand }),
+  renderer: Object.freeze({ FramebufferRenderer, graphicDitherPixel, patternPixel }),
+  tristateRaster: Object.freeze({
+    RASTER_TRANSPARENT,
+    RASTER_WHITE,
+    RASTER_BLACK,
+    pixelsFromRasterNode,
+    createTriStateRaster,
+  }),
+  selectionGeometry,
+  selectionOverlay,
+});
 
 function collectFloodRegion(source, width, height, startX, startY) {
   const w = Math.max(1, Math.round(Number(width) || 1));
@@ -57,7 +85,7 @@ function rasterState(settings, renderer, tristate, absoluteX, absoluteY, localX,
   return bit ? tristate.RASTER_BLACK : tristate.RASTER_WHITE;
 }
 
-function bucketFillTarget(editor, PE = globalThis.PixelEditor) {
+function bucketFillTarget(editor, PE = floodFillDependencies) {
   const page = editor.activePage();
   const id = editor.state.selection.primaryId;
   const node = PE.model.nodeById(page, id);
@@ -71,7 +99,7 @@ function bucketFillTarget(editor, PE = globalThis.PixelEditor) {
   return null;
 }
 
-function bucketFillRaster(editor, node, point, settings, PE = globalThis.PixelEditor) {
+function bucketFillRaster(editor, node, point, settings, PE = floodFillDependencies) {
   const page = editor.activePage();
   const geometry = PE.selectionGeometry;
   const pivot = PE.selectionOverlay?.sourcePivotBounds?.(editor, node) || geometry?.sourceGeometryBounds?.(node);
@@ -96,7 +124,7 @@ function bucketFillRaster(editor, node, point, settings, PE = globalThis.PixelEd
   return editor.exec(new PE.commands.UpdateNodesCommand([node.id], { raster }, page.id, '油漆桶填充'));
 }
 
-function bucketFillPage(editor, page, point, settings, PE = globalThis.PixelEditor) {
+function bucketFillPage(editor, page, point, settings, PE = floodFillDependencies) {
   const sx = Math.max(0, Math.min(399, Math.round(point.x)));
   const sy = Math.max(0, Math.min(299, Math.round(point.y)));
   const source = PE.renderer.FramebufferRenderer.renderPage(editor.state.project, page.id, editor.state.assets);
@@ -123,7 +151,7 @@ function bucketFillPage(editor, page, point, settings, PE = globalThis.PixelEdit
   return editor.exec(new PE.commands.UpdatePageCommand(page.id, { overlay }, '背景油漆桶填充'));
 }
 
-function bucketFillImage(editor, node, point, settings, PE = globalThis.PixelEditor) {
+function bucketFillImage(editor, node, point, settings, PE = floodFillDependencies) {
   const page = editor.activePage();
   const sx = Math.floor(point.x - node.x);
   const sy = Math.floor(point.y - node.y);
@@ -152,7 +180,7 @@ function bucketFillImage(editor, node, point, settings, PE = globalThis.PixelEdi
   return editor.exec(new PE.commands.UpdateNodesCommand([node.id], { overlay }, page.id, '图片油漆桶填充'));
 }
 
-function bucketFillAt(editor, point, PE = globalThis.PixelEditor) {
+function bucketFillAt(editor, point, PE = floodFillDependencies) {
   const info = bucketFillTarget(editor, PE);
   if (!info) {
     editor.notice('油漆桶只能编辑未锁定的图片 / 栅格图层；未选择图层时编辑页面背景');
@@ -165,13 +193,4 @@ function bucketFillAt(editor, point, PE = globalThis.PixelEditor) {
   return bucketFillImage(editor, info.node, point, settings, PE);
 }
 
-function installFloodFillRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.model || !PE?.commands || !PE?.renderer?.FramebufferRenderer || !PE?.tristateRaster || !PE?.ui?.Workspace) throw new Error('PixelEditor flood fill dependencies are not initialized');
-  if (PE.floodFillInstalled) return PE.floodFill;
-  PE.floodFillInstalled = true;
-  PE.floodFill = { collectFloodRegion, sampledBit, bucketFillTarget, bucketFillRaster, bucketFillPage, bucketFillImage, bucketFillAt };
-  return PE.floodFill;
-}
-
-export { collectFloodRegion, bucketFillTarget, bucketFillRaster, bucketFillPage, bucketFillImage, bucketFillAt, installFloodFillRuntime };
+export { collectFloodRegion, bucketFillTarget, bucketFillRaster, bucketFillPage, bucketFillImage, bucketFillAt };

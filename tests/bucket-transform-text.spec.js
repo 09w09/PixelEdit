@@ -62,7 +62,7 @@ test('bucket flood fill respects raster boundaries, patterns, transparency and h
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     const M = PE.model;
     const C = PE.commands;
     const T = PE.tristateRaster;
@@ -126,7 +126,7 @@ test('rotated transform properties stay integer and resize cursor follows transf
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     const M = PE.model;
     const C = PE.commands;
     const G = PE.selectionGeometry;
@@ -184,7 +184,7 @@ test('text tool defaults expose horizontal and vertical alignment and new text s
     v.value = 'middle';
     v.dispatchEvent(new Event('change', { bubbles: true }));
     editor.beginLiveDraw('text', { x: 11, y: 13 });
-    const node = window.PixelEditor.model.nodeById(editor.activePage(), editor.customGesture?.nodeId);
+    const node = window.PixelEditorDebug.services.model.nodeById(editor.activePage(), editor.customGesture?.nodeId);
     const snapshot = node ? { alignH: node.alignH, alignV: node.alignV } : null;
     const defaults = editor.getToolDefaults('text');
     editor.cancelCustomGesture();

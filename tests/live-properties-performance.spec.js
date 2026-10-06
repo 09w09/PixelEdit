@@ -26,7 +26,7 @@ test('100 continuous numeric inputs preserve focus, coalesce history, and avoid 
 
   const metrics = await page.evaluate(async nodeId => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     const counts = { properties: 0, canvas: 0, overlay: 0, layers: 0, history: 0 };
     const originals = {
       properties: editor.properties.render.bind(editor.properties),

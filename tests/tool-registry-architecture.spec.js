@@ -30,7 +30,7 @@ test('ToolRegistry and ToolController own every supported tool without Workspace
   await openEditor(page);
   const state = await page.evaluate(ids => {
     const editor = window.PixelEditorTest.editor;
-    const tools = window.PixelEditor.tools;
+    const tools = window.PixelEditorDebug.services.tools;
     return {
       registry: Boolean(tools?.registry),
       controller: Boolean(editor.toolController),
@@ -80,8 +80,8 @@ test('every tool switch terminates the active CommandBus edit session before the
   await openEditor(page);
   const result = await page.evaluate(ids => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     const input = document.querySelector('#fileImage');
     if (input) input.click = () => {};
     const output = [];

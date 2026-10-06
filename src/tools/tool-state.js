@@ -7,13 +7,4 @@ function toolDefaults(preferences, tool) {
   return defaults ? clone(defaults) : {};
 }
 
-function installToolStateRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.preferences) throw new Error('PixelEditor preferences are not initialized');
-  if (PE.toolStateInstalled) return;
-  PE.toolStateInstalled = true;
-  PE.tools = PE.tools || {};
-  PE.tools.toolDefaults = toolDefaults;
-}
-
-export { toolDefaults, installToolStateRuntime };
+export { toolDefaults };

@@ -45,11 +45,8 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 
-function createContextMenuService(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE.model;
-  const C = PE.commands;
-  const I = PE.interaction;
+function createContextMenuService({ model: M, commands: C, interaction: I, target = globalThis } = {}) {
+  if (!M || !C || !I?.HitTest) throw new Error('PixelEditor context-menu dependencies are not initialized');
 
   const contextCommands = editor => visibleCommands(editor, M, C);
   const executeContextCommand = (editor, id, value) => {
@@ -97,21 +94,17 @@ function createContextMenuService(target = globalThis) {
       if (result && typeof result.then === 'function') result.catch(error => editor.notice?.(String(error?.message || error)));
     });
   };
-  return { contextCommands, executeContextCommand, renderContextMenu, openContextMenu, closeContextMenu, onContextMenu, setupContextMenu };
+  return Object.freeze({
+    commandDefinitions: editor => commandDefinitions(editor, M, C),
+    visibleCommands: editor => visibleCommands(editor, M, C),
+    contextCommands,
+    executeContextCommand,
+    renderContextMenu,
+    openContextMenu,
+    closeContextMenu,
+    onContextMenu,
+    setupContextMenu,
+  });
 }
 
-function installContextMenuRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.model || !PE?.commands || !PE?.interaction || !PE?.ui?.Workspace || !PE?.ui?.PageDock) throw new Error('PixelEditor context-menu dependencies are not initialized');
-  if (PE.contextMenuInstalled) return PE.contextMenu;
-  PE.contextMenuInstalled = true;
-  const service = createContextMenuService(target);
-  PE.contextMenu = {
-    commandDefinitions: editor => commandDefinitions(editor, PE.model, PE.commands),
-    visibleCommands: editor => visibleCommands(editor, PE.model, PE.commands),
-    ...service,
-  };
-  return PE.contextMenu;
-}
-
-export { commandDefinitions, visibleCommands, createContextMenuService, installContextMenuRuntime };
+export { commandDefinitions, visibleCommands, createContextMenuService };

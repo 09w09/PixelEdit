@@ -43,12 +43,4 @@ function resolveTextToolSelection(preferences, project, family = preferences?.fo
   return { fontFamily, fontSize, lastScalableFontSize, fixed: fixedSize != null, fixedSize };
 }
 
-function installFontOptionsRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor font option dependencies are not initialized');
-  if (PE.fontOptionsInstalled) return;
-  PE.fontOptionsInstalled = true;
-  PE.fontOptions = { BUILTIN_FONT_OPTIONS, fontOptions, fontRecordForFamily, resolveTextToolSelection };
-}
-
-export { BUILTIN_FONT_OPTIONS, fontOptions, fontRecordForFamily, resolveTextToolSelection, installFontOptionsRuntime };
+export { BUILTIN_FONT_OPTIONS, fontOptions, fontRecordForFamily, resolveTextToolSelection };

@@ -175,8 +175,8 @@ test('mixed multi-selection numeric property becomes live for every selected sha
   const ids = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     editor.newProject({ force: true });
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 20, y: 20, w: 50, h: 40, stroke: { width: 1, color: 1, style: 'solid' } });
     const b = M.createNode('rectangle', { parentId: p.id, x: 100, y: 20, w: 50, h: 40, stroke: { width: 3, color: 1, style: 'solid' } });

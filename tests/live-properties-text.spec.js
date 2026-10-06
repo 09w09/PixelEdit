@@ -180,7 +180,7 @@ test('one focused text numeric session is one undo step and a later focus is sep
   const undone = await page.evaluate(nodeId => {
     const editor = window.PixelEditorTest.editor;
     editor.bus.undo();
-    return window.PixelEditor.model.nodeById(editor.activePage(), nodeId)?.fontSize;
+    return window.PixelEditorDebug.services.model.nodeById(editor.activePage(), nodeId)?.fontSize;
   }, id);
   expect(undone).toBe(34);
 });

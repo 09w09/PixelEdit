@@ -2,6 +2,7 @@ import { renderShapeToolOptions, SHAPE_TOOLS } from './shape-style-options.js';
 import { renderTextToolOptions } from './text-tool-options.js';
 import { renderFillToolOptions } from './fill-tool-options.js';
 import { ICONS, iconButton, setIconButton } from '../ui/icon-toolbar.js';
+import { modifiableSelectionRoots } from '../transforms/selection-transform.js';
 
 const SELECTION_ACTIONS = [
   { action: 'align-left', title: '左对齐', icon: ICONS.alignLeft, run: editor => editor.align('left') },
@@ -95,9 +96,7 @@ class ToolOptionsBar {
   }
 
   modifiableSelectionCount() {
-    const runtime = globalThis.PixelEditor?.selectionTransform;
-    if (!runtime?.modifiableSelectionRoots) return this.editor.state.selection.ids.length;
-    return runtime.modifiableSelectionRoots(this.editor.activePage(), this.editor.state.selection).length;
+    return modifiableSelectionRoots(this.editor.activePage(), this.editor.state.selection).length;
   }
 
   renderSelectionTools() {
@@ -208,12 +207,4 @@ function installGlobalToolbar(editor) {
   return toolBar;
 }
 
-function installToolOptionsRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');
-  if (PE.toolOptionsInstalled) return;
-  PE.toolOptionsInstalled = true;
-  PE.toolOptions = { ToolOptionsBar, installGlobalToolbar, actionRequirement, SELECTION_ACTIONS };
-}
-
-export { SELECTION_ACTIONS, ToolOptionsBar, actionRequirement, installGlobalToolbar, installToolOptionsRuntime };
+export { SELECTION_ACTIONS, ToolOptionsBar, actionRequirement, installGlobalToolbar };

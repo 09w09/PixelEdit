@@ -1,3 +1,12 @@
 import { referencedAssetIds, validateProject } from '../model/schema.js';
 import { assertProjectInvariants } from '../model/invariants.js';
-const P=globalThis.PixelEditor.persistence;const M=globalThis.PixelEditor.model;const ProjectSerializer={validate(project){assertProjectInvariants(project);validateProject(project);return project;},referencedAssetIds,serialize(project,assets){assertProjectInvariants(project);validateProject(project);const output=structuredClone(project);output.assets=assets.referenced(referencedAssetIds(project));return JSON.stringify(output);},deserialize(raw){const output=typeof raw==='string'?JSON.parse(raw):structuredClone(raw);assertProjectInvariants(output);validateProject(output);const records=output.assets||[];delete output.assets;return{project:output,assets:new M.AssetStore(records)};}};P.ProjectSerializer=ProjectSerializer;export{ProjectSerializer};
+import { AssetStore } from '../model/asset-store.js';
+
+const ProjectSerializer={
+  validate(project){assertProjectInvariants(project);validateProject(project);return project;},
+  referencedAssetIds,
+  serialize(project,assets){assertProjectInvariants(project);validateProject(project);const output=structuredClone(project);output.assets=assets.referenced(referencedAssetIds(project));return JSON.stringify(output);},
+  deserialize(raw){const output=typeof raw==='string'?JSON.parse(raw):structuredClone(raw);assertProjectInvariants(output);validateProject(output);const records=output.assets||[];delete output.assets;return{project:output,assets:new AssetStore(records)};},
+};
+
+export { ProjectSerializer };

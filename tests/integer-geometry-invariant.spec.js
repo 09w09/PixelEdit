@@ -65,8 +65,8 @@ test('property edits, pointer-style moves, duplicate and paste never persist fra
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', { parentId: p.id, x: 10, y: 20, w: 31, h: 19 });
@@ -86,7 +86,7 @@ test('property edits, pointer-style moves, duplicate and paste never persist fra
 
   await page.evaluate(id => {
     const editor = window.PixelEditorTest.editor;
-    const C = window.PixelEditor.commands;
+    const C = window.PixelEditorDebug.services.commands;
     const p = editor.activePage();
     editor.exec(new C.MoveSelectionCommand([id], 3.6, -2.4, p.id));
     editor.state.selection.replace([id]);
@@ -102,7 +102,7 @@ test('rotated resize, line endpoint and polygon vertex edits stay on the integer
   await openEditor(page);
   const snapshots = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     const M = PE.model;
     const C = PE.commands;
     const G = PE.selectionGeometry;
@@ -190,8 +190,8 @@ test('visual align and distribute commands never introduce fractional source pos
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const nodes = [
@@ -234,8 +234,8 @@ test('command mutation boundary canonicalizes fractional box, line and polygon g
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const box = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 20, h: 20 });

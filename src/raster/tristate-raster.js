@@ -131,26 +131,6 @@ function triStatePixelsToRgba(pixels, width, height) {
   return rgba;
 }
 
-function installTriStateRasterRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE) throw new Error('PixelEditor is not initialized');
-  PE.tristateRaster = {
-    RASTER_TRANSPARENT,
-    RASTER_WHITE,
-    RASTER_BLACK,
-    RASTER_ENCODING,
-    normalizeRasterState,
-    encodeTriStatePixels,
-    decodeTriStatePixels,
-    createTriStateRaster,
-    pixelsFromRasterNode,
-    paintTriStateRaster,
-    resizeTriStateRaster,
-    rasterPixelToComposite,
-    triStatePixelsToRgba,
-  };
-}
-
 export {
   RASTER_TRANSPARENT,
   RASTER_WHITE,
@@ -165,5 +145,4 @@ export {
   resizeTriStateRaster,
   rasterPixelToComposite,
   triStatePixelsToRgba,
-  installTriStateRasterRuntime,
 };

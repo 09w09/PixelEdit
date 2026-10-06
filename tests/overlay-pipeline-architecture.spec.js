@@ -34,7 +34,7 @@ test('OverlayPipeline is the single owner of overlay composition', async ({ page
   await openEditor(page);
   const state = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const pipeline = window.PixelEditor.overlayPipeline;
+    const pipeline = window.PixelEditorDebug.services.overlayPipeline;
     return {
       globalPipeline: Boolean(pipeline),
       editorPipeline: editor.overlayPipeline === pipeline,
@@ -55,8 +55,8 @@ test('overlay layers render in one deterministic pass without losing existing vi
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
     const raster = M.createNode('raster', {

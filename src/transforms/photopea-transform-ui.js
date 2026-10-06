@@ -64,47 +64,25 @@ function svgHandle(point, zoom, sizeForZoom) {
   return `<rect class="selection-handle selection-edge-handle" x="${point.x - half}" y="${point.y - half}" width="${size}" height="${size}"/>`;
 }
 
-function installPhotopeaTransformUIRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const R = PE?.renderer;
-  const T = PE?.transformModel;
-  const G = PE?.selectionGeometry;
-  const S = PE?.selectionOverlay;
-  const Workspace = PE?.ui?.Workspace;
-  const Properties = PE?.ui?.Properties;
-  if (!M || !R?.FramebufferRenderer || !T || !G || !S || !Workspace || !Properties) {
-    throw new Error('PixelEditor transform UI dependencies are not initialized');
-  }
-  if (PE.photopeaTransformUIInstalled) return;
-  PE.photopeaTransformUIInstalled = true;
-
-  function edgeHandlesMarkup(editor) {
-    if (editor.state.selection.ids.length !== 1) return '';
-    const node = M.nodeById(editor.activePage(), editor.state.selection.ids[0]);
-    if (!node || !BOX_TYPES.has(node.type)) return '';
-    const pivot = S.sourcePivotBounds(editor, node);
-    const geometry = G.selectionGeometry(node, pivot);
-    if (!geometry?.handles) return '';
-    const dx = editor.overlayState.previewMove?.dx || 0;
-    const dy = editor.overlayState.previewMove?.dy || 0;
-    return EDGE_CORNERS.map(corner => {
-      const point = geometry.handles[corner];
-      return svgHandle({ x: point.x + dx, y: point.y + dy }, editor.zoom, S.handleVisualSize);
-    }).join('');
-  }
-
-  PE.photopeaTransformUI = {
-    integerVisualBounds,
-    withEdgeHandles,
-    resizeCursorForHandle,
-    edgeHandlesMarkup,
-  };
+function edgeHandlesMarkup(editor, { model, selectionGeometry, selectionOverlay } = {}) {
+  if (!editor || !model || !selectionGeometry || !selectionOverlay) return '';
+  if (editor.state.selection.ids.length !== 1) return '';
+  const node = model.nodeById(editor.activePage(), editor.state.selection.ids[0]);
+  if (!node || !BOX_TYPES.has(node.type)) return '';
+  const pivot = selectionOverlay.sourcePivotBounds(editor, node);
+  const geometry = selectionGeometry.selectionGeometry(node, pivot);
+  if (!geometry?.handles) return '';
+  const dx = editor.overlayState.previewMove?.dx || 0;
+  const dy = editor.overlayState.previewMove?.dy || 0;
+  return EDGE_CORNERS.map(corner => {
+    const point = geometry.handles[corner];
+    return svgHandle({ x: point.x + dx, y: point.y + dy }, editor.zoom, selectionOverlay.handleVisualSize);
+  }).join('');
 }
 
 export {
   integerVisualBounds,
   withEdgeHandles,
   resizeCursorForHandle,
-  installPhotopeaTransformUIRuntime,
+  edgeHandlesMarkup,
 };

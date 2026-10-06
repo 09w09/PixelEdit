@@ -9,7 +9,7 @@ test('new projects serialize as V17 without workspace layout', async ({ page }) 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const P = window.PixelEditor.persistence;
+    const P = window.PixelEditorDebug.services.persistence;
     editor.newProject({ force: true });
     const raw = P.ProjectSerializer.serialize(editor.state.project, editor.state.assets);
     const parsed = JSON.parse(raw);
@@ -29,8 +29,8 @@ test('new projects serialize as V17 without workspace layout', async ({ page }) 
 test('serializer rejects V16 and accepts exact V17', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const P = window.PixelEditor.persistence;
-    const M = window.PixelEditor.model;
+    const P = window.PixelEditorDebug.services.persistence;
+    const M = window.PixelEditorDebug.services.model;
     const editor = window.PixelEditorTest.editor;
     editor.newProject({ force: true });
     const good = JSON.parse(P.ProjectSerializer.serialize(editor.state.project, editor.state.assets));
@@ -53,7 +53,7 @@ test('serializer rejects V16 and accepts exact V17', async ({ page }) => {
 test('V17 local preferences clamp malformed values and ignore V16 keys', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const prefs = window.PixelEditor.preferences;
+    const prefs = window.PixelEditorDebug.services.preferences;
     localStorage.setItem('pixeledit:v16:preferences', JSON.stringify({ workspace: { leftWidth: 499 } }));
     localStorage.setItem(prefs.PREFERENCE_KEY, '{broken');
     const malformed = prefs.loadEditorPreferences(localStorage);

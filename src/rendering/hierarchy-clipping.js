@@ -14,7 +14,6 @@ function ancestorClip(tree, nodeId, getBounds) {
   return clip;
 }
 
-const hierarchyClip = { CANVAS_BOUNDS: { ...CANVAS_BOUNDS }, finiteBounds, hasArea, intersectBounds, containsPixel, unionBounds, ancestorClip };
-if (globalThis.PixelEditor) globalThis.PixelEditor.hierarchyClip = hierarchyClip;
+const hierarchyClip = Object.freeze({ CANVAS_BOUNDS: { ...CANVAS_BOUNDS }, finiteBounds, hasArea, intersectBounds, containsPixel, unionBounds, ancestorClip });
 
 export { CANVAS_BOUNDS, finiteBounds, hasArea, intersectBounds, containsPixel, unionBounds, ancestorClip, hierarchyClip };

@@ -29,7 +29,7 @@ test('text tool exposes font and size defaults and new text snapshots them', asy
     const font = document.querySelector('#toolOptionFont');
     const size = document.querySelector('#toolOptionFontSize');
     editor.beginLiveDraw('text', { x: 10, y: 12 });
-    const node = window.PixelEditor.model.nodeById(editor.activePage(), editor.customGesture?.nodeId);
+    const node = window.PixelEditorDebug.services.model.nodeById(editor.activePage(), editor.customGesture?.nodeId);
     const snapshot = node ? { family: node.fontFamily, size: node.fontSize } : null;
     editor.setToolDefault('text', 'fontFamily', 'sans-serif');
     editor.setToolDefault('text', 'fontSize', 33);
@@ -82,8 +82,8 @@ test('font actions render in text tool options and are absent from element prope
   const seeded = await seedImportedFont(page, { family: 'Imported_scalable', fixedSize: null });
   const result = await page.evaluate(({ family }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     const p = editor.activePage();
     const node = M.createNode('text', { parentId: p.id, x: 5, y: 5, w: 80, h: 30, text: 'A', fontFamily: family, fontSize: 22 });
     editor.exec(new C.AddNodesCommand([node], p.id));
@@ -116,8 +116,8 @@ test('removing font selected by text tool falls back without mutating unrelated 
   const seeded = await seedImportedFont(page);
   const result = await page.evaluate(({ family }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     const p = editor.activePage();
     const unrelated = M.createNode('text', { parentId: p.id, x: 2, y: 2, w: 80, h: 24, text: 'B', fontFamily: 'sans-serif', fontSize: 19 });
     editor.exec(new C.AddNodesCommand([unrelated], p.id));

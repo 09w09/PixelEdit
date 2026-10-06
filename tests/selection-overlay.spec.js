@@ -8,7 +8,7 @@ async function openEditor(page) {
 test('box helper geometry uses outer pixel edges without w-1 offsets', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const S = window.PixelEditor.selectionOverlay;
+    const S = window.PixelEditorDebug.services.selectionOverlay;
     return {
       one: S?.boxHandlePoints?.({ x: 7, y: 9, w: 1, h: 1 }),
       ten: S?.boxHandlePoints?.({ x: 10, y: 20, w: 10, h: 10 }),
@@ -25,7 +25,7 @@ test('selection handle visual size stays ten CSS pixels at 100 800 and 1600 perc
   await openEditor(page);
   const sizes = await page.evaluate(() => [1, 8, 16].map(zoom => ({
     zoom,
-    logical: window.PixelEditor.selectionOverlay?.handleVisualSize?.(zoom),
+    logical: window.PixelEditorDebug.services.selectionOverlay?.handleVisualSize?.(zoom),
   })));
   for (const item of sizes) expect(item.logical * item.zoom).toBeCloseTo(10, 5);
 });
@@ -58,7 +58,7 @@ test('line selection renders a line with only endpoint handles instead of a boun
 test('box resize handle hit target remains about sixteen CSS pixels across zoom levels', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const S = window.PixelEditor.selectionOverlay;
+    const S = window.PixelEditorDebug.services.selectionOverlay;
     return [1, 8, 16].map(zoom => ({
       zoom,
       inside: Boolean(S?.hitBoxHandle?.({ x: 10, y: 10, w: 20, h: 20 }, { x: 10 + 7.5 / zoom, y: 10 }, zoom)),

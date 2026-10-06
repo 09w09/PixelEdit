@@ -8,8 +8,8 @@ async function openEditor(page) {
 test('top aligned text baseline is derived from actual ink ascent', async ({ page }) => {
   await openEditor(page);
   const metrics = await page.evaluate(() => {
-    const T = window.PixelEditor.textLayout;
-    const node = window.PixelEditor.model.createNode('text', {
+    const T = window.PixelEditorDebug.services.textLayout;
+    const node = window.PixelEditorDebug.services.model.createNode('text', {
       x: 0, y: 0, w: 120, h: 50, text: '文字Ag', fontFamily: 'sans-serif', fontSize: 28, alignV: 'top', wrap: false,
     });
     const canvas = document.createElement('canvas');
@@ -34,8 +34,8 @@ test('top aligned text baseline is derived from actual ink ascent', async ({ pag
 test('measured layout keeps italic-like overhang inside a left aligned text box', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const T = window.PixelEditor.textLayout;
-    const node = window.PixelEditor.model.createNode('text', {
+    const T = window.PixelEditorDebug.services.textLayout;
+    const node = window.PixelEditorDebug.services.model.createNode('text', {
       w: 80, h: 40, text: 'fj', fontFamily: 'serif', fontSize: 30, alignH: 'left', alignV: 'top', wrap: false,
     });
     const canvas = document.createElement('canvas');
@@ -57,11 +57,11 @@ test('measured layout keeps italic-like overhang inside a left aligned text box'
 test('top middle and bottom alignment produce ordered measured text blocks', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const T = window.PixelEditor.textLayout;
+    const T = window.PixelEditorDebug.services.textLayout;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     return ['top', 'middle', 'bottom'].map(alignV => {
-      const node = window.PixelEditor.model.createNode('text', {
+      const node = window.PixelEditorDebug.services.model.createNode('text', {
         w: 120, h: 90, text: '第一行\n第二行', fontFamily: 'sans-serif', fontSize: 18,
         lineSpacing: 5, alignV, wrap: false,
       });
@@ -79,9 +79,9 @@ test('top middle and bottom alignment produce ordered measured text blocks', asy
 test('empty whitespace wrapped and descender text all produce valid binary masks', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const T = window.PixelEditor.textLayout;
+    const T = window.PixelEditorDebug.services.textLayout;
     return ['', '   ', 'gypq', '一二三四五六七八九十'].map(text => {
-      const node = window.PixelEditor.model.createNode('text', {
+      const node = window.PixelEditorDebug.services.model.createNode('text', {
         w: 45, h: 80, text, fontFamily: 'sans-serif', fontSize: 18, wrap: true, letterSpacing: 1, lineSpacing: 2,
       });
       const out = T?.renderTextMask?.(node);

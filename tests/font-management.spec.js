@@ -7,8 +7,8 @@ async function openEditor(page) {
 
 function seedFontAndTextScript() {
   const editor = window.PixelEditorTest.editor;
-  const M = window.PixelEditor.model;
-  const C = window.PixelEditor.commands;
+  const M = window.PixelEditorDebug.services.model;
+  const C = window.PixelEditorDebug.services.commands;
   editor.newProject({ force: true });
   const assetId = editor.state.assets.add('font', 'data:font/woff2;base64,AA==', {
     name: 'TestFont.woff2', mime: 'font/woff2', sha256: 'test-sha',
@@ -30,7 +30,7 @@ test('removing an imported font replaces every page reference and preserves effe
   const result = await page.evaluate(seedFontAndTextScript);
   const removed = await page.evaluate(({ family, firstId, secondId, text1Id, text2Id }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     const ok = editor.removeImportedFont?.(family);
     const a = M.nodeById(M.pageById(editor.state.project, firstId), text1Id);
     const b = M.nodeById(M.pageById(editor.state.project, secondId), text2Id);
@@ -52,7 +52,7 @@ test('font removal participates in undo and redo without losing the asset needed
   const seeded = await page.evaluate(seedFontAndTextScript);
   const result = await page.evaluate(({ family, assetId, firstId, text1Id }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     editor.removeImportedFont(family);
     const afterRemove = { family: M.nodeById(M.pageById(editor.state.project, firstId), text1Id).fontFamily, asset: editor.state.assets.has(assetId) };
     const undo = editor.bus.undo();
@@ -109,7 +109,7 @@ test('serialized project after font removal contains no dangling font asset', as
   const result = await page.evaluate(({ family }) => {
     const editor = window.PixelEditorTest.editor;
     editor.removeImportedFont(family);
-    const raw = window.PixelEditor.persistence.ProjectSerializer.serialize(editor.state.project, editor.state.assets);
+    const raw = window.PixelEditorDebug.services.persistence.ProjectSerializer.serialize(editor.state.project, editor.state.assets);
     const parsed = JSON.parse(raw);
     return { fonts: parsed.fonts.length, fontAssets: parsed.assets.filter(a => a.type === 'font').length };
   }, seeded);

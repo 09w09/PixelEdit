@@ -1,9 +1,14 @@
+import { TreeModel, pageById, nodeById } from '../model/index.js';
 import { Framebuffer } from './framebuffer.js';
 import { RenderContext } from './render-context.js';
 import { CANVAS_BOUNDS, intersectBounds, hasArea, unionBounds } from './effects/clipping.js';
 import { fillValue } from './effects/fill.js';
 import { transformedBounds } from '../transforms/transform-model.js';
 import { createBinaryImagePipeline } from './binary-image.js';
+import * as primitives from './bitmap-primitives.js';
+import { graphicDitherPixel, patternPixel } from './pattern-renderer.js';
+import { TextRenderer } from './base-text-renderer.js';
+import { ImageRenderer } from './base-image-renderer.js';
 import { rectangleRenderer } from './node-renderers/rectangle-renderer.js';
 import { circleRenderer } from './node-renderers/circle-renderer.js';
 import { lineRenderer } from './node-renderers/line-renderer.js';
@@ -12,19 +17,12 @@ import { textRenderer } from './node-renderers/text-renderer.js';
 import { imageRenderer } from './node-renderers/image-renderer.js';
 import { rasterRenderer } from './node-renderers/raster-renderer.js';
 
+const renderRuntime = Object.freeze({ ...primitives, graphicDitherPixel, patternPixel, TextRenderer, ImageRenderer });
+
 class Renderer {
-  constructor(PE = globalThis.PixelEditor) {
-    this.PE = PE;
-    this.runtime = PE.renderer;
-    this.nodeRenderers = Object.freeze({
-      rectangle: rectangleRenderer,
-      circle: circleRenderer,
-      line: lineRenderer,
-      polygon: polygonRenderer,
-      text: textRenderer,
-      image: imageRenderer,
-      raster: rasterRenderer,
-    });
+  constructor({ runtime = renderRuntime } = {}) {
+    this.runtime = runtime;
+    this.nodeRenderers = Object.freeze({ rectangle: rectangleRenderer, circle: circleRenderer, line: lineRenderer, polygon: polygonRenderer, text: textRenderer, image: imageRenderer, raster: rasterRenderer });
     this.nodeTypes = new Set(Object.keys(this.nodeRenderers));
     this.binaryImage = createBinaryImagePipeline(this.runtime);
     this.facade = Object.freeze({
@@ -38,25 +36,24 @@ class Renderer {
     });
   }
 
-  page(project, pageId) { return this.PE.model.pageById(project, pageId); }
+  page(project, pageId) { return pageById(project, pageId); }
 
   context(project, pageId, assets, framebuffer) {
     const page = this.page(project, pageId);
     if (!page) throw new Error('page not found');
-    return new RenderContext({ renderer: this, project, page, tree: new this.PE.model.TreeModel(page), assets, framebuffer });
+    return new RenderContext({ renderer: this, project, page, tree: new TreeModel(page), assets, framebuffer });
   }
 
   sourceBounds(node, context) {
     if (!node) return { x: 0, y: 0, w: 0, h: 0 };
     const nodeRenderer = this.nodeRenderers[node.type];
     if (!nodeRenderer) return { x: node.x || 0, y: node.y || 0, w: node.w || 0, h: node.h || 0 };
-    const fallback = context || { renderer: this };
-    return nodeRenderer.visualBounds(node, fallback);
+    return nodeRenderer.visualBounds(node, context || { renderer: this });
   }
 
   visualBounds(nodeId, context) {
     const page = this.page(context.project, context.pageId);
-    const node = this.PE.model.nodeById(page, nodeId);
+    const node = nodeById(page, nodeId);
     if (!node) return { x: 0, y: 0, w: 0, h: 0 };
     const source = this.sourceBounds(node, { renderer: this, project: context.project, page, pageId: context.pageId, assets: context.assets });
     return transformedBounds(node, { baseBounds: () => source });
@@ -64,9 +61,8 @@ class Renderer {
 
   ancestorClip(nodeId, context) {
     const page = this.page(context.project, context.pageId);
-    const tree = new this.PE.model.TreeModel(page);
-    let clip = { ...CANVAS_BOUNDS };
-    let node = tree.node(nodeId);
+    const tree = new TreeModel(page);
+    let clip = { ...CANVAS_BOUNDS }, node = tree.node(nodeId);
     const visited = new Set();
     while (node?.parentId && node.parentId !== page.id && !visited.has(node.parentId)) {
       visited.add(node.parentId);
@@ -79,9 +75,7 @@ class Renderer {
     return clip;
   }
 
-  visibleBounds(nodeId, context) {
-    return intersectBounds(this.visualBounds(nodeId, context), this.ancestorClip(nodeId, context));
-  }
+  visibleBounds(nodeId, context) { return intersectBounds(this.visualBounds(nodeId, context), this.ancestorClip(nodeId, context)); }
 
   drawPageBackground(context) {
     const page = context.page;
@@ -101,9 +95,7 @@ class Renderer {
     const nodeRenderer = this.nodeRenderers[node.type];
     if (nodeRenderer) nodeRenderer.render(node, context);
     const bounds = this.visualBounds(node.id, { project: context.project, pageId: context.page.id, assets: context.assets });
-    context.withClip(bounds, () => {
-      for (const child of context.tree.childrenOf(node.id)) this.renderNode(context, child.id);
-    });
+    context.withClip(bounds, () => { for (const child of context.tree.childrenOf(node.id)) this.renderNode(context, child.id); });
   }
 
   renderPage(project, pageId, assets) {
@@ -126,13 +118,11 @@ class Renderer {
   visualSubtreeBounds(nodeId, context) {
     const page = this.page(context.project, context.pageId);
     if (!page) return { x: 0, y: 0, w: 0, h: 0 };
-    const tree = new this.PE.model.TreeModel(page);
-    const list = [];
+    const tree = new TreeModel(page), list = [];
     const visit = (id, clip) => {
       const node = tree.node(id);
       if (!node || node.visible === false || !hasArea(clip)) return;
-      const raw = this.visualBounds(id, context);
-      const visible = intersectBounds(raw, clip);
+      const raw = this.visualBounds(id, context), visible = intersectBounds(raw, clip);
       if (hasArea(visible)) list.push(visible);
       const childClip = intersectBounds(clip, raw);
       for (const child of tree.childrenOf(id)) visit(child.id, childClip);
@@ -145,31 +135,19 @@ class Renderer {
     const bounds = this.visualSubtreeBounds(nodeId, { project, pageId, assets });
     const x0 = Math.max(0, Math.floor(bounds.x)), y0 = Math.max(0, Math.floor(bounds.y));
     const x1 = Math.min(400, Math.ceil(bounds.x + bounds.w)), y1 = Math.min(300, Math.ceil(bounds.y + bounds.h));
-    const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
-    const white = this.renderSubtree(project, pageId, nodeId, assets, 0);
-    const black = this.renderSubtree(project, pageId, nodeId, assets, 1);
-    const data = new Uint8ClampedArray(w * h * 4);
-    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) {
-      const source = (y0 + y) * 400 + x0 + x;
-      const a = white[source], b = black[source], offset = (y * w + x) * 4;
+    const width = Math.max(1, x1 - x0), height = Math.max(1, y1 - y0);
+    const white = this.renderSubtree(project, pageId, nodeId, assets, 0), black = this.renderSubtree(project, pageId, nodeId, assets, 1);
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+      const source = (y0 + y) * 400 + x0 + x, a = white[source], b = black[source], offset = (y * width + x) * 4;
       if (a === 0 && b === 1) data[offset + 3] = 0;
-      else {
-        const value = a ? 0 : 255;
-        data[offset] = data[offset + 1] = data[offset + 2] = value;
-        data[offset + 3] = 255;
-      }
+      else { const value = a ? 0 : 255; data[offset] = data[offset + 1] = data[offset + 2] = value; data[offset + 3] = 255; }
     }
-    return { x: x0, y: y0, w, h, data };
+    return { x: x0, y: y0, w: width, h: height, data };
   }
 }
 
-const R = globalThis.PixelEditor.renderer;
-const pipeline = new Renderer(globalThis.PixelEditor);
-R.Renderer = Renderer;
-R.RenderContext = RenderContext;
-R.Framebuffer = Framebuffer;
-R.nodeRenderers = pipeline.nodeRenderers;
-R.pipeline = pipeline;
-R.FramebufferRenderer = pipeline.facade;
+const pipeline = new Renderer();
+const FramebufferRenderer = pipeline.facade;
 
-export { Renderer, pipeline };
+export { Renderer, pipeline, FramebufferRenderer, renderRuntime };

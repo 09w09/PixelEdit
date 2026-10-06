@@ -28,7 +28,7 @@ test('V17 cross-subsystem workflow stays canonical through edit, save/load and e
   await openEditor(page);
 
   const result = await page.evaluate(() => {
-    const PE = window.PixelEditor;
+    const PE = window.PixelEditorDebug.services;
     const editor = window.PixelEditorTest.editor;
     const M = PE.model;
     const C = PE.commands;

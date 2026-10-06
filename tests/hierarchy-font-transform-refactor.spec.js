@@ -9,9 +9,9 @@ test('child rendering and hit testing are clipped by every ancestor layer bounds
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const R = window.PixelEditor.renderer;
-    const I = window.PixelEditor.interaction;
+    const M = window.PixelEditorDebug.services.model;
+    const R = window.PixelEditorDebug.services.renderer;
+    const I = window.PixelEditorDebug.services.interaction;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const parent = M.createNode('rectangle', {
@@ -57,8 +57,8 @@ test('font import and current-font removal live in text tool options, not elemen
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     editor.state.project.fonts.push({
@@ -105,9 +105,9 @@ test('group rotation keeps source geometry immutable and stores placement only i
   const result = await page.evaluate(() => {
     const center = bounds => ({ x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 });
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const a = M.createNode('rectangle', { parentId: p.id, x: 10, y: 10, w: 10, h: 6 });
@@ -150,9 +150,9 @@ test('four quarter turns return exactly to canonical identity without source-geo
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const R = window.PixelEditor.renderer;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const nodes = [
@@ -199,8 +199,8 @@ test('selection overlay follows composed transforms without rewriting source con
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const poly = M.createNode('polygon', {
@@ -222,8 +222,8 @@ test('selection overlay follows composed transforms without rewriting source con
       y: Number(el.getAttribute('y')) + Number(el.getAttribute('height')) / 2,
     }));
     const current = M.nodeById(p, poly.id);
-    const pivotBounds = window.PixelEditor.selectionOverlay.sourcePivotBounds(editor, current);
-    const expected = window.PixelEditor.selectionGeometry.selectionGeometry(current, pivotBounds).controlPoints;
+    const pivotBounds = window.PixelEditorDebug.services.selectionOverlay.sourcePivotBounds(editor, current);
+    const expected = window.PixelEditorDebug.services.selectionGeometry.selectionGeometry(current, pivotBounds).controlPoints;
     return {
       originalPoints,
       currentPoints: structuredClone(current.points),

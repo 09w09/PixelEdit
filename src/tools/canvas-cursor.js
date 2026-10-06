@@ -54,23 +54,6 @@ function applyCanvasCursor(editor, { resetNative = false } = {}) {
   if (resetNative) editor.canvas.style.cursor = 'default';
 }
 
-function installCanvasCursorRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace) throw new Error('PixelEditor workspace is not initialized');
-  if (PE.canvasCursorInstalled) return PE.canvasCursor;
-  PE.canvasCursorInstalled = true;
-
-  PE.canvasCursor = {
-    BRUSH_TOOLS,
-    CROSSHAIR_TOOLS,
-    cursorModeForTool,
-    brushCursorBounds,
-    brushCursorMarkup,
-    applyCanvasCursor,
-  };
-  return PE.canvasCursor;
-}
-
 export {
   BRUSH_TOOLS,
   CROSSHAIR_TOOLS,
@@ -78,5 +61,4 @@ export {
   brushCursorBounds,
   brushCursorMarkup,
   applyCanvasCursor,
-  installCanvasCursorRuntime,
 };

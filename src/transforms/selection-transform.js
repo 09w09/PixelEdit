@@ -1,3 +1,10 @@
+import { TreeModel, SelectionSet, pageById } from '../model/index.js';
+import { FramebufferRenderer } from '../rendering/renderer.js';
+import { transformModel } from './transform-model.js';
+
+const MODEL = Object.freeze({ TreeModel, SelectionSet, pageById });
+const RENDERER = Object.freeze({ FramebufferRenderer });
+
 function unionBounds(bounds) {
   const items = (bounds || []).filter(item => item && Number.isFinite(item.x) && Number.isFinite(item.y));
   if (!items.length) return null;
@@ -26,7 +33,7 @@ function reflectPointAround(point, pivot, axis) {
   return { x: point.x, y: pivot.y * 2 - point.y };
 }
 
-function modifiableSelectionRoots(page, selection, Model) {
+function modifiableSelectionRoots(page, selection, Model = MODEL) {
   if (!page || !selection) return [];
   const tree = new Model.TreeModel(page);
   return selection.transformRoots(tree).filter(id => {
@@ -35,7 +42,7 @@ function modifiableSelectionRoots(page, selection, Model) {
   });
 }
 
-function collectModifiableSubtree(page, roots, Model) {
+function collectModifiableSubtree(page, roots, Model = MODEL) {
   const tree = new Model.TreeModel(page);
   const output = [];
   const seen = new Set();
@@ -51,18 +58,22 @@ function collectModifiableSubtree(page, roots, Model) {
   return output;
 }
 
-function nodeVisualBounds(node, editor, Renderer) {
-  return Renderer.FramebufferRenderer.visualBounds(node.id, { project: editor.state.project, pageId: editor.activePage().id, assets: editor.state.assets });
+function nodeVisualBounds(node, editor, Renderer = RENDERER) {
+  return Renderer.FramebufferRenderer.visualBounds(node.id, {
+    project: editor.state.project,
+    pageId: editor.activePage().id,
+    assets: editor.state.assets,
+  });
 }
 
-function selectionVisualBounds(editor, nodes, Renderer, Model) {
+function selectionVisualBounds(editor, nodes, Renderer = RENDERER, Model = MODEL) {
   const tree = new Model.TreeModel(editor.activePage());
   const visible = (nodes || []).filter(node => tree.isEffectivelyVisible(node.id));
   const source = visible.length ? visible : nodes;
   return unionBounds((source || []).map(node => nodeVisualBounds(node, editor, Renderer)));
 }
 
-function moveSubtreeFractional(page, rootId, dx, dy, Model, TransformModel) {
+function moveSubtreeFractional(page, rootId, dx, dy, Model = MODEL, TransformModel = transformModel) {
   const tree = new Model.TreeModel(page);
   let changed = false;
   const visit = id => {
@@ -77,25 +88,57 @@ function moveSubtreeFractional(page, rootId, dx, dy, Model, TransformModel) {
   return changed;
 }
 
-function composeRotate(transform, degrees, TransformModel) {
+function composeRotate(transform, degrees, TransformModel = transformModel) {
   const current = TransformModel.normalizeTransform(transform);
-  return { rotation: TransformModel.normalizeRotation(current.rotation + degrees), flipX: current.flipX, flipY: current.flipY, translateX: current.translateX, translateY: current.translateY };
+  return {
+    rotation: TransformModel.normalizeRotation(current.rotation + degrees),
+    flipX: current.flipX,
+    flipY: current.flipY,
+    translateX: current.translateX,
+    translateY: current.translateY,
+  };
 }
 
-function composeFlip(transform, axis, TransformModel) {
+function composeFlip(transform, axis, TransformModel = transformModel) {
   const current = TransformModel.normalizeTransform(transform);
-  if (axis === 'horizontal') return { rotation: TransformModel.normalizeRotation(-current.rotation), flipX: !current.flipX, flipY: current.flipY, translateX: current.translateX, translateY: current.translateY };
-  return { rotation: TransformModel.normalizeRotation(-current.rotation), flipX: current.flipX, flipY: !current.flipY, translateX: current.translateX, translateY: current.translateY };
+  if (axis === 'horizontal') {
+    return {
+      rotation: TransformModel.normalizeRotation(-current.rotation),
+      flipX: !current.flipX,
+      flipY: current.flipY,
+      translateX: current.translateX,
+      translateY: current.translateY,
+    };
+  }
+  return {
+    rotation: TransformModel.normalizeRotation(-current.rotation),
+    flipX: current.flipX,
+    flipY: !current.flipY,
+    translateX: current.translateX,
+    translateY: current.translateY,
+  };
 }
 
-function canonicalSourceBounds(node, TransformModel) { return TransformModel.nodeLocalBounds(node); }
-function canonicalSourceCenter(node, TransformModel) { return centerOf(canonicalSourceBounds(node, TransformModel)); }
-function transformedSourceCenter(node, TransformModel) {
+function canonicalSourceBounds(node, TransformModel = transformModel) {
+  return TransformModel.nodeLocalBounds(node);
+}
+
+function canonicalSourceCenter(node, TransformModel = transformModel) {
+  return centerOf(canonicalSourceBounds(node, TransformModel));
+}
+
+function transformedSourceCenter(node, TransformModel = transformModel) {
   const source = canonicalSourceCenter(node, TransformModel);
   const transform = TransformModel.normalizeTransform(node.transform);
-  return { x: source.x + (transform.translateX || 0), y: source.y + (transform.translateY || 0) };
+  return {
+    x: source.x + (transform.translateX || 0),
+    y: source.y + (transform.translateY || 0),
+  };
 }
-function canonicalTransformedBounds(node, TransformModel) { return TransformModel.transformedBounds(node); }
+
+function canonicalTransformedBounds(node, TransformModel = transformModel) {
+  return TransformModel.transformedBounds(node);
+}
 
 function nearestEvenInteger(value) {
   const number = Number(value);
@@ -106,30 +149,45 @@ function nearestEvenInteger(value) {
   return Math.round(number);
 }
 
-function placeTransformAtCenter(transform, center, source, TransformModel) {
-  return TransformModel.normalizeTransform({ ...transform, translateX: nearestEvenInteger(center.x - source.x), translateY: nearestEvenInteger(center.y - source.y) });
+function placeTransformAtCenter(transform, center, source, TransformModel = transformModel) {
+  return TransformModel.normalizeTransform({
+    ...transform,
+    translateX: nearestEvenInteger(center.x - source.x),
+    translateY: nearestEvenInteger(center.y - source.y),
+  });
 }
 
 function rasterSourceBounds(node) {
-  return { x: Number(node.x) || 0, y: Number(node.y) || 0, w: Math.max(1, Number(node.w) || 1), h: Math.max(1, Number(node.h) || 1) };
+  return {
+    x: Number(node.x) || 0,
+    y: Number(node.y) || 0,
+    w: Math.max(1, Number(node.w) || 1),
+    h: Math.max(1, Number(node.h) || 1),
+  };
 }
 
-function screenPointToRasterPixel(node, point, TransformModel = globalThis.PixelEditor?.transformModel) {
+function screenPointToRasterPixel(node, point, TransformModel = transformModel) {
   if (!node || node.type !== 'raster' || !TransformModel) return null;
   const bounds = rasterSourceBounds(node);
   const matrix = TransformModel.nodeTransformMatrix(node, bounds);
-  const local = TransformModel.inverseTransformPoint(matrix, { x: Number(point.x) + 0.5, y: Number(point.y) + 0.5 });
+  const local = TransformModel.inverseTransformPoint(matrix, {
+    x: Number(point.x) + 0.5,
+    y: Number(point.y) + 0.5,
+  });
   return { x: Math.floor(local.x - bounds.x), y: Math.floor(local.y - bounds.y) };
 }
 
-function rasterPixelToScreenPoint(node, pixel, TransformModel = globalThis.PixelEditor?.transformModel) {
+function rasterPixelToScreenPoint(node, pixel, TransformModel = transformModel) {
   if (!node || node.type !== 'raster' || !TransformModel) return null;
   const bounds = rasterSourceBounds(node);
   const matrix = TransformModel.nodeTransformMatrix(node, bounds);
-  return TransformModel.transformPoint(matrix, { x: bounds.x + Number(pixel.x) + 0.5, y: bounds.y + Number(pixel.y) + 0.5 });
+  return TransformModel.transformPoint(matrix, {
+    x: bounds.x + Number(pixel.x) + 0.5,
+    y: bounds.y + Number(pixel.y) + 0.5,
+  });
 }
 
-function rasterPixelCornersToScreen(node, pixel, TransformModel = globalThis.PixelEditor?.transformModel) {
+function rasterPixelCornersToScreen(node, pixel, TransformModel = transformModel) {
   if (!node || node.type !== 'raster' || !TransformModel) return [];
   const bounds = rasterSourceBounds(node);
   const matrix = TransformModel.nodeTransformMatrix(node, bounds);
@@ -143,150 +201,196 @@ function rasterPixelCornersToScreen(node, pixel, TransformModel = globalThis.Pix
   ];
 }
 
-function installSelectionTransformRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const C = PE?.commands;
-  const R = PE?.renderer;
-  const Workspace = PE?.ui?.Workspace;
-  const T = PE?.transformModel;
-  const Raster = PE?.tristateRaster;
-  if (!M || !C || !R?.FramebufferRenderer || !Workspace || !T || !Raster) throw new Error('PixelEditor selection transform dependencies are not initialized');
-  if (PE.selectionTransformInstalled) return PE.selectionTransform;
-  PE.selectionTransformInstalled = true;
-
-  function affectedNodes(state, ids, pageId) {
-    const page = M.pageById(state.project, pageId || state.project.activePageId);
-    const selection = new M.SelectionSet(ids || []);
-    const roots = modifiableSelectionRoots(page, selection, M);
-    return { page, roots, nodes: collectModifiableSubtree(page, roots, M) };
-  }
-
-  class SelectionTransformCommand {
-    constructor(ids, action, value, pageId, assets) {
-      this.ids = [...ids]; this.action = action; this.value = value; this.pageId = pageId; this.assets = assets;
-      this.label = action === 'flip-horizontal' ? '水平翻转' : action === 'flip-vertical' ? '垂直翻转' : action === 'rotate-ccw-90' ? '逆时针旋转 90°' : action === 'rotate-cw-90' ? '顺时针旋转 90°' : '旋转';
-    }
-    execute(state) {
-      const { page, roots, nodes } = affectedNodes(state, this.ids, this.pageId);
-      if (!page || !roots.length || !nodes.length) return false;
-      const mode = this.action;
-      let angle = Number(this.value) || 0;
-      if (mode === 'rotate-cw-90') angle = 90;
-      else if (mode === 'rotate-ccw-90') angle = -90;
-      else if (mode === 'rotate-angle') angle = T.normalizeRotation(angle);
-      if (mode.startsWith('rotate') && angle === 0) return false;
-      if (!['rotate-cw-90', 'rotate-ccw-90', 'rotate-angle', 'flip-horizontal', 'flip-vertical'].includes(mode)) return false;
-      const tree = new M.TreeModel(page);
-      const visible = nodes.filter(node => tree.isEffectivelyVisible(node.id));
-      const pivotNodes = visible.length ? visible : nodes;
-      const groupBounds = unionBounds(pivotNodes.map(node => canonicalTransformedBounds(node, T)));
-      if (!groupBounds) return false;
-      const pivot = centerOf(groupBounds);
-      const before = nodes.map(node => ({ node, sourceCenter: canonicalSourceCenter(node, T), center: transformedSourceCenter(node, T), transform: T.normalizeTransform(node.transform) }));
-      for (const item of before) {
-        const nextCenter = mode.startsWith('rotate') ? rotatePointAround(item.center, pivot, angle) : reflectPointAround(item.center, pivot, mode === 'flip-horizontal' ? 'horizontal' : 'vertical');
-        const orientation = mode.startsWith('rotate') ? composeRotate(item.transform, angle, T) : composeFlip(item.transform, mode === 'flip-horizontal' ? 'horizontal' : 'vertical', T);
-        item.node.transform = placeTransformAtCenter(orientation, nextCenter, item.sourceCenter, T);
-      }
-      return true;
-    }
-  }
-
-  class VisualAlignCommand {
-    constructor(mode, ids, pageId, assets) { this.mode = mode; this.ids = [...ids]; this.pageId = pageId; this.assets = assets; this.label = '对齐'; }
-    execute(state) {
-      const page = M.pageById(state.project, this.pageId || state.project.activePageId);
-      const roots = modifiableSelectionRoots(page, new M.SelectionSet(this.ids), M);
-      if (roots.length < 2) return false;
-      const context = { project: state.project, pageId: page.id, assets: this.assets || state.assets };
-      const bounds = roots.map(id => R.FramebufferRenderer.visualBounds(id, context));
-      const group = unionBounds(bounds);
-      let changed = false;
-      for (let index = 0; index < roots.length; index += 1) {
-        const current = bounds[index];
-        let dx = 0, dy = 0;
-        if (this.mode === 'left') dx = group.x - current.x;
-        else if (this.mode === 'right') dx = group.x + group.w - (current.x + current.w);
-        else if (this.mode === 'hcenter') dx = group.x + group.w / 2 - (current.x + current.w / 2);
-        else if (this.mode === 'top') dy = group.y - current.y;
-        else if (this.mode === 'bottom') dy = group.y + group.h - (current.y + current.h);
-        else if (this.mode === 'vcenter') dy = group.y + group.h / 2 - (current.y + current.h / 2);
-        if (Math.abs(dx) > 1e-9 || Math.abs(dy) > 1e-9) changed = moveSubtreeFractional(page, roots[index], dx, dy, M, T) || changed;
-      }
-      return changed;
-    }
-  }
-
-  class VisualDistributeCommand {
-    constructor(axis, ids, pageId, assets) { this.axis = axis; this.ids = [...ids]; this.pageId = pageId; this.assets = assets; this.label = axis === 'horizontal' ? '水平分布' : '垂直分布'; }
-    execute(state) {
-      const page = M.pageById(state.project, this.pageId || state.project.activePageId);
-      const roots = modifiableSelectionRoots(page, new M.SelectionSet(this.ids), M);
-      if (roots.length < 3) return false;
-      const context = { project: state.project, pageId: page.id, assets: this.assets || state.assets };
-      const horizontal = this.axis === 'horizontal';
-      const items = roots.map(id => ({ id, bounds: R.FramebufferRenderer.visualBounds(id, context) }));
-      items.sort((a, b) => horizontal ? (a.bounds.x + a.bounds.w / 2) - (b.bounds.x + b.bounds.w / 2) : (a.bounds.y + a.bounds.h / 2) - (b.bounds.y + b.bounds.h / 2));
-      const start = horizontal ? items[0].bounds.x : items[0].bounds.y;
-      const last = items.at(-1).bounds;
-      const end = horizontal ? last.x + last.w : last.y + last.h;
-      const total = items.reduce((sum, item) => sum + (horizontal ? item.bounds.w : item.bounds.h), 0);
-      const gap = (end - start - total) / (items.length - 1);
-      let cursor = start, changed = false;
-      for (let index = 0; index < items.length; index += 1) {
-        const item = items[index];
-        const current = horizontal ? item.bounds.x : item.bounds.y;
-        const delta = cursor - current;
-        if (index > 0 && index < items.length - 1 && Math.abs(delta) > 1e-9) changed = moveSubtreeFractional(page, item.id, horizontal ? delta : 0, horizontal ? 0 : delta, M, T) || changed;
-        cursor += (horizontal ? item.bounds.w : item.bounds.h) + gap;
-      }
-      return changed;
-    }
-  }
-
-  function runSelectionTransform(editor, action, value = 0) {
-    if (!editor.state.selection.ids.length) return false;
-    if (action === 'rotate-angle' && T.normalizeRotation(value) === 0) return false;
-    return editor.exec(new SelectionTransformCommand(editor.state.selection.ids, action, value, editor.activePage().id, editor.state.assets));
-  }
-  function align(editor, mode) {
-    if (editor.state.selection.ids.length < 2) return false;
-    return editor.exec(new VisualAlignCommand(mode, editor.state.selection.ids, editor.activePage().id, editor.state.assets));
-  }
-  function distribute(editor, axis) {
-    if (editor.state.selection.ids.length < 3) return false;
-    return editor.exec(new VisualDistributeCommand(axis, editor.state.selection.ids, editor.activePage().id, editor.state.assets));
-  }
-
-  C.SelectionTransformCommand = SelectionTransformCommand;
-  C.VisualAlignCommand = VisualAlignCommand;
-  C.VisualDistributeCommand = VisualDistributeCommand;
-  PE.selectionTransform = {
-    unionBounds,
-    centerOf,
-    rotatePointAround,
-    reflectPointAround,
-    modifiableSelectionRoots: (page, selection) => modifiableSelectionRoots(page, selection, M),
-    collectModifiableSubtree: (page, roots) => collectModifiableSubtree(page, roots, M),
-    selectionVisualBounds: (editor, nodes) => selectionVisualBounds(editor, nodes, R, M),
-    canonicalSourceBounds: node => canonicalSourceBounds(node, T),
-    canonicalSourceCenter: node => canonicalSourceCenter(node, T),
-    canonicalTransformedBounds: node => canonicalTransformedBounds(node, T),
-    composeRotate: (transform, degrees) => composeRotate(transform, degrees, T),
-    composeFlip: (transform, axis) => composeFlip(transform, axis, T),
-    screenPointToRasterPixel: (node, point) => screenPointToRasterPixel(node, point, T),
-    rasterPixelToScreenPoint: (node, pixel) => rasterPixelToScreenPoint(node, pixel, T),
-    rasterPixelCornersToScreen: (node, pixel) => rasterPixelCornersToScreen(node, pixel, T),
-    SelectionTransformCommand,
-    VisualAlignCommand,
-    VisualDistributeCommand,
-    runSelectionTransform,
-    align,
-    distribute,
-  };
-  return PE.selectionTransform;
+function affectedNodes(state, ids, pageId, Model = MODEL) {
+  const page = Model.pageById(state.project, pageId || state.project.activePageId);
+  const selection = new Model.SelectionSet(ids || []);
+  const roots = modifiableSelectionRoots(page, selection, Model);
+  return { page, roots, nodes: collectModifiableSubtree(page, roots, Model) };
 }
+
+class SelectionTransformCommand {
+  constructor(ids, action, value, pageId, assets) {
+    this.ids = [...ids];
+    this.action = action;
+    this.value = value;
+    this.pageId = pageId;
+    this.assets = assets;
+    this.label = action === 'flip-horizontal'
+      ? '水平翻转'
+      : action === 'flip-vertical'
+        ? '垂直翻转'
+        : action === 'rotate-ccw-90'
+          ? '逆时针旋转 90°'
+          : action === 'rotate-cw-90'
+            ? '顺时针旋转 90°'
+            : '旋转';
+  }
+
+  execute(state) {
+    const { page, roots, nodes } = affectedNodes(state, this.ids, this.pageId);
+    if (!page || !roots.length || !nodes.length) return false;
+    const mode = this.action;
+    let angle = Number(this.value) || 0;
+    if (mode === 'rotate-cw-90') angle = 90;
+    else if (mode === 'rotate-ccw-90') angle = -90;
+    else if (mode === 'rotate-angle') angle = transformModel.normalizeRotation(angle);
+    if (mode.startsWith('rotate') && angle === 0) return false;
+    if (!['rotate-cw-90', 'rotate-ccw-90', 'rotate-angle', 'flip-horizontal', 'flip-vertical'].includes(mode)) return false;
+
+    const tree = new TreeModel(page);
+    const visible = nodes.filter(node => tree.isEffectivelyVisible(node.id));
+    const pivotNodes = visible.length ? visible : nodes;
+    const groupBounds = unionBounds(pivotNodes.map(node => canonicalTransformedBounds(node)));
+    if (!groupBounds) return false;
+    const pivot = centerOf(groupBounds);
+    const before = nodes.map(node => ({
+      node,
+      sourceCenter: canonicalSourceCenter(node),
+      center: transformedSourceCenter(node),
+      transform: transformModel.normalizeTransform(node.transform),
+    }));
+    for (const item of before) {
+      const nextCenter = mode.startsWith('rotate')
+        ? rotatePointAround(item.center, pivot, angle)
+        : reflectPointAround(item.center, pivot, mode === 'flip-horizontal' ? 'horizontal' : 'vertical');
+      const orientation = mode.startsWith('rotate')
+        ? composeRotate(item.transform, angle)
+        : composeFlip(item.transform, mode === 'flip-horizontal' ? 'horizontal' : 'vertical');
+      item.node.transform = placeTransformAtCenter(orientation, nextCenter, item.sourceCenter);
+    }
+    return true;
+  }
+}
+
+class VisualAlignCommand {
+  constructor(mode, ids, pageId, assets) {
+    this.mode = mode;
+    this.ids = [...ids];
+    this.pageId = pageId;
+    this.assets = assets;
+    this.label = '对齐';
+  }
+
+  execute(state) {
+    const page = pageById(state.project, this.pageId || state.project.activePageId);
+    const roots = modifiableSelectionRoots(page, new SelectionSet(this.ids));
+    if (roots.length < 2) return false;
+    const context = { project: state.project, pageId: page.id, assets: this.assets || state.assets };
+    const bounds = roots.map(id => FramebufferRenderer.visualBounds(id, context));
+    const group = unionBounds(bounds);
+    let changed = false;
+    for (let index = 0; index < roots.length; index += 1) {
+      const current = bounds[index];
+      let dx = 0;
+      let dy = 0;
+      if (this.mode === 'left') dx = group.x - current.x;
+      else if (this.mode === 'right') dx = group.x + group.w - (current.x + current.w);
+      else if (this.mode === 'hcenter') dx = group.x + group.w / 2 - (current.x + current.w / 2);
+      else if (this.mode === 'top') dy = group.y - current.y;
+      else if (this.mode === 'bottom') dy = group.y + group.h - (current.y + current.h);
+      else if (this.mode === 'vcenter') dy = group.y + group.h / 2 - (current.y + current.h / 2);
+      if (Math.abs(dx) > 1e-9 || Math.abs(dy) > 1e-9) {
+        changed = moveSubtreeFractional(page, roots[index], dx, dy) || changed;
+      }
+    }
+    return changed;
+  }
+}
+
+class VisualDistributeCommand {
+  constructor(axis, ids, pageId, assets) {
+    this.axis = axis;
+    this.ids = [...ids];
+    this.pageId = pageId;
+    this.assets = assets;
+    this.label = axis === 'horizontal' ? '水平分布' : '垂直分布';
+  }
+
+  execute(state) {
+    const page = pageById(state.project, this.pageId || state.project.activePageId);
+    const roots = modifiableSelectionRoots(page, new SelectionSet(this.ids));
+    if (roots.length < 3) return false;
+    const context = { project: state.project, pageId: page.id, assets: this.assets || state.assets };
+    const horizontal = this.axis === 'horizontal';
+    const items = roots.map(id => ({ id, bounds: FramebufferRenderer.visualBounds(id, context) }));
+    items.sort((a, b) => horizontal
+      ? (a.bounds.x + a.bounds.w / 2) - (b.bounds.x + b.bounds.w / 2)
+      : (a.bounds.y + a.bounds.h / 2) - (b.bounds.y + b.bounds.h / 2));
+    const start = horizontal ? items[0].bounds.x : items[0].bounds.y;
+    const last = items.at(-1).bounds;
+    const end = horizontal ? last.x + last.w : last.y + last.h;
+    const total = items.reduce((sum, item) => sum + (horizontal ? item.bounds.w : item.bounds.h), 0);
+    const gap = (end - start - total) / (items.length - 1);
+    let cursor = start;
+    let changed = false;
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index];
+      const current = horizontal ? item.bounds.x : item.bounds.y;
+      const delta = cursor - current;
+      if (index > 0 && index < items.length - 1 && Math.abs(delta) > 1e-9) {
+        changed = moveSubtreeFractional(page, item.id, horizontal ? delta : 0, horizontal ? 0 : delta) || changed;
+      }
+      cursor += (horizontal ? item.bounds.w : item.bounds.h) + gap;
+    }
+    return changed;
+  }
+}
+
+function runSelectionTransform(editor, action, value = 0) {
+  if (!editor.state.selection.ids.length) return false;
+  if (action === 'rotate-angle' && transformModel.normalizeRotation(value) === 0) return false;
+  return editor.exec(new SelectionTransformCommand(
+    editor.state.selection.ids,
+    action,
+    value,
+    editor.activePage().id,
+    editor.state.assets,
+  ));
+}
+
+function align(editor, mode) {
+  if (editor.state.selection.ids.length < 2) return false;
+  return editor.exec(new VisualAlignCommand(
+    mode,
+    editor.state.selection.ids,
+    editor.activePage().id,
+    editor.state.assets,
+  ));
+}
+
+function distribute(editor, axis) {
+  if (editor.state.selection.ids.length < 3) return false;
+  return editor.exec(new VisualDistributeCommand(
+    axis,
+    editor.state.selection.ids,
+    editor.activePage().id,
+    editor.state.assets,
+  ));
+}
+
+const selectionTransform = Object.freeze({
+  unionBounds,
+  centerOf,
+  rotatePointAround,
+  reflectPointAround,
+  modifiableSelectionRoots,
+  collectModifiableSubtree,
+  selectionVisualBounds,
+  canonicalSourceBounds,
+  canonicalSourceCenter,
+  canonicalTransformedBounds,
+  composeRotate,
+  composeFlip,
+  screenPointToRasterPixel,
+  rasterPixelToScreenPoint,
+  rasterPixelCornersToScreen,
+  SelectionTransformCommand,
+  VisualAlignCommand,
+  VisualDistributeCommand,
+  runSelectionTransform,
+  align,
+  distribute,
+});
 
 export {
   unionBounds,
@@ -304,5 +408,11 @@ export {
   screenPointToRasterPixel,
   rasterPixelToScreenPoint,
   rasterPixelCornersToScreen,
-  installSelectionTransformRuntime,
+  SelectionTransformCommand,
+  VisualAlignCommand,
+  VisualDistributeCommand,
+  runSelectionTransform,
+  align,
+  distribute,
+  selectionTransform,
 };

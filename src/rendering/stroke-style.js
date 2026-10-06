@@ -187,7 +187,6 @@ function validateStrokeProject(project) {
   return project;
 }
 
-const strokeStyle = { normalizeStroke, strokePattern, forEachStyledPathPoint, styledStrokePixels, strokeBounds, validateStrokeProject };
-if (globalThis.PixelEditor) globalThis.PixelEditor.strokeStyle = strokeStyle;
+const strokeStyle = Object.freeze({ normalizeStroke, strokePattern, forEachStyledPathPoint, styledStrokePixels, strokeBounds, validateStrokeProject });
 
 export { normalizeStroke, strokePattern, forEachStyledPathPoint, styledStrokePixels, strokeBounds, validateStrokeProject, strokeStyle };

@@ -1,4 +1,5 @@
 import { canPaintSelection } from '../media/edit-boundaries.js';
+import { RASTER_TRANSPARENT, RASTER_WHITE, RASTER_BLACK } from './tristate-raster.js';
 
 function brushWidth(value) {
   return Math.max(1, Math.min(100, Math.round(Number(value) || 1)));
@@ -21,8 +22,7 @@ function expandBrushPoints(points, width) {
 }
 
 function beginPaintWithBrush(editor, point) {
-  const T = globalThis.PixelEditor?.tristateRaster;
-  if (!editor || !T) return false;
+  if (!editor) return false;
   if (!canPaintSelection(editor)) return false;
   const info = editor.paintTarget?.();
   if (!info) {
@@ -60,8 +60,8 @@ function beginPaintWithBrush(editor, point) {
 
   if (info.kind === 'node' && info.node?.type === 'raster') {
     const value = editor.tool === 'eraser'
-      ? T.RASTER_TRANSPARENT
-      : settings.color === 0 ? T.RASTER_WHITE : T.RASTER_BLACK;
+      ? RASTER_TRANSPARENT
+      : settings.color === 0 ? RASTER_WHITE : RASTER_BLACK;
     editor.notice?.('');
     editor.customGesture = {
       type: 'paint',
@@ -86,17 +86,4 @@ function beginPaintWithBrush(editor, point) {
   return false;
 }
 
-function installPaintBrushRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const C = PE?.commands;
-  const Workspace = PE?.ui?.Workspace;
-  const T = PE?.tristateRaster;
-  if (!M || !C || !Workspace || !T) throw new Error('PixelEditor paint brush dependencies are not initialized');
-  if (PE.paintBrushInstalled) return;
-  PE.paintBrushInstalled = true;
-
-  PE.paintBrush = { brushWidth, expandBrushPoints, beginPaintWithBrush };
-}
-
-export { brushWidth, expandBrushPoints, beginPaintWithBrush, installPaintBrushRuntime };
+export { brushWidth, expandBrushPoints, beginPaintWithBrush };

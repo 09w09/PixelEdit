@@ -8,8 +8,8 @@ async function openEditor(page) {
 test('raster nodes persist packed tri-state pixels without image source properties', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     const input = Uint8Array.from([2, 1, 0, 0, 2, 1]);
     const node = M.createNode('raster', { x: 3, y: 4, w: 3, h: 2, pixels: input });
     const decoded = T?.decodeTriStatePixels?.(node.raster.data, node.w, node.h);
@@ -29,8 +29,8 @@ test('raster nodes persist packed tri-state pixels without image source properti
 test('raster resize expands transparent and crops/translates pixels without resampling', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
-    const M = window.PixelEditor.model;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     const node = M.createNode('raster', { x: 10, y: 10, w: 2, h: 2, pixels: Uint8Array.from([2, 1, 0, 2]) });
     const expanded = T?.resizeTriStateRaster?.(node, { x: 9, y: 9, w: 4, h: 4 });
     const expandedPixels = expanded && T.decodeTriStatePixels(expanded.raster.data, expanded.w, expanded.h);
@@ -51,9 +51,9 @@ test('source images reject painting while raster layers accept exact black white
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const assetId = editor.state.assets.add('image', '', { name: 'source.png', mime: 'image/png' });
@@ -86,9 +86,9 @@ test('rasterize converts source image and vector/text/shape subtrees into fixed 
   const result = await page.evaluate(async () => {
     window.confirm = () => true;
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
 
@@ -127,10 +127,10 @@ test('raster nodes round-trip through pix serialization without image assets', a
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const P = window.PixelEditor.persistence;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const P = window.PixelEditorDebug.services.persistence;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     editor.newProject({ force: true });
     const activePage = editor.activePage();
     const raster = M.createNode('raster', { parentId: activePage.id, x: 7, y: 8, w: 3, h: 2, pixels: Uint8Array.from([2, 1, 0, 0, 2, 1]) });

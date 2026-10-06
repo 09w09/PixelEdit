@@ -57,8 +57,8 @@ test('rotation typing and wheel preview immediately while flips apply through un
 test('shape style runtime no longer exposes the old rectangle-only live property binder', async ({ page }) => {
   await openEditor(page);
   const shapeStyle = await page.evaluate(() => ({
-    hasLegacyBinder: typeof window.PixelEditor.shapeStyleProperties?.bindLiveIntegerInput === 'function',
-    hasLegacyNormalizer: typeof window.PixelEditor.shapeStyleProperties?.normalizeLiveInteger === 'function',
+    hasLegacyBinder: typeof window.PixelEditorDebug.services.shapeStyleProperties?.bindLiveIntegerInput === 'function',
+    hasLegacyNormalizer: typeof window.PixelEditorDebug.services.shapeStyleProperties?.normalizeLiveInteger === 'function',
   }));
   expect(shapeStyle).toEqual({ hasLegacyBinder: false, hasLegacyNormalizer: false });
 });

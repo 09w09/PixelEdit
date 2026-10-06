@@ -11,7 +11,7 @@ test('final invert complements only covered threshold and dither pixels', async 
   await openEditor(page);
 
   const result = await page.evaluate(() => {
-    const binary = window.PixelEditor.binaryImage;
+    const binary = window.PixelEditorDebug.services.binaryImage;
     const rgba = new Uint8ClampedArray([
       0, 0, 0, 255,
       255, 255, 255, 255,
@@ -63,7 +63,7 @@ test('contain padding and transparent source remain uncovered after inversion', 
     ]);
     const assetId = state.assets.add('image', '', { name: 'alpha.png', mime: 'image/png' });
     state.assets.setRuntime(assetId, { width: 2, height: 1, data: rgba });
-    const node = window.PixelEditor.model.createNode('image', {
+    const node = window.PixelEditorDebug.services.model.createNode('image', {
       parentId: editor.activePage().id,
       x: 0,
       y: 0,
@@ -77,7 +77,7 @@ test('contain padding and transparent source remain uncovered after inversion', 
         bwMode: 'threshold', threshold: 128, invert: true, ditherAlgorithm: 'bayer', bayerMatrix: 4,
       },
     });
-    const binary = window.PixelEditor.binaryImage.binaryImageForNode(node, state.assets);
+    const binary = window.PixelEditorDebug.services.binaryImage.binaryImageForNode(node, state.assets);
     return { bits: Array.from(binary.bits), alpha: Array.from(binary.alpha), width: binary.width, height: binary.height };
   });
 
@@ -104,7 +104,7 @@ test('binary image result matches framebuffer and PNG export pixels', async ({ p
     ]);
     const assetId = state.assets.add('image', '', { name: 'pair.png', mime: 'image/png' });
     state.assets.setRuntime(assetId, { width: 2, height: 1, data: rgba });
-    const node = window.PixelEditor.model.createNode('image', {
+    const node = window.PixelEditorDebug.services.model.createNode('image', {
       parentId: editor.activePage().id,
       x: 10,
       y: 10,
@@ -119,8 +119,8 @@ test('binary image result matches framebuffer and PNG export pixels', async ({ p
       },
     });
     editor.activePage().nodes.push(node);
-    const binary = window.PixelEditor.binaryImage.binaryImageForNode(node, state.assets);
-    const framebuffer = window.PixelEditor.renderer.FramebufferRenderer.renderPage(state.project, editor.activePage().id, state.assets);
+    const binary = window.PixelEditorDebug.services.binaryImage.binaryImageForNode(node, state.assets);
+    const framebuffer = window.PixelEditorDebug.services.renderer.FramebufferRenderer.renderPage(state.project, editor.activePage().id, state.assets);
     const canvas = editor.exportPng();
     const pixels = canvas.getContext('2d').getImageData(10, 10, 2, 1).data;
     return {

@@ -1,3 +1,6 @@
+import { OverlayRenderer } from './base-overlay-renderer.js';
+import { selectionOverlay } from './selection-overlay.js';
+
 const DEFAULT_LAYER_ORDER = ['transparency', 'selection', 'handles', 'interaction', 'tool-cursor'];
 
 function wrapLayer(id, markup = '') {
@@ -5,34 +8,32 @@ function wrapLayer(id, markup = '') {
 }
 
 class OverlayPipeline {
-  constructor(target = globalThis) {
-    const PE = target.PixelEditor;
-    if (!PE?.renderer?.OverlayRenderer) throw new Error('PixelEditor overlay renderer is not initialized');
-    this.target = target;
+  constructor({ transparencyOverlay, photopeaTransformUI, canvasCursor, selection = selectionOverlay, overlayRenderer = OverlayRenderer } = {}) {
+    if (!overlayRenderer?.markup) throw new Error('PixelEditor overlay renderer is not initialized');
     this.layers = [
       {
         id: 'transparency',
-        render: editor => PE.transparencyOverlay?.markup?.(editor) || '',
+        render: editor => transparencyOverlay?.markup?.(editor) || '',
       },
       {
         id: 'selection',
-        render: editor => PE.selectionOverlay?.selectionMarkup?.(editor) || '',
+        render: editor => selection?.selectionMarkup?.(editor) || '',
       },
       {
         id: 'handles',
-        render: editor => (PE.selectionOverlay?.handlesMarkup?.(editor) || '')
-          + (PE.photopeaTransformUI?.edgeHandlesMarkup?.(editor) || ''),
+        render: editor => (selection?.handlesMarkup?.(editor) || '')
+          + (photopeaTransformUI?.edgeHandlesMarkup?.(editor) || ''),
       },
       {
         id: 'interaction',
-        render: editor => PE.renderer.OverlayRenderer.markup({
+        render: editor => overlayRenderer.markup({
           smartGuides: editor.overlayState?.smartGuides || [],
           marquee: editor.overlayState?.marquee,
         }),
       },
       {
         id: 'tool-cursor',
-        render: editor => PE.canvasCursor?.brushCursorMarkup?.(editor) || '',
+        render: editor => canvasCursor?.brushCursorMarkup?.(editor) || '',
       },
     ];
   }
@@ -47,22 +48,12 @@ class OverlayPipeline {
   }
 }
 
-function renderOverlay(editor, pipeline = globalThis.PixelEditor?.overlayPipeline) {
+let activeOverlayPipeline = null;
+
+function renderOverlay(editor, pipeline = activeOverlayPipeline) {
   if (!pipeline) return '';
   editor.overlayPipeline = pipeline;
   return pipeline.render(editor);
 }
 
-function installOverlayPipelineRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace || !PE?.selectionOverlay || !PE?.transparencyOverlay || !PE?.canvasCursor) {
-    throw new Error('PixelEditor overlay layer dependencies are not initialized');
-  }
-  if (PE.overlayPipelineInstalled) return PE.overlayPipeline;
-  PE.overlayPipelineInstalled = true;
-  const pipeline = new OverlayPipeline(target);
-  PE.overlayPipeline = pipeline;
-  return pipeline;
-}
-
-export { DEFAULT_LAYER_ORDER, OverlayPipeline, renderOverlay, installOverlayPipelineRuntime };
+export { DEFAULT_LAYER_ORDER, OverlayPipeline, renderOverlay };

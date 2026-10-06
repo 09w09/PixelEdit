@@ -136,25 +136,6 @@ function updateEditorPreferences(current, patch) {
   return normalizePreferences(mergeObjects(normalizePreferences(current), patch));
 }
 
-function installEditorPreferencesRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.model || !PE?.persistence || !PE?.ui?.Workspace) {
-    throw new Error('PixelEditor editor preference dependencies are not initialized');
-  }
-  if (PE.editorPreferencesInstalled) return;
-  PE.editorPreferencesInstalled = true;
-  PE.preferences = {
-    PREFERENCE_KEY,
-    AUTOSAVE_KEY,
-    DEFAULT_FILENAME,
-    defaultEditorPreferences,
-    loadEditorPreferences,
-    saveEditorPreferences,
-    updateEditorPreferences,
-    normalizePreferences,
-  };
-}
-
 export {
   PREFERENCE_KEY,
   AUTOSAVE_KEY,
@@ -164,5 +145,4 @@ export {
   saveEditorPreferences,
   updateEditorPreferences,
   normalizePreferences,
-  installEditorPreferencesRuntime,
 };

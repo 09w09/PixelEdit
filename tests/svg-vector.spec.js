@@ -66,7 +66,7 @@ test('SVG is rerasterized from vector source at the current target size', async 
     node.image.cropH = 8;
 
     const state = window.PixelEditorTest.getState();
-    const rendered = window.PixelEditor.renderer.ImageRenderer.render(node, state.assets);
+    const rendered = window.PixelEditorDebug.services.renderer.ImageRenderer.render(node, state.assets);
 
     const directImage = await new Promise((resolve, reject) => {
       const image = new Image();
@@ -122,11 +122,11 @@ test('serialized SVG stays vector-backed after project hydration', async ({ page
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8"><path d="M0 8 L8 0 L8 2 L2 8 Z" fill="black"/></svg>';
     await editor.importSvgText(svg, 'diagonal.svg');
 
-    const raw = window.PixelEditor.persistence.ProjectSerializer.serialize(
+    const raw = window.PixelEditorDebug.services.persistence.ProjectSerializer.serialize(
       editor.state.project,
       editor.state.assets,
     );
-    const restored = window.PixelEditor.persistence.ProjectSerializer.deserialize(raw);
+    const restored = window.PixelEditorDebug.services.persistence.ProjectSerializer.deserialize(raw);
     editor.state.project = restored.project;
     editor.state.assets = restored.assets;
     editor.state.selection.clear();
@@ -143,7 +143,7 @@ test('serialized SVG stays vector-backed after project hydration', async ({ page
     node.image.cropH = 8;
 
     const runtime = editor.state.assets.getRuntime(node.assetId);
-    const rendered = window.PixelEditor.renderer.ImageRenderer.render(node, editor.state.assets);
+    const rendered = window.PixelEditorDebug.services.renderer.ImageRenderer.render(node, editor.state.assets);
 
     let mixedBlocks = 0;
     for (let blockY = 0; blockY < 8; blockY += 1) {
@@ -182,7 +182,7 @@ test('nearest-neighbor bitmap rendering remains unchanged', async ({ page }) => 
     const assetId = state.assets.add('image', '', { name: 'grid.png', mime: 'image/png' });
     state.assets.setRuntime(assetId, { width: 2, height: 2, data });
 
-    const node = window.PixelEditor.model.createNode('image', {
+    const node = window.PixelEditorDebug.services.model.createNode('image', {
       parentId: activePage.id,
       x: 0,
       y: 0,
@@ -207,7 +207,7 @@ test('nearest-neighbor bitmap rendering remains unchanged', async ({ page }) => 
       },
     });
 
-    const rendered = window.PixelEditor.renderer.ImageRenderer.render(node, state.assets);
+    const rendered = window.PixelEditorDebug.services.renderer.ImageRenderer.render(node, state.assets);
     const at = (x, y) => rendered.data[(y * 4 + x) * 4];
     return {
       topLeft: at(0, 0),

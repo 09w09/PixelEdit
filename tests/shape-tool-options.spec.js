@@ -95,7 +95,7 @@ test('new shapes snapshot current stroke and fill defaults without mutating exis
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     editor.newProject({ force: true });
     editor.setToolDefault('rectangle', 'width', 4);
     editor.setToolDefault('rectangle', 'color', 0);

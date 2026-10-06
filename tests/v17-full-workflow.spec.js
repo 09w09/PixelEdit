@@ -8,7 +8,7 @@ async function openEditor(page) {
 async function drawWithTool(page, tool, start, end) {
   return page.evaluate(({ tool, start, end }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
+    const M = window.PixelEditorDebug.services.model;
     editor.state.selection.clear();
     editor.pageSelectedId = null;
     editor.setTool(tool);
@@ -47,9 +47,9 @@ test('complete V17 workflow survives round-trip and exports opaque black-white P
 
   const setup = await page.evaluate(({ lineId, rectangleId }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const T = window.PixelEditor.tristateRaster;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const T = window.PixelEditorDebug.services.tristateRaster;
     const source = editor.activePage();
 
     const raster = M.createNode('raster', {
@@ -124,8 +124,8 @@ test('complete V17 workflow survives round-trip and exports opaque black-white P
 
   const crossPage = await page.evaluate(({ rectangleId, rasterId }) => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
 
     editor.state.selection.replace([rectangleId]);
     const payload = editor.copySelection();
@@ -200,9 +200,9 @@ test('complete V17 workflow survives round-trip and exports opaque black-white P
 
   const roundTrip = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const P = window.PixelEditor.persistence;
-    const R = window.PixelEditor.renderer;
-    const M = window.PixelEditor.model;
+    const P = window.PixelEditorDebug.services.persistence;
+    const R = window.PixelEditorDebug.services.renderer;
+    const M = window.PixelEditorDebug.services.model;
 
     const before = R.FramebufferRenderer.renderPage(editor.state.project, editor.activePage().id, editor.state.assets);
     const raw = P.ProjectSerializer.serialize(editor.state.project, editor.state.assets);

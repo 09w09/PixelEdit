@@ -39,13 +39,4 @@ function lineStrokeBounds(node) {
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
 }
 
-function installPixelStrokeRuntime(target = globalThis) {
-  const PE = target.PixelEditor, R = PE?.renderer;
-  if (!R) throw new Error('PixelEditor is not initialized');
-  if (PE.pixelStrokeRuntimeInstalled) return;
-  PE.pixelStrokeRuntimeInstalled = true;
-  PE.pixelStrokeRuntime = { rasterThinLine, forEachStrokePixel, lineStrokeBounds };
-  if (typeof R.plotPixel === 'function') R.plotThickLine = (framebuffer, x1, y1, x2, y2, width = 1, value = 1) => forEachStrokePixel(x1, y1, x2, y2, width, (x, y) => R.plotPixel(framebuffer, x, y, value));
-}
-
-export { rasterThinLine, forEachStrokePixel, lineStrokeBounds, installPixelStrokeRuntime };
+export { rasterThinLine, forEachStrokePixel, lineStrokeBounds };

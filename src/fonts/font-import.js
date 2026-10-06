@@ -1,3 +1,5 @@
+import { sha256Bytes } from '../model/hash.js';
+
 function bytesToDataUrl(bytes, mime = 'font/ttf') {
   let binary = '';
   const chunk = 0x8000;
@@ -12,14 +14,14 @@ function inferFixedFontSize(name) {
   return match ? Number(match[1]) : null;
 }
 
-async function importFonts(editor, files, Model = globalThis.PixelEditor?.model) {
+async function importFonts(editor, files, hashBytes = sha256Bytes) {
   const records = [];
   let skipped = 0;
   const knownSha = new Set((editor.state.project.fonts || []).map(record => record.sha256).filter(Boolean));
 
   for (const file of files || []) {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const sha256 = await Model.sha256Bytes(bytes);
+    const sha256 = await hashBytes(bytes);
     if (knownSha.has(sha256)) {
       skipped += 1;
       continue;
@@ -60,13 +62,4 @@ async function importFonts(editor, files, Model = globalThis.PixelEditor?.model)
   return { imported: records.length, skipped };
 }
 
-function installFontImportRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.model?.sha256Bytes || !PE?.ui?.Workspace) throw new Error('PixelEditor is not initialized');
-  if (PE.fontImportInstalled) return PE.fontImport;
-  PE.fontImportInstalled = true;
-  PE.fontImport = { inferFixedFontSize, importFonts };
-  return PE.fontImport;
-}
-
-export { inferFixedFontSize, importFonts, installFontImportRuntime };
+export { inferFixedFontSize, importFonts };

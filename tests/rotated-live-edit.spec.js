@@ -14,10 +14,10 @@ test('rotated box resize keeps the opposite world corner fixed and the dragged h
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const G = window.PixelEditor.selectionGeometry;
-    const S = window.PixelEditor.selectionOverlay;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
+    const S = window.PixelEditorDebug.services.selectionOverlay;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', {
@@ -68,10 +68,10 @@ test('rotated line endpoint editing maps the pointer back to source coordinates 
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const G = window.PixelEditor.selectionGeometry;
-    const S = window.PixelEditor.selectionOverlay;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
+    const S = window.PixelEditorDebug.services.selectionOverlay;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('line', {
@@ -121,10 +121,10 @@ test('rotated polygon vertex editing keeps untouched vertices stable in world sp
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const G = window.PixelEditor.selectionGeometry;
-    const S = window.PixelEditor.selectionOverlay;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
+    const S = window.PixelEditorDebug.services.selectionOverlay;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('polygon', {
@@ -170,10 +170,10 @@ test('rotated and mirrored box resize uses the original gesture transform as a s
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
-    const M = window.PixelEditor.model;
-    const C = window.PixelEditor.commands;
-    const G = window.PixelEditor.selectionGeometry;
-    const S = window.PixelEditor.selectionOverlay;
+    const M = window.PixelEditorDebug.services.model;
+    const C = window.PixelEditorDebug.services.commands;
+    const G = window.PixelEditorDebug.services.selectionGeometry;
+    const S = window.PixelEditorDebug.services.selectionOverlay;
     editor.newProject({ force: true });
     const p = editor.activePage();
     const node = M.createNode('rectangle', {

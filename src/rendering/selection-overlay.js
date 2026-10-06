@@ -1,144 +1,96 @@
+import { nodeById, TreeModel } from '../model/index.js';
+import { FramebufferRenderer } from './renderer.js';
+import { transformModel } from '../transforms/transform-model.js';
+import { selectionGeometry } from '../selection/selection-geometry.js';
+
 const BOX_TYPES = new Set(['rectangle', 'circle', 'text', 'image', 'raster']);
-
-function safeZoom(zoom) {
-  return Math.max(0.01, Number(zoom) || 1);
-}
-
-function handleVisualSize(zoom, cssPx = 10) {
-  return cssPx / safeZoom(zoom);
-}
-
-function handleHitTolerance(zoom, cssPx = 8) {
-  return cssPx / safeZoom(zoom);
-}
-
-function translated(point, dx = 0, dy = 0) {
-  return { ...point, x: point.x + dx, y: point.y + dy };
-}
+const safeZoom = zoom => Math.max(0.01, Number(zoom) || 1);
+const handleVisualSize = (zoom, cssPx = 10) => cssPx / safeZoom(zoom);
+const handleHitTolerance = (zoom, cssPx = 8) => cssPx / safeZoom(zoom);
+const translated = (point, dx = 0, dy = 0) => ({ ...point, x: point.x + dx, y: point.y + dy });
 
 function handleRect(point, zoom) {
-  const size = handleVisualSize(zoom);
-  const half = size / 2;
+  const size = handleVisualSize(zoom), half = size / 2;
   return `<rect class="selection-handle" x="${point.x - half}" y="${point.y - half}" width="${size}" height="${size}"/>`;
 }
 
-function installSelectionOverlayRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  const M = PE?.model;
-  const C = PE?.commands;
-  const R = PE?.renderer;
-  const Workspace = PE?.ui?.Workspace;
-  const T = PE?.transformModel;
-  const G = PE?.selectionGeometry;
-  if (!M || !C?.UpdateNodesCommand || !R?.FramebufferRenderer || !Workspace || !T || !G) {
-    throw new Error('PixelEditor selection geometry is not initialized');
-  }
-  if (PE.selectionOverlayInstalled) return;
-  PE.selectionOverlayInstalled = true;
-
-  const boxHandlePoints = bounds => {
-    const handles = G.sourceHandles(bounds);
-    return ['nw', 'ne', 'sw', 'se'].map(corner => ({ ...handles[corner], corner }));
-  };
-
+function createSelectionOverlay({ geometry = selectionGeometry, transforms = transformModel, renderer = FramebufferRenderer } = {}) {
+  const boxHandlePoints = bounds => ['nw', 'ne', 'sw', 'se'].map(corner => ({ ...geometry.sourceHandles(bounds)[corner], corner }));
   const hitBoxHandle = (bounds, point, zoom) => {
     const tolerance = handleHitTolerance(zoom);
-    for (const handle of boxHandlePoints(bounds)) {
-      if (Math.hypot(handle.x - point.x, handle.y - point.y) <= tolerance) return handle;
-    }
+    for (const handle of boxHandlePoints(bounds)) if (Math.hypot(handle.x - point.x, handle.y - point.y) <= tolerance) return handle;
     return null;
   };
-
   function sourcePivotBounds(editor, node) {
     if (!editor || !node) return null;
-    const context = {
-      project: editor.state.project,
-      pageId: editor.activePage().id,
-      assets: editor.state.assets,
-    };
-    const visual = R.FramebufferRenderer.visualBounds(node.id, context);
-    const transform = T.normalizeTransform(node.transform);
-    const centerX = visual.x + visual.w / 2 - (transform.translateX || 0);
-    const centerY = visual.y + visual.h / 2 - (transform.translateY || 0);
-    return { x: centerX, y: centerY, w: 0, h: 0 };
+    const context = { project: editor.state.project, pageId: editor.activePage().id, assets: editor.state.assets };
+    const visual = renderer.visualBounds(node.id, context), transform = transforms.normalizeTransform(node.transform);
+    return { x: visual.x + visual.w / 2 - (transform.translateX || 0), y: visual.y + visual.h / 2 - (transform.translateY || 0), w: 0, h: 0 };
   }
-
   function outlineMarkup(node, dx = 0, dy = 0, pivotBounds = null) {
-    const geometry = G.selectionGeometry(node, pivotBounds);
-    if (!geometry) return '';
+    const shape = geometry.selectionGeometry(node, pivotBounds);
+    if (!shape) return '';
     if (node.type === 'line') {
-      const [a, b] = geometry.controlPoints.map(point => translated(point, dx, dy));
-      if (!a || !b) return '';
-      return `<line class="selection-box" vector-effect="non-scaling-stroke" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`;
+      const [a, b] = shape.controlPoints.map(point => translated(point, dx, dy));
+      return a && b ? `<line class="selection-box" vector-effect="non-scaling-stroke" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>` : '';
     }
     if (node.type === 'polygon') {
-      const points = geometry.outline.map(point => translated(point, dx, dy));
+      const points = shape.outline.map(point => translated(point, dx, dy));
       return `<polygon class="selection-box" vector-effect="non-scaling-stroke" points="${points.map(point => `${point.x},${point.y}`).join(' ')}"/>`;
     }
     if (BOX_TYPES.has(node.type)) {
-      if (T.isIdentityTransform(node.transform)) {
-        const b = geometry.sourceBounds;
-        return `<rect class="selection-box" vector-effect="non-scaling-stroke" x="${b.x + dx}" y="${b.y + dy}" width="${b.w}" height="${b.h}"/>`;
+      if (transforms.isIdentityTransform(node.transform)) {
+        const bounds = shape.sourceBounds;
+        return `<rect class="selection-box" vector-effect="non-scaling-stroke" x="${bounds.x + dx}" y="${bounds.y + dy}" width="${bounds.w}" height="${bounds.h}"/>`;
       }
-      const points = geometry.outline.map(point => translated(point, dx, dy));
+      const points = shape.outline.map(point => translated(point, dx, dy));
       return `<polygon class="selection-box" vector-effect="non-scaling-stroke" points="${points.map(point => `${point.x},${point.y}`).join(' ')}"/>`;
     }
     return '';
   }
-
   function selectionMarkup(editor) {
     const page = editor.activePage();
     if (!page) return '';
-    const preview = editor.overlayState?.previewMove;
-    const dx = preview?.dx || 0;
-    const dy = preview?.dy || 0;
+    const preview = editor.overlayState?.previewMove, dx = preview?.dx || 0, dy = preview?.dy || 0;
     let html = '';
     for (const id of editor.state.selection.ids) {
-      const node = M.nodeById(page, id);
+      const node = nodeById(page, id);
       if (node) html += outlineMarkup(node, dx, dy, sourcePivotBounds(editor, node));
     }
     return html;
   }
-
   function handlesMarkup(editor) {
-    const page = editor.activePage();
-    const ids = editor.state.selection.ids;
+    const page = editor.activePage(), ids = editor.state.selection.ids;
     if (!page || ids.length !== 1) return '';
-    const node = M.nodeById(page, ids[0]);
-    const geometry = node ? G.selectionGeometry(node, sourcePivotBounds(editor, node)) : null;
-    if (!geometry) return '';
-    const preview = editor.overlayState?.previewMove;
-    const dx = preview?.dx || 0;
-    const dy = preview?.dy || 0;
-    const handles = BOX_TYPES.has(node.type)
-      ? ['nw', 'ne', 'sw', 'se'].map(corner => geometry.handles[corner])
-      : geometry.controlPoints;
+    const node = nodeById(page, ids[0]);
+    const shape = node ? geometry.selectionGeometry(node, sourcePivotBounds(editor, node)) : null;
+    if (!shape) return '';
+    const preview = editor.overlayState?.previewMove, dx = preview?.dx || 0, dy = preview?.dy || 0;
+    const handles = BOX_TYPES.has(node.type) ? ['nw', 'ne', 'sw', 'se'].map(corner => shape.handles[corner]) : shape.controlPoints;
     return handles.map(point => handleRect(translated(point, dx, dy), editor.zoom)).join('');
   }
-
   function selectionHandleAt(editor, point) {
     const ids = editor.state.selection.ids;
     if (ids.length !== 1) return null;
-    const page = editor.activePage();
-    const node = M.nodeById(page, ids[0]);
-    const tree = new M.TreeModel(page);
+    const page = editor.activePage(), node = nodeById(page, ids[0]), tree = new TreeModel(page);
     if (!node || tree.isEffectivelyLocked(node.id)) return null;
-    return G.hitHandle(node, point, editor.zoom, sourcePivotBounds(editor, node));
+    return geometry.hitHandle(node, point, editor.zoom, sourcePivotBounds(editor, node));
   }
-
-  PE.selectionOverlay = {
+  return Object.freeze({
     boxHandlePoints,
     hitBoxHandle,
     handleVisualSize,
     handleHitTolerance,
-    sourceGeometryBounds: G.sourceGeometryBounds,
+    sourceGeometryBounds: geometry.sourceGeometryBounds,
     sourcePivotBounds,
-    selectionGeometry: G.selectionGeometry,
+    selectionGeometry: geometry.selectionGeometry,
     outlineMarkup,
     selectionMarkup,
     handlesMarkup,
     selectionHandleAt,
-  };
+  });
 }
 
-export { handleVisualSize, handleHitTolerance, installSelectionOverlayRuntime };
+const selectionOverlay = createSelectionOverlay();
+
+export { handleVisualSize, handleHitTolerance, createSelectionOverlay, selectionOverlay };

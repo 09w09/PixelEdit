@@ -29,12 +29,4 @@ function installNativeContextMenuBoundary(editor, documentRef = globalThis.docum
   return () => documentRef.removeEventListener('contextmenu', handler);
 }
 
-function installContextMenuBoundaryRuntime(target = globalThis) {
-  const PE = target.PixelEditor;
-  if (!PE?.ui?.Workspace) throw new Error('PixelEditor context-menu boundary dependencies are not initialized');
-  if (PE.contextMenuBoundaryInstalled) return;
-  PE.contextMenuBoundaryInstalled = true;
-  PE.contextMenuBoundary = { classifyContextRegion, installNativeContextMenuBoundary };
-}
-
-export { classifyContextRegion, installNativeContextMenuBoundary, installContextMenuBoundaryRuntime };
+export { classifyContextRegion, installNativeContextMenuBoundary };
