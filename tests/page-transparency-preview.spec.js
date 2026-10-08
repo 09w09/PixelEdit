@@ -29,8 +29,9 @@ test('白底工程预览只隐藏背景，真实合成 Alpha 始终不变', asyn
     const deselected=sample(10,10);
     e.setBackgroundPreview(false);
     const restored=sample(10,10);
+    const afterHardware=R.FramebufferRenderer.renderPage(e.state.project,p.id,e.state.assets);
     return{transparent,white,black,selected,deselected,restored,
-      realAlpha:real.alpha[10*400+10],hardwareUnchanged:hardware.every((v,i)=>v===R.FramebufferRenderer.renderPage(e.state.project,p.id,e.state.assets)[i])};
+      realAlpha:real.alpha[10*400+10],hardwareUnchanged:hardware.every((v,i)=>v===afterHardware[i])};
   });
   expect(result).toEqual({transparent:0,white:255,black:255,selected:0,
     deselected:0,restored:255,realAlpha:1,hardwareUnchanged:true});
