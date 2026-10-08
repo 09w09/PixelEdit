@@ -64,7 +64,7 @@ test('V17 local preferences clamp malformed values and ignore V16 keys', async (
         rectangle: { width: 4, color: 1, style: 'solid', fill: { mode: 'solid', color: 0 } },
         text: { fontFamily: 'serif', fontSize: 24, lastScalableFontSize: 22 },
       },
-      transparencyPreview: true,
+      hidePageBackground: true,
     }));
     const clamped = prefs.loadEditorPreferences(localStorage);
     return { malformed, clamped, key: prefs.PREFERENCE_KEY };
@@ -82,7 +82,7 @@ test('V17 local preferences clamp malformed values and ignore V16 keys', async (
   expect(result.clamped.tools.text).toEqual({
     fontFamily: 'serif', fontSize: 24, lastScalableFontSize: 22, alignH: 'left', alignV: 'top',
   });
-  expect(result.clamped.transparencyPreview).toBe(true);
+  expect(result.clamped.hidePageBackground).toBe(true);
 });
 
 test('workspace preference updates persist locally without dirtying project', async ({ page }) => {

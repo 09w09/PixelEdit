@@ -8,7 +8,6 @@ async function openEditor(page) {
 
 const OVERLAY_PATCH_FILES = [
   '../src/rendering/selection-overlay.js',
-  '../src/rendering/transparency-overlay.js',
   '../src/tools/canvas-cursor.js',
   '../src/transforms/photopea-transform-ui.js',
 ];
@@ -74,7 +73,7 @@ test('overlay layers render in one deterministic pass without losing existing vi
     });
     editor.exec(new C.AddNodesCommand([raster], active.id));
     editor.state.selection.replace([raster.id]);
-    editor.setTransparencyPreview(true);
+    editor.setBackgroundPreview(true);
     editor.setTool('pencil');
     editor.setToolDefault('pencil', 'width', 3);
     editor.canvasCursorInside = true;
@@ -87,7 +86,7 @@ test('overlay layers render in one deterministic pass without losing existing vi
     const svg = editor.overlay;
     return {
       layers: [...svg.querySelectorAll(':scope > [data-overlay-layer]')].map(node => node.getAttribute('data-overlay-layer')),
-      transparency: editor.transparencyCanvas.getContext('2d').getImageData(0, 0, 1, 1).data[3],
+      previewAlpha: editor.ctx.getImageData(0, 0, 1, 1).data[3],
       selection: svg.querySelectorAll('.selection-box').length,
       handles: svg.querySelectorAll('.selection-handle').length,
       guides: svg.querySelectorAll('.smart-guide').length,
@@ -97,7 +96,7 @@ test('overlay layers render in one deterministic pass without losing existing vi
   });
 
   expect(result.layers).toEqual(LAYER_ORDER);
-  expect(result.transparency).toBe(82);
+  expect(result.previewAlpha).toBe(0);
   expect(result.selection).toBe(1);
   expect(result.handles).toBe(8);
   expect(result.guides).toBe(1);

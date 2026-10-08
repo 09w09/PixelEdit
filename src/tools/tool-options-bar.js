@@ -186,24 +186,24 @@ function installGlobalToolbar(editor) {
   const title = document.querySelector('#rightTopPane .dock-title');
   if (title) title.textContent = '元素属性';
 
-  let preview = document.querySelector('#transparencyPreviewBtn');
+  let preview = document.querySelector('#backgroundPreviewBtn');
   if (!preview) {
-    preview = iconButton({ title: '显示页面透明区域', svg: ICONS.transparency, pressed: false });
-    preview.id = 'transparencyPreviewBtn';
+    preview = iconButton({ title: '隐藏页面背景（仅预览，不影响导出）', svg: ICONS.transparency, pressed: false });
+    preview.id = 'backgroundPreviewBtn';
     const grow = topbar.querySelector('.grow');
     topbar.insertBefore(preview, grow || null);
     preview.addEventListener('click', () => {
-      editor.setTransparencyPreview(!editor.editorPreferences.transparencyPreview);
+      editor.setBackgroundPreview(!editor.editorPreferences.hidePageBackground);
     });
   }
 
-  editor.updateTransparencyPreviewButton = () => {
-    const enabled = Boolean(editor.editorPreferences?.transparencyPreview);
+  editor.updateBackgroundPreviewButton = () => {
+    const enabled = Boolean(editor.editorPreferences?.hidePageBackground);
     preview.setAttribute('aria-pressed', String(enabled));
-    preview.title = enabled ? '隐藏页面透明区域' : '显示页面透明区域';
+    preview.title = enabled ? '显示页面背景' : '隐藏页面背景（仅预览，不影响导出）';
     preview.setAttribute('aria-label', preview.title);
   };
-  editor.updateTransparencyPreviewButton();
+  editor.updateBackgroundPreviewButton();
   return toolBar;
 }
 
