@@ -59,6 +59,7 @@ test('overlay layers render in one deterministic pass without losing existing vi
     const C = window.PixelEditorDebug.services.commands;
     editor.newProject({ force: true });
     const active = editor.activePage();
+    active.fill = { mode: 'transparent', color: 0 };
     const raster = M.createNode('raster', {
       parentId: active.id,
       x: 40,

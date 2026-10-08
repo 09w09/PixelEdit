@@ -74,13 +74,16 @@ function createServices() {
   const transparencyOverlay = Object.freeze({
     PREVIEW_RGB,
     PREVIEW_OPACITY,
-    render(editor) {
+    render(editor, alpha = null) {
       if (!editor?.transparencyCanvas) return;
       const page = editor.activePage();
-      const active = Boolean(editor.editorPreferences?.transparencyPreview && page);
-      const coverage = active
-        ? FramebufferRenderer.renderContentCoverage(editor.state.project, page.id, editor.state.assets)
-        : null;
+      if (!editor.editorPreferences?.transparencyPreview || !page) {
+        drawTransparencyPreview(editor.transparencyCanvas, null);
+        return;
+      }
+      const coverage = alpha || FramebufferRenderer.renderPageComposite(
+        editor.state.project, page.id, editor.state.assets,
+      ).alpha;
       drawTransparencyPreview(editor.transparencyCanvas, coverage);
     },
   });

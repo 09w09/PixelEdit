@@ -1,5 +1,5 @@
-// Whole-page content coverage overlay. Page background is intentionally excluded:
-// the exported 1-bit frame remains fully opaque, but empty artwork pixels can be inspected.
+// Preview the actual alpha of all composited page content, including the background.
+// This display aid never changes the 1-bit hardware output.
 const PREVIEW_RGB = [114, 183, 255];
 const PREVIEW_OPACITY = 0.32;
 const PREVIEW_ALPHA = Math.round(PREVIEW_OPACITY * 255);

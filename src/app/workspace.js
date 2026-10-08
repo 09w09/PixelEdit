@@ -142,7 +142,7 @@ class Workspace {
     this.canvas = $('#screenCanvas');
     this.transparencyCanvas = $('#transparencyOverlayCanvas');
     this.overlay = $('#overlaySvg');
-    this.ctx = this.canvas.getContext('2d', { alpha: false });
+    this.ctx = this.canvas.getContext('2d', { alpha: true });
     this.pageLayers = new U.PageDock(this, $('#pageLayerDock'));
     this.properties = new U.Properties(this, $('#properties'), PE.propertyProvider);
     this.history = new U.HistoryDock(this, $('#historyDock'));
@@ -686,14 +686,43 @@ class Workspace {
     return this.state.selection.ids.map(id => R.FramebufferRenderer.visualBounds(id, { project: this.state.project, pageId: page.id, assets: this.state.assets })).filter(bounds => bounds && bounds.w > 0 && bounds.h > 0).map(bounds => ({ x: bounds.x + dx, y: bounds.y + dy, w: bounds.w, h: bounds.h }));
   }
 
-  drawFramebuffer(framebuffer) {
-    const image = this.ctx.createImageData(400, 300); for (let index = 0; index < framebuffer.length; index += 1) { const value = framebuffer[index] ? 0 : 255, offset = index * 4; image.data[offset] = value; image.data[offset + 1] = value; image.data[offset + 2] = value; image.data[offset + 3] = 255; } this.ctx.putImageData(image, 0, 0); this.lastFramebuffer = framebuffer; PE.transparencyOverlay.render(this);
+  // Canvas displays actual alpha; hardware renderPage() always flattens to 1-bit white.
+  writeComposite(context, composite) {
+    const image = context.createImageData(400, 300);
+    for (let index = 0; index < composite.bits.length; index += 1) {
+      const offset = index * 4;
+      const value = composite.bits[index] ? 0 : 255;
+      image.data[offset] = value;
+      image.data[offset + 1] = value;
+      image.data[offset + 2] = value;
+      image.data[offset + 3] = composite.alpha[index] ? 255 : 0;
+    }
+    context.putImageData(image, 0, 0);
   }
 
-  renderCanvas() { const page = this.activePage(); if (!page) return; this.drawFramebuffer(R.FramebufferRenderer.renderPage(this.state.project, page.id, this.state.assets)); }
+  drawFramebuffer(composite) {
+    this.writeComposite(this.ctx, composite);
+    this.lastFramebuffer = composite.bits.slice();
+    this.canvas.classList.toggle('has-transparency', this.activePage()?.fill?.mode === 'transparent');
+    PE.transparencyOverlay.render(this, composite.alpha);
+  }
+
+  renderCanvas() {
+    const page = this.activePage();
+    if (page) this.drawFramebuffer(R.FramebufferRenderer.renderPageComposite(this.state.project, page.id, this.state.assets));
+  }
 
   renderCanvasPreviewMove() {
-    const page = this.activePage(), preview = this.overlayState.previewMove; if (!page || !preview || (!preview.dx && !preview.dy)) { this.renderCanvas(); return; } const tree = new M.TreeModel(page), roots = new M.SelectionSet(preview.ids || this.state.selection.ids).transformRoots(tree); for (const id of roots) C.moveNodeTree(page, id, preview.dx, preview.dy, tree); try { this.drawFramebuffer(R.FramebufferRenderer.renderPage(this.state.project, page.id, this.state.assets)); } finally { for (const id of roots) C.moveNodeTree(page, id, -preview.dx, -preview.dy, tree); }
+    const page = this.activePage(), preview = this.overlayState.previewMove;
+    if (!page || !preview || (!preview.dx && !preview.dy)) { this.renderCanvas(); return; }
+    const tree = new M.TreeModel(page);
+    const roots = new M.SelectionSet(preview.ids || this.state.selection.ids).transformRoots(tree);
+    for (const id of roots) C.moveNodeTree(page, id, preview.dx, preview.dy, tree);
+    try {
+      this.drawFramebuffer(R.FramebufferRenderer.renderPageComposite(this.state.project, page.id, this.state.assets));
+    } finally {
+      for (const id of roots) C.moveNodeTree(page, id, -preview.dx, -preview.dy, tree);
+    }
   }
 
   renderOverlay() { return PE.overlayPipeline?.render?.(this) || ''; }
@@ -794,7 +823,17 @@ class Workspace {
   setTransparencyPreview(enabled) { if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences(); this.editorPreferences = updateEditorPreferences(this.editorPreferences, { transparencyPreview: Boolean(enabled) }); saveEditorPreferences(this.editorPreferences); this.updateTransparencyPreviewButton?.(); PE.transparencyOverlay.render(this); return this.editorPreferences.transparencyPreview; }
 
   exportPng() {
-    const framebuffer = R.FramebufferRenderer.renderPage(this.state.project, this.activePage().id, this.state.assets), canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = 300; const context = canvas.getContext('2d'), image = context.createImageData(400, 300); for (let index = 0; index < framebuffer.length; index += 1) { const value = framebuffer[index] ? 0 : 255, offset = index * 4; image.data[offset] = value; image.data[offset + 1] = value; image.data[offset + 2] = value; image.data[offset + 3] = 255; } context.putImageData(image, 0, 0); canvas.toBlob(blob => downloadBlob(blob, 'screen-400x300.png'), 'image/png'); return canvas;
+    const page = this.activePage();
+    const composite = R.FramebufferRenderer.renderPageComposite(this.state.project, page.id, this.state.assets);
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    this.writeComposite(canvas.getContext('2d'), composite);
+    canvas.toBlob(blob => {
+      if (blob) downloadBlob(blob, 'screen-400x300.png');
+      else this.notice('导出 PNG 失败');
+    }, 'image/png');
+    return canvas;
   }
 
   async saveProject() {
