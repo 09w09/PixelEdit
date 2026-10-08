@@ -107,7 +107,10 @@ test('whole-page transparency preview ignores selection and never changes frameb
     return { uncovered, black, selected, deselected, disabled,
       framebufferSame: before.every((value, index) => value === after[index]) };
   });
-  expect(result.uncovered).toEqual([114, 183, 255, 82]);
+  // Browser Canvas may round un-premultiplied RGB by one level.
+  expect(result.uncovered[0]).toBeGreaterThanOrEqual(114);
+  expect(result.uncovered[0]).toBeLessThanOrEqual(115);
+  expect(result.uncovered.slice(1)).toEqual([183, 255, 82]);
   expect(result.black[3]).toBe(0);
   expect(result.selected).toEqual(result.uncovered);
   expect(result.deselected).toEqual(result.uncovered);
