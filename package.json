@@ -10,10 +10,11 @@
     "test": "playwright test",
     "test:svg": "playwright test tests/svg-vector.spec.js",
     "test:line": "playwright test tests/line-stroke.spec.js",
-    "test:preview": "playwright test --config playwright.preview.config.js"
+    "test:preview": "playwright test --config playwright.preview.config.js",
+    "test:compat": "playwright test --config playwright.compat.config.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
-    "vite": "^7.0.0"
+    "@playwright/test": "1.55.0",
+    "vite": "7.0.0"
   }
 }

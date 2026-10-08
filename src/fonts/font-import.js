@@ -1,4 +1,5 @@
 import { sha256Bytes } from '../model/hash.js';
+import { assertSize, MAX_FONT_FILE_BYTES } from '../model/resource-limits.js';
 
 function bytesToDataUrl(bytes, mime = 'font/ttf') {
   let binary = '';
@@ -20,6 +21,7 @@ async function importFonts(editor, files, hashBytes = sha256Bytes) {
   const knownSha = new Set((editor.state.project.fonts || []).map(record => record.sha256).filter(Boolean));
 
   for (const file of files || []) {
+    assertSize(file.size, MAX_FONT_FILE_BYTES, '字体');
     const bytes = new Uint8Array(await file.arrayBuffer());
     const sha256 = await hashBytes(bytes);
     if (knownSha.has(sha256)) {

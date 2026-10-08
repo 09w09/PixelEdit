@@ -7,6 +7,7 @@ import {
 } from '../commands/clipboard-commands.js';
 import { FontManager } from '../fonts/font-manager.js';
 import { decodeRasterImage } from '../media/image-runtime.js';
+import { assertDimensions, assertSize, MAX_IMAGE_FILE_BYTES, MAX_PROJECT_BYTES, MAX_RASTER_PIXELS } from '../model/resource-limits.js';
 import { normalizeFill, normalizeStroke } from '../model/schema.js';
 import {
   DEFAULT_FILENAME,
@@ -49,7 +50,7 @@ function downloadBlob(blob, name) {
   setTimeout(() => {
     URL.revokeObjectURL(anchor.href);
     anchor.remove();
-  }, 0);
+  }, 30000);
 }
 
 function parseXbmText(text) {
@@ -59,6 +60,7 @@ function parseXbmText(text) {
   if (!widthMatch || !heightMatch || !bitsMatch) throw new Error('Invalid XBM');
   const width = Number(widthMatch[1]);
   const height = Number(heightMatch[1]);
+  assertDimensions(width, height, MAX_RASTER_PIXELS);
   const bytes = (bitsMatch[1].match(/0x[0-9a-fA-F]+|\d+/g) || []).map(Number);
   const rowBytes = Math.ceil(width / 8);
   const pixels = new Uint8Array(width * height);
@@ -119,6 +121,7 @@ class Workspace {
     };
     this.pageSelectedId = this.state.project.activePageId;
     this.bus = new C.CommandBus(this.state, { limit: 100 });
+    this.bus.markSaved();
     this.files = new P.ProjectFiles(this.state);
     this.autosave = new P.Autosave(this.state);
     this.clipboard = new ElementClipboard(M, PE.transformModel);
@@ -158,7 +161,11 @@ class Workspace {
     const toolOptionsElement = installGlobalToolbar(this);
     this.toolOptionsBar = new ToolOptionsBar(this, toolOptionsElement);
     this.toolOptionsBar.render();
-    this.autosaveTimer = setInterval(() => this.autosave.run(), 300000);
+    this.autosaveTimer = setInterval(() => this.persistRecovery(), 60000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.persistRecovery();
+    });
+    window.addEventListener('pagehide', () => this.persistRecovery());
     window.addEventListener('beforeunload', event => {
       if (this.state.dirty) {
         event.preventDefault();
@@ -212,8 +219,19 @@ class Workspace {
     $('#exportPngBtn').onclick = () => this.exportPng();
   }
 
+  confirmDiscardChanges() {
+    return !this.state.dirty || (typeof confirm === 'function' &&
+      confirm('当前工程有未保存修改。继续将丢失这些修改，确定吗？'));
+  }
+
+  persistRecovery() {
+    if (!this.state.dirty) return false;
+    try { this.autosave.run(); return true; }
+    catch (error) { this.notice(error.message); return false; }
+  }
+
   newProject({ force = false } = {}) {
-    if (!force && this.state.dirty && typeof confirm === 'function' && !confirm('当前工程有未保存修改，确认新建并丢弃这些修改吗？')) return false;
+    if (!force && !this.confirmDiscardChanges()) return false;
     this.autosave?.clear();
     this.state.project = M.createProject();
     this.state.assets = new M.AssetStore();
@@ -223,6 +241,7 @@ class Workspace {
     this.state.projectFileName = '';
     this.state.dirty = false;
     this.bus = new C.CommandBus(this.state, { limit: 100 });
+    this.bus.markSaved();
     this.files = new P.ProjectFiles(this.state);
     this.autosave = new P.Autosave(this.state);
     this.clipboard = new ElementClipboard(M, PE.transformModel);
@@ -245,6 +264,7 @@ class Workspace {
     this.state.projectFileName = '';
     this.state.dirty = true;
     this.bus = new C.CommandBus(this.state, { limit: 100 });
+    this.hydrateAssets().then(() => this.renderAll()).catch(error => this.notice(error.message));
     return true;
   }
 
@@ -725,7 +745,12 @@ class Workspace {
     imageInput.addEventListener('cancel', () => { if (this.tool === 'image') this.setTool('pointer'); });
     imageInput.addEventListener('change', () => { if (!imageInput.files?.length && this.tool === 'image') this.setTool('pointer'); });
     $('#fileFont').onchange = async event => { const files = [...(event.target.files || [])]; if (files.length) try { const result = await this.importFonts(files); this.notice(`已导入 ${result.imported} 个字体，跳过 ${result.skipped} 个重复字体`); } catch (error) { alert(`字体导入失败：${error.message}`); } event.target.value = ''; };
-    $('#fileProject').onchange = async event => { const file = event.target.files?.[0]; if (file) try { const output = P.ProjectSerializer.deserialize(await file.text()); this.state.project = output.project; this.state.assets = output.assets; this.state.projectFileHandle = null; this.state.projectFileName = file.name; this.state.selection.clear(); this.pageSelectedId = this.state.project.activePageId; this.bus = new C.CommandBus(this.state, { limit: 100 }); this.state.dirty = false; await this.hydrateAssets(); this.autosave?.clear(); this.applyLayout(); this.renderAll(); } catch (error) { alert(`项目无效：${error.message}`); } event.target.value = ''; };
+    $('#fileProject').onchange = async event => {
+      const file = event.target.files?.[0];
+      try { if (file) await this.loadProjectFile(file); }
+      catch (error) { alert(`项目无效：${error.message}`); }
+      finally { event.target.value = ''; }
+    };
     window.addEventListener('paste', async event => { if (['INPUT', 'TEXTAREA'].includes(event.target?.tagName)) return; const text = event.clipboardData?.getData('text/plain') || ''; if (/<svg[\s\S]*<\/svg>/i.test(text)) { event.preventDefault(); await this.importSvgText(text); } else if (/#define\s+\w+_width/i.test(text) && /#define\s+\w+_height/i.test(text)) { event.preventDefault(); await this.importXbmText(text); } });
   }
 
@@ -734,16 +759,18 @@ class Workspace {
   }
 
   async importImageFile(file, { replaceTargetId = null } = {}) {
-    try { if (file.name.toLowerCase().endsWith('.xbm')) return this.importXbmText(await file.text(), file.name, { replaceTargetId }); if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) return this.importSvgText(await file.text(), file.name, { replaceTargetId }); const dataUrl = await dataUrlFromFile(file), runtime = await decodeRasterImage(dataUrl); return this.addImageAsset(dataUrl, runtime, file.name, file.type || 'image', { sourceType: 'bitmap', replaceTargetId }); } finally { if (this.tool === 'image') this.setTool('pointer'); }
+    try { assertSize(file.size, MAX_IMAGE_FILE_BYTES, '图片'); if (file.name.toLowerCase().endsWith('.xbm')) return this.importXbmText(await file.text(), file.name, { replaceTargetId }); if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) return this.importSvgText(await file.text(), file.name, { replaceTargetId }); const dataUrl = await dataUrlFromFile(file), runtime = await decodeRasterImage(dataUrl); return this.addImageAsset(dataUrl, runtime, file.name, file.type || 'image', { sourceType: 'bitmap', replaceTargetId }); } finally { if (this.tool === 'image') this.setTool('pointer'); }
   }
 
   async importSvgText(text, name = 'svg', options = {}) { return PE.svgVectorRuntime?.importSvgText?.(this, text, name, options); }
 
   async importXbmText(text, name = 'xbm', { replaceTargetId = null } = {}) {
+    assertSize(text.length * 2, MAX_IMAGE_FILE_BYTES, 'XBM');
     const xbm = parseXbmText(text), canvas = xbmToCanvas(xbm), dataUrl = canvas.toDataURL('image/png'), runtime = { width: xbm.width, height: xbm.height, data: canvas.getContext('2d').getImageData(0, 0, xbm.width, xbm.height).data }; return this.addImageAsset(dataUrl, runtime, name, 'image/xbm', { sourceType: 'xbm', replaceTargetId });
   }
 
   addImageAsset(url, runtime, name, mime, meta = {}) {
+    assertDimensions(runtime.width, runtime.height);
     const id = this.state.assets.add('image', url, { name, mime }); this.state.assets.setRuntime(id, runtime); const targetId = meta.replaceTargetId;
     if (targetId) { const page = this.activePage(), old = M.nodeById(page, targetId), tree = new M.TreeModel(page); if (old?.type === 'image' && !tree.isEffectivelyLocked(targetId)) { const changed = this.exec(new C.UpdateNodesCommand([targetId], { assetId: id, sourceWidth: runtime.width, sourceHeight: runtime.height, sourceName: name, sourceType: meta.sourceType || 'bitmap', svgViewBox: meta.svgViewBox || null, image: { ...(old.image || {}), cropX: 0, cropY: 0, cropW: runtime.width, cropH: runtime.height } }, page.id, '替换图片')); if (changed) { this.state.selection.replace([targetId]); this.setTool('pointer'); return M.nodeById(page, targetId); } } this.state.assets.delete(id); return null; }
     const parentId = this.creationParentId(); if (!parentId) { this.state.assets.delete(id); return null; } const scale = Math.min(1, 400 / runtime.width, 300 / runtime.height), width = Math.max(1, Math.round(runtime.width * scale)), height = Math.max(1, Math.round(runtime.height * scale)), node = M.createNode('image', { parentId, x: Math.floor((400 - width) / 2), y: Math.floor((300 - height) / 2), w: width, h: height, assetId: id, sourceWidth: runtime.width, sourceHeight: runtime.height, sourceName: name, sourceType: meta.sourceType || 'bitmap', svgViewBox: meta.svgViewBox || null }); this.exec(new C.AddNodesCommand([node], this.activePage().id, '导入图片')); this.state.selection.replace([node.id]); this.setTool('pointer'); this.renderAll(); return node;
@@ -770,13 +797,77 @@ class Workspace {
   }
 
   async saveProject() {
-    if (!this.state.projectFileName && typeof globalThis.showSaveFilePicker !== 'function') this.state.projectFileName = DEFAULT_FILENAME;
-    if (typeof window.showSaveFilePicker === 'function') try { this.files = new P.ProjectFiles(this.state); await this.files.save(); this.autosave?.clear(); this.renderAll({ canvas: false }); return; } catch (error) { if (error?.name === 'AbortError') return; alert(`保存失败：${error.message}`); return; }
-    const raw = P.ProjectSerializer.serialize(this.state.project, this.state.assets), name = this.state.projectFileName?.endsWith('.pix') ? this.state.projectFileName : DEFAULT_FILENAME; downloadBlob(new Blob([raw], { type: 'application/json' }), name); this.state.projectFileName = name; this.state.dirty = false; this.autosave?.clear(); this.renderAll({ canvas: false });
+    if (typeof window.showSaveFilePicker === 'function') {
+      try {
+        await this.files.save();
+        this.bus.markSaved();
+        this.autosave?.clear();
+        this.renderAll({ canvas: false });
+        return true;
+      } catch (error) {
+        if (error?.name === 'AbortError') return false;
+        alert(`保存失败：${error.message}`);
+        return false;
+      }
+    }
+    // A browser download cannot confirm that the file was actually written.
+    try {
+      const raw = P.ProjectSerializer.serialize(this.state.project, this.state.assets);
+      const name = this.state.projectFileName?.endsWith('.pix') ? this.state.projectFileName : DEFAULT_FILENAME;
+      downloadBlob(new Blob([raw], { type: 'application/json' }), name);
+      this.state.projectFileName = name;
+      this.notice('已开始下载工程；请确认文件保存成功，未保存保护仍然有效');
+      this.renderAll({ canvas: false });
+      return true;
+    } catch (error) {
+      alert(`保存失败：${error.message}`);
+      return false;
+    }
+  }
+
+  async loadProjectCandidate(candidate) {
+    if (!candidate || !this.confirmDiscardChanges()) return false;
+    // Decode the new document before replacing the active state.
+    await PE.svgVectorRuntime.hydrateAssets({ state: candidate }, { strict: true });
+    this.cancelCustomGesture();
+    this.bus.breakMergeChain('replace-project');
+    this.state.selection.clear();
+    this.state.project = candidate.project;
+    this.state.assets = candidate.assets;
+    this.state.projectFileHandle = candidate.handle || null;
+    this.state.projectFileName = candidate.name || '';
+    this.state.dirty = false;
+    this.pageSelectedId = candidate.project.activePageId;
+    this.bus = new C.CommandBus(this.state, { limit: 100 });
+    this.bus.markSaved();
+    this.clipboard.clear();
+    this.overlayState = {};
+    await this.hydrateAssets();
+    this.autosave?.clear();
+    this.applyLayout();
+    this.renderAll();
+    return true;
+  }
+
+  async loadProjectFile(file, handle = null) {
+    assertSize(file.size, MAX_PROJECT_BYTES, '工程文件');
+    const output = P.ProjectSerializer.deserialize(await file.text());
+    return this.loadProjectCandidate({ ...output, handle, name: file.name || '' });
   }
 
   async openProject() {
-    if (typeof window.showOpenFilePicker === 'function') try { this.files = new P.ProjectFiles(this.state); await this.files.open(); this.state.selection.clear(); this.pageSelectedId = this.state.project.activePageId; this.bus = new C.CommandBus(this.state, { limit: 100 }); await this.hydrateAssets(); this.autosave?.clear(); this.applyLayout(); this.renderAll(); return; } catch (error) { if (error?.name === 'AbortError') return; alert(`打开失败：${error.message}`); return; } $('#fileProject').click();
+    if (typeof window.showOpenFilePicker === 'function') {
+      try {
+        const candidate = await this.files.open();
+        return this.loadProjectCandidate(candidate);
+      } catch (error) {
+        if (error?.name === 'AbortError') return false;
+        alert(`打开失败：${error.message}`);
+        return false;
+      }
+    }
+    $('#fileProject').click();
+    return false;
   }
 
   updateWorkspaceLayout(patch = {}) { return PE.workspaceLayout?.updateWorkspaceLayout?.(this, patch); }

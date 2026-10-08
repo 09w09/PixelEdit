@@ -23,10 +23,13 @@ jobs:
           npm install --no-save "@rollup/rollup-linux-x64-gnu@${ROLLUP_VERSION}"
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run browser regression tests
         run: npm test
+
+      - name: Cross-browser compatibility smoke tests
+        run: npm run test:compat
 
       - name: Build production bundle
         run: npm run build

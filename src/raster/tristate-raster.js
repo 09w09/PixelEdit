@@ -1,3 +1,4 @@
+import { assertDimensions, MAX_RASTER_PIXELS } from '../model/resource-limits.js';
 const RASTER_TRANSPARENT = 0;
 const RASTER_WHITE = 1;
 const RASTER_BLACK = 2;
@@ -38,7 +39,7 @@ function encodeTriStatePixels(pixels) {
 function decodeTriStatePixels(data, width, height) {
   const w = Math.max(0, Math.round(Number(width) || 0));
   const h = Math.max(0, Math.round(Number(height) || 0));
-  const length = w * h;
+  const length = assertDimensions(w, h, MAX_RASTER_PIXELS);
   const bytes = base64ToBytes(data);
   const pixels = new Uint8Array(length);
   for (let index = 0; index < length; index += 1) {
@@ -52,6 +53,7 @@ function createTriStateRaster(width, height, pixels = null, defaultValue = RASTE
   const w = Math.max(1, Math.round(Number(width) || 1));
   const h = Math.max(1, Math.round(Number(height) || 1));
   const normalizedDefault = normalizeRasterState(defaultValue);
+  assertDimensions(w, h, MAX_RASTER_PIXELS);
   const output = new Uint8Array(w * h);
   output.fill(normalizedDefault);
   if (pixels) {
@@ -92,6 +94,7 @@ function resizeTriStateRaster(node, geometry) {
   const y = Math.round(Number(geometry?.y) || 0);
   const w = Math.max(1, Math.round(Number(geometry?.w) || 1));
   const h = Math.max(1, Math.round(Number(geometry?.h) || 1));
+  assertDimensions(w, h, MAX_RASTER_PIXELS);
   const source = pixelsFromRasterNode(node);
   const output = new Uint8Array(w * h);
   output.fill(RASTER_TRANSPARENT);

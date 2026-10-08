@@ -4,7 +4,9 @@ import { EditSession, mergeDescriptorKey, resolveMergeDescriptor } from './edit-
 const cloneProject = value => structuredClone(value);
 
 class CommandBus {
-  constructor(state, { limit = 100 } = {}) { this.state=state;this.limit=limit;this.entries=[];this.cursor=0;this.session=null;this._pendingPropertyChannel='';this._mergeChainKey=null;this._mergeChainCursor=null;this._mergeBreakReason='';this._normalizeAndValidate();this.entries=[{label:'初始状态',snapshot:cloneProject(state.project)}];state.selection?.setBoundaryHandler?.(reason=>this.breakMergeChain(reason)); }
+  constructor(state, { limit = 100 } = {}) { this.state=state;this.limit=limit;this.entries=[];this.cursor=0;this.session=null;this._pendingPropertyChannel='';this._mergeChainKey=null;this._mergeChainCursor=null;this._mergeBreakReason='';this._normalizeAndValidate();this._savedSnapshot=state.dirty?null:JSON.stringify(state.project);this.entries=[{label:'初始状态',snapshot:cloneProject(state.project)}];state.selection?.setBoundaryHandler?.(reason=>this.breakMergeChain(reason)); }
+  markSaved(){if(this.session)this.commitSession();this._savedSnapshot=JSON.stringify(this.state.project);this.state.dirty=false;return true;}
+  _syncDirty(){this.state.dirty=this._savedSnapshot===null||JSON.stringify(this.state.project)!==this._savedSnapshot;}
   _normalizeAndValidate(){normalizeCommittedProject(this.state.project);assertProjectInvariants(this.state.project);return this.state.project;}
   _clearMerge(reason=''){this._mergeChainKey=null;this._mergeChainCursor=null;this._mergeBreakReason=String(reason||'');}
   _trim(){while(this.entries.length>this.limit+1){this.entries.shift();this.cursor-=1;}}
@@ -16,11 +18,11 @@ class CommandBus {
   commitSession(){const session=this.session;if(!session)return false;this.session=null;this._pendingPropertyChannel='';if(!session.changed){this._clearMerge('session-empty');return false;}this._normalizeAndValidate();const snapshot=cloneProject(this.state.project);if(JSON.stringify(snapshot)===JSON.stringify(session.startSnapshot)){this.entries=cloneProject(session.startEntries);this.cursor=session.startCursor;this.state.dirty=session.startDirty;this._clearMerge('session-noop');return false;}const entry=session.entryIndex==null?null:this.entries[session.entryIndex];if(entry){entry.snapshot=snapshot;entry.label=session.label||entry.label;entry.mergeDescriptor=session.descriptor||null;entry.mergeDescriptorKey=mergeDescriptorKey(session.descriptor)||null;}else this._push(session.label||'编辑',snapshot,session.descriptor);this._clearMerge('session-commit');return true;}
   cancelSession(){const session=this.session;if(!session)return false;this.session=null;this._pendingPropertyChannel='';this.state.project=cloneProject(session.startSnapshot);this.entries=cloneProject(session.startEntries);this.cursor=session.startCursor;this.state.dirty=session.startDirty;this._clearMerge('session-cancel');return true;}
   breakMergeChain(reason=''){const text=String(reason||'');if(text.startsWith('property-start:')){if(this.session)this.commitSession();this._pendingPropertyChannel=text.slice('property-start:'.length)||'property';this._clearMerge(text);return;}if(this.session)this.commitSession();this._pendingPropertyChannel='';this._clearMerge(text);}
-  restore(index){if(index<0||index>=this.entries.length)return false;this.state.project=cloneProject(this.entries[index].snapshot);this._normalizeAndValidate();this.cursor=index;this.state.dirty=true;return true;}
+  restore(index){if(index<0||index>=this.entries.length)return false;this.state.project=cloneProject(this.entries[index].snapshot);this._normalizeAndValidate();this.cursor=index;this._syncDirty();return true;}
   undo(){if(this.session)this.commitSession();this._clearMerge('undo');return this.cursor>0?this.restore(this.cursor-1):false;}
   redo(){if(this.session)this.commitSession();this._clearMerge('redo');return this.cursor<this.entries.length-1?this.restore(this.cursor+1):false;}
   jump(index){if(this.session)this.commitSession();this._clearMerge('jump');return this.restore(index);}
-  reset(project=this.state.project,label='初始状态'){if(this.session)this.cancelSession();this.state.project=project;this._normalizeAndValidate();this.entries=[{label,snapshot:cloneProject(this.state.project)}];this.cursor=0;this._pendingPropertyChannel='';this._clearMerge('reset');this.state.selection?.setBoundaryHandler?.(reason=>this.breakMergeChain(reason));}
+  reset(project=this.state.project,label='初始状态'){if(this.session)this.cancelSession();this.state.project=project;this._normalizeAndValidate();this.entries=[{label,snapshot:cloneProject(this.state.project)}];this.cursor=0;this._pendingPropertyChannel='';this._savedSnapshot=this.state.dirty?null:JSON.stringify(this.state.project);this._clearMerge('reset');this.state.selection?.setBoundaryHandler?.(reason=>this.breakMergeChain(reason));}
 }
 
 export { CommandBus, cloneProject };

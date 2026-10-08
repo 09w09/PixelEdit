@@ -27,3 +27,28 @@ npm run preview
 ```
 
 构建结果位于 `dist/`。
+
+## 数据与兼容性
+
+仅接受 V17 工程，不提供旧格式迁移。打开其他工程会检查未保存修改，并在资源校验成功后替换当前工程。
+
+Chrome 系浏览器优先通过文件选择器保存；其他浏览器采用下载文件方式。浏览器无法确认用户已将下载文件写入磁盘，因此下载后仍保留未保存警告。自动恢复使用本地存储，空间不足或被禁用时会提示失败。重要作品应主动导出 `.pix` 文件。
+
+图片、SVG、字体和工程文件实施尺寸、数量及内容安全限制；不支持引用外部资源的 SVG。
+
+## 测试
+
+```bash
+npm install
+npx playwright install chromium
+npm test
+npm run build
+npm run test:preview
+```
+
+Firefox / WebKit 兼容性冒烟测试：
+
+```bash
+npx playwright install firefox webkit
+npm run test:compat
+```

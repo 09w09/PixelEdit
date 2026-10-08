@@ -49,7 +49,7 @@ class PageDock {
     for (let pageIndex = 0; pageIndex < project.pages.length; pageIndex += 1) {
       const page = project.pages[pageIndex], active = page.id === activeId, selected = active && this.editor.pageSelectedId === page.id;
       const collapsed = this.collapsedPages.has(page.id), tree = new TreeModel(page), hasRoots = tree.roots().length > 0;
-      html += `<div class="page-row ${active ? 'active' : ''} ${selected ? 'selected' : ''}" data-page-id="${page.id}">${hasRoots ? this.icon(collapsed ? 'chevRight' : 'chevDown', collapsed ? '展开页面' : '折叠页面', 'page-expand') : '<span class="icon-spacer"></span>'}${this.icon(page.locked ? 'lock' : 'unlock', page.locked ? '解锁页面' : '锁定页面', 'page-lock')}<div class="page-main">${escapeHtml(page.name)}<div class="layer-type">页面 / 背景</div></div>${this.icon('up', '页面上移', 'page-up')}${this.icon('down', '页面下移', 'page-down')}${this.icon('copy', '复制页面', 'page-duplicate')}${this.icon('trash', '删除页面', 'page-delete')}</div>`;
+      html += `<div class="page-row ${active ? 'active' : ''} ${selected ? 'selected' : ''}" data-page-id="${escapeHtml(page.id)}">${hasRoots ? this.icon(collapsed ? 'chevRight' : 'chevDown', collapsed ? '展开页面' : '折叠页面', 'page-expand') : '<span class="icon-spacer"></span>'}${this.icon(page.locked ? 'lock' : 'unlock', page.locked ? '解锁页面' : '锁定页面', 'page-lock')}<div class="page-main">${escapeHtml(page.name)}<div class="layer-type">页面 / 背景</div></div>${this.icon('up', '页面上移', 'page-up')}${this.icon('down', '页面下移', 'page-down')}${this.icon('copy', '复制页面', 'page-duplicate')}${this.icon('trash', '删除页面', 'page-delete')}</div>`;
       if (active && !collapsed) {
         const rows = [];
         const walk = (parentId, depth) => {
@@ -64,7 +64,7 @@ class PageDock {
           const inheritedLocked = tree.isInheritedLocked(node.id), effectiveLocked = inheritedLocked || node.locked;
           const lockTitle = inheritedLocked ? '由页面或父图层锁定' : (node.locked ? '解锁图层' : '锁定图层');
           this.flat.push(node.id);
-          html += `<div class="layer-row ${isSelected ? 'selected' : ''}" data-page-id="${page.id}" data-node-id="${node.id}" draggable="${!effectiveLocked}" style="--depth:${depth}">${this.icon(node.visible === false ? 'eyeOff' : 'eye', node.visible === false ? '显示图层' : '隐藏图层', 'layer-eye')}${this.icon(effectiveLocked ? 'lock' : 'unlock', lockTitle, 'layer-lock', inheritedLocked)}${hasChildren ? this.icon(this.collapsedLayers.has(node.id) ? 'chevRight' : 'chevDown', this.collapsedLayers.has(node.id) ? '展开子图层' : '折叠子图层', 'layer-expand') : '<span class="icon-spacer"></span>'}<div class="layer-main"><div class="layer-name">${escapeHtml(node.name)}</div><div class="layer-type">${TYPE[node.type] || node.type}</div></div></div>`;
+          html += `<div class="layer-row ${isSelected ? 'selected' : ''}" data-page-id="${escapeHtml(page.id)}" data-node-id="${escapeHtml(node.id)}" draggable="${!effectiveLocked}" style="--depth:${depth}">${this.icon(node.visible === false ? 'eyeOff' : 'eye', node.visible === false ? '显示图层' : '隐藏图层', 'layer-eye')}${this.icon(effectiveLocked ? 'lock' : 'unlock', lockTitle, 'layer-lock', inheritedLocked)}${hasChildren ? this.icon(this.collapsedLayers.has(node.id) ? 'chevRight' : 'chevDown', this.collapsedLayers.has(node.id) ? '展开子图层' : '折叠子图层', 'layer-expand') : '<span class="icon-spacer"></span>'}<div class="layer-main"><div class="layer-name">${escapeHtml(node.name)}</div><div class="layer-type">${escapeHtml(TYPE[node.type] || node.type)}</div></div></div>`;
         }
       }
     }
