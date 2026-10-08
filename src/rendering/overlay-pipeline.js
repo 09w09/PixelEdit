@@ -1,20 +1,16 @@
 import { OverlayRenderer } from './base-overlay-renderer.js';
 import { selectionOverlay } from './selection-overlay.js';
 
-const DEFAULT_LAYER_ORDER = ['transparency', 'selection', 'handles', 'interaction', 'tool-cursor'];
+const DEFAULT_LAYER_ORDER = ['selection', 'handles', 'interaction', 'tool-cursor'];
 
 function wrapLayer(id, markup = '') {
   return `<g data-overlay-layer="${id}">${markup || ''}</g>`;
 }
 
 class OverlayPipeline {
-  constructor({ transparencyOverlay, photopeaTransformUI, canvasCursor, selection = selectionOverlay, overlayRenderer = OverlayRenderer } = {}) {
+  constructor({ photopeaTransformUI, canvasCursor, selection = selectionOverlay, overlayRenderer = OverlayRenderer } = {}) {
     if (!overlayRenderer?.markup) throw new Error('PixelEditor overlay renderer is not initialized');
     this.layers = [
-      {
-        id: 'transparency',
-        render: editor => transparencyOverlay?.markup?.(editor) || '',
-      },
       {
         id: 'selection',
         render: editor => selection?.selectionMarkup?.(editor) || '',

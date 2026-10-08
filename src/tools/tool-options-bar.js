@@ -188,7 +188,7 @@ function installGlobalToolbar(editor) {
 
   let preview = document.querySelector('#transparencyPreviewBtn');
   if (!preview) {
-    preview = iconButton({ title: '显示透明区域', svg: ICONS.transparency, pressed: false });
+    preview = iconButton({ title: '显示页面透明区域（不含背景）', svg: ICONS.transparency, pressed: false });
     preview.id = 'transparencyPreviewBtn';
     const grow = topbar.querySelector('.grow');
     topbar.insertBefore(preview, grow || null);
@@ -200,7 +200,7 @@ function installGlobalToolbar(editor) {
   editor.updateTransparencyPreviewButton = () => {
     const enabled = Boolean(editor.editorPreferences?.transparencyPreview);
     preview.setAttribute('aria-pressed', String(enabled));
-    preview.title = enabled ? '隐藏透明区域' : '显示透明区域';
+    preview.title = enabled ? '隐藏页面透明区域（不含背景）' : '显示页面透明区域（不含背景）';
     preview.setAttribute('aria-label', preview.title);
   };
   editor.updateTransparencyPreviewButton();

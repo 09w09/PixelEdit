@@ -78,7 +78,7 @@ test('raster transparent pixels reveal lower layers while white pixels cover bla
   expect(result).toEqual([1, 0, 1]);
 });
 
-test('selected-raster transparency preview uses uniform translucent blue and never changes framebuffer', async ({ page }) => {
+test('whole-page transparency preview ignores selection and never changes framebuffer', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -88,33 +88,34 @@ test('selected-raster transparency preview uses uniform translucent blue and nev
     const p = editor.activePage();
     const raster = M.createNode('raster', { parentId: p.id, x: 20, y: 20, w: 2, h: 1, pixels: Uint8Array.from([0, 2]) });
     p.nodes.push(raster);
-    editor.state.selection.replace([raster.id]);
+    editor.state.selection.clear();
     const before = Array.from(R.FramebufferRenderer.renderPage(editor.state.project, p.id, editor.state.assets));
     editor.setTransparencyPreview(true);
+    const overlay = document.querySelector('#transparencyOverlayCanvas');
+    const context = overlay.getContext('2d');
+    const sample = (x, y) => [...context.getImageData(x, y, 1, 1).data];
+    const uncovered = sample(20, 20), black = sample(21, 20);
+    editor.state.selection.replace([raster.id]);
     editor.renderOverlay();
-    const overlay = document.querySelector('#overlaySvg');
-    const preview = overlay?.querySelectorAll('[data-transparency-preview="true"]') || [];
-    const fills = [...preview].map(node => node.getAttribute('fill'));
-    const opacities = [...preview].map(node => node.getAttribute('fill-opacity'));
-    const after = Array.from(R.FramebufferRenderer.renderPage(editor.state.project, p.id, editor.state.assets));
+    const selected = sample(20, 20);
     editor.state.selection.clear();
     editor.renderOverlay();
-    const afterDeselect = overlay?.querySelectorAll('[data-transparency-preview="true"]').length || 0;
-    return {
-      count: preview.length,
-      fills,
-      opacities,
-      framebufferSame: before.every((value, index) => value === after[index]),
-      afterDeselect,
-    };
+    const deselected = sample(20, 20);
+    const after = Array.from(R.FramebufferRenderer.renderPage(editor.state.project, p.id, editor.state.assets));
+    editor.setTransparencyPreview(false);
+    const disabled = sample(20, 20);
+    return { uncovered, black, selected, deselected, disabled,
+      framebufferSame: before.every((value, index) => value === after[index]) };
   });
-  expect(result.count).toBe(1);
-  expect(new Set(result.fills).size).toBe(1);
-  expect(result.fills[0]).toMatch(/rgb|#|blue/i);
-  expect(Number(result.opacities[0])).toBeGreaterThan(0);
-  expect(Number(result.opacities[0])).toBeLessThan(1);
+  // Browser Canvas may round un-premultiplied RGB by one level.
+  expect(result.uncovered[0]).toBeGreaterThanOrEqual(114);
+  expect(result.uncovered[0]).toBeLessThanOrEqual(115);
+  expect(result.uncovered.slice(1)).toEqual([183, 255, 82]);
+  expect(result.black[3]).toBe(0);
+  expect(result.selected).toEqual(result.uncovered);
+  expect(result.deselected).toEqual(result.uncovered);
+  expect(result.disabled[3]).toBe(0);
   expect(result.framebufferSame).toBe(true);
-  expect(result.afterDeselect).toBe(0);
 });
 
 test('page eraser stays opaque white and tri-state raster round-trip is byte exact', async ({ page }) => {
