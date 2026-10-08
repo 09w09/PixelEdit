@@ -8,7 +8,6 @@ async function openEditor(page) {
 
 const OVERLAY_PATCH_FILES = [
   '../src/rendering/selection-overlay.js',
-  '../src/rendering/transparency-overlay.js',
   '../src/tools/canvas-cursor.js',
   '../src/transforms/photopea-transform-ui.js',
 ];
