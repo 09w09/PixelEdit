@@ -28,6 +28,7 @@ class Renderer {
     this.facade = Object.freeze({
       renderPage: this.renderPage.bind(this),
       renderPageComposite: this.renderPageComposite.bind(this),
+      renderPageTransparentEdges: this.renderPageTransparentEdges.bind(this),
       renderSubtree: this.renderSubtree.bind(this),
       subtreeRgba: this.subtreeRgba.bind(this),
       visualBounds: this.visualBounds.bind(this),
@@ -113,6 +114,48 @@ class Renderer {
     this.drawPageBackground(context, { hideFill: hidePageBackground });
     for (const root of context.tree.roots()) this.renderNode(context, root.id);
     return { bits: framebuffer.bits, alpha: framebuffer.alpha };
+  }
+
+  // Scope transparency marks to the transformed bounds of *visible* nodes.
+  // This mask is separate from the page backdrop, and from the pixels each node paints.
+  renderNodeBoundsMask(project, pageId, assets) {
+    const mask = new Framebuffer(400, 300);
+    const context = this.context(project, pageId, assets, mask);
+    const visit = id => {
+      const node = context.tree.node(id);
+      if (!node || node.visible === false || !hasArea(context.currentClip)) return;
+      const bounds = this.sourceBounds(node, context);
+      if (hasArea(bounds)) {
+        const layer = context.createLayer(bounds);
+        layer.alpha.fill(1);
+        context.compositeNodeLayer(node, layer, bounds);
+      }
+      const visible = this.visualBounds(node.id, { project, pageId, assets });
+      context.withClip(visible, () => {
+        for (const child of context.tree.childrenOf(node.id)) visit(child.id);
+      });
+    };
+    for (const root of context.tree.roots()) visit(root.id);
+    return mask.alpha;
+  }
+
+  // Mark only transparent pixels *inside* visible layer bounds, and only at
+  // their contours. Never recolor the blank page background or opaque artwork.
+  renderPageTransparentEdges(project, pageId, assets) {
+    const bounds = this.renderNodeBoundsMask(project, pageId, assets);
+    const content = this.renderPageComposite(project, pageId, assets, { hidePageBackground: true }).alpha;
+    const edges = new Uint8Array(bounds.length);
+    const hole = i => bounds[i] === 1 && content[i] === 0;
+    for (let y = 0; y < 300; y += 1) {
+      for (let x = 0; x < 400; x += 1) {
+        const i = y * 400 + x;
+        if (!hole(i)) continue;
+        if (x === 0 || !hole(i - 1) || x === 399 || !hole(i + 1)
+          || y === 0 || !hole(i - 400) || y === 299 || !hole(i + 400))
+          edges[i] = 1;
+      }
+    }
+    return edges;
   }
 
   // Hardware preview/output is always opaque 1-bit, with transparent pixels flattened to white.

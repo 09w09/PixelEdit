@@ -686,7 +686,7 @@ class Workspace {
   }
 
   // Canvas displays actual alpha; hardware renderPage() always flattens to 1-bit white.
-  writeComposite(context, composite) {
+  writeComposite(context, composite, transparencyEdges = null) {
     const image = context.createImageData(400, 300);
     for (let index = 0; index < composite.bits.length; index += 1) {
       const offset = index * 4;
@@ -695,16 +695,22 @@ class Workspace {
       image.data[offset + 1] = value;
       image.data[offset + 2] = value;
       image.data[offset + 3] = composite.alpha[index] ? 255 : 0;
+      // Editing-only blue contour; never part of export or project pixels.
+      if (transparencyEdges?.[index]) {
+        image.data[offset] = 65;
+        image.data[offset + 1] = 135;
+        image.data[offset + 2] = 216;
+        image.data[offset + 3] = 255;
+      }
     }
     context.putImageData(image, 0, 0);
   }
 
-  // Background visibility is an editing-only view mode; the project is unchanged.
-  drawFramebuffer(composite, actualComposite = composite) {
-    this.writeComposite(this.ctx, composite);
-    this.lastFramebuffer = actualComposite.bits.slice();
-    this.canvas.classList.toggle('has-transparency',
-      Boolean(this.editorPreferences?.hidePageBackground) || this.activePage()?.fill?.mode === 'transparent');
+  drawFramebuffer(composite, transparencyEdges = null) {
+    this.writeComposite(this.ctx, composite, transparencyEdges);
+    this.lastFramebuffer = composite.bits.slice();
+    // Page background is always the real project fill, even while previewing.
+    this.canvas.classList.toggle('has-transparency', this.activePage()?.fill?.mode === 'transparent');
   }
 
   renderCanvas() {
@@ -712,10 +718,10 @@ class Workspace {
     if (!page) return;
     const project = this.state.project, assets = this.state.assets;
     const actual = R.FramebufferRenderer.renderPageComposite(project, page.id, assets);
-    const preview = this.editorPreferences?.hidePageBackground
-      ? R.FramebufferRenderer.renderPageComposite(project, page.id, assets, { hidePageBackground: true })
-      : actual;
-    this.drawFramebuffer(preview, actual);
+    const edges = this.editorPreferences?.showTransparencyContours
+      ? R.FramebufferRenderer.renderPageTransparentEdges(project, page.id, assets)
+      : null;
+    this.drawFramebuffer(actual, edges);
   }
 
   renderCanvasPreviewMove() {
@@ -825,13 +831,13 @@ class Workspace {
     if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences(); this.editorPreferences = updateEditorPreferences(this.editorPreferences, { tools: { [tool]: { [key]: value } } }); saveEditorPreferences(this.editorPreferences); this.toolOptionsBar?.render?.(); if (key === 'width' && tool === this.tool && PE.canvasCursor?.cursorModeForTool?.(tool) === 'brush' && this.canvasCursorInside) this.renderOverlay(); return this.getToolDefaults(tool);
   }
 
-  setBackgroundPreview(enabled) {
+  setTransparencyContours(enabled) {
     if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences();
-    this.editorPreferences = updateEditorPreferences(this.editorPreferences, { hidePageBackground: Boolean(enabled) });
+    this.editorPreferences = updateEditorPreferences(this.editorPreferences, { showTransparencyContours: Boolean(enabled) });
     saveEditorPreferences(this.editorPreferences);
-    this.updateBackgroundPreviewButton?.();
+    this.updateTransparencyContoursButton?.();
     this.renderCanvas();
-    return this.editorPreferences.hidePageBackground;
+    return this.editorPreferences.showTransparencyContours;
   }
 
   exportPng() {

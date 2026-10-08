@@ -73,7 +73,7 @@ test('overlay layers render in one deterministic pass without losing existing vi
     });
     editor.exec(new C.AddNodesCommand([raster], active.id));
     editor.state.selection.replace([raster.id]);
-    editor.setBackgroundPreview(true);
+    editor.setTransparencyContours(true);
     editor.setTool('pencil');
     editor.setToolDefault('pencil', 'width', 3);
     editor.canvasCursorInside = true;

@@ -48,7 +48,7 @@ function defaultEditorPreferences() {
         alignV: 'top',
       },
     },
-    hidePageBackground: false,
+    showTransparencyContours: false,
   };
 }
 
@@ -92,7 +92,7 @@ function normalizePreferences(input) {
     rightSplit: number(workspace.rightSplit, defaults.workspace.rightSplit, 0.1, 0.9),
   };
   for (const [tool, fallback] of Object.entries(defaults.tools)) out.tools[tool] = normalizeTool(tool, tools[tool], fallback);
-  out.hidePageBackground = source.hidePageBackground === true;
+  out.showTransparencyContours = source.showTransparencyContours === true;
   return out;
 }
 

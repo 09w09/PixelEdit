@@ -186,24 +186,24 @@ function installGlobalToolbar(editor) {
   const title = document.querySelector('#rightTopPane .dock-title');
   if (title) title.textContent = '元素属性';
 
-  let preview = document.querySelector('#backgroundPreviewBtn');
+  let preview = document.querySelector('#transparencyContoursBtn');
   if (!preview) {
-    preview = iconButton({ title: '隐藏页面背景（仅预览，不影响导出）', svg: ICONS.transparency, pressed: false });
-    preview.id = 'backgroundPreviewBtn';
+    preview = iconButton({ title: '显示图层透明边界（不改变页面背景）', svg: ICONS.transparency, pressed: false });
+    preview.id = 'transparencyContoursBtn';
     const grow = topbar.querySelector('.grow');
     topbar.insertBefore(preview, grow || null);
     preview.addEventListener('click', () => {
-      editor.setBackgroundPreview(!editor.editorPreferences.hidePageBackground);
+      editor.setTransparencyContours(!editor.editorPreferences.showTransparencyContours);
     });
   }
 
-  editor.updateBackgroundPreviewButton = () => {
-    const enabled = Boolean(editor.editorPreferences?.hidePageBackground);
+  editor.updateTransparencyContoursButton = () => {
+    const enabled = Boolean(editor.editorPreferences?.showTransparencyContours);
     preview.setAttribute('aria-pressed', String(enabled));
-    preview.title = enabled ? '显示页面背景' : '隐藏页面背景（仅预览，不影响导出）';
+    preview.title = enabled ? '隐藏图层透明边界' : '显示图层透明边界（不改变页面背景）';
     preview.setAttribute('aria-label', preview.title);
   };
-  editor.updateBackgroundPreviewButton();
+  editor.updateTransparencyContoursButton();
   return toolBar;
 }
 

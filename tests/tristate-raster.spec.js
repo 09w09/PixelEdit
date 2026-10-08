@@ -78,34 +78,32 @@ test('raster transparent pixels reveal lower layers while white pixels cover bla
   expect(result).toEqual([1, 0, 1]);
 });
 
-test('隐藏白色背景时栅格透明像素真正透明，不影响导出的 1-bit 数据', async ({ page }) => {
+test('栅格透明像素仅出现边界线，页面背景和导出不变',async({page})=>{
   await openEditor(page);
-  const result = await page.evaluate(() => {
-    const editor=window.PixelEditorTest.editor,M=window.PixelEditorDebug.services.model;
-    const R=window.PixelEditorDebug.services.renderer,C=window.PixelEditorDebug.services.commands;
-    editor.newProject({force:true});
-    const p=editor.activePage();
-    const node=M.createNode('raster',{parentId:p.id,x:20,y:20,w:3,h:1,
-      pixels:Uint8Array.from([0,1,2])});
-    editor.exec(new C.AddNodesCommand([node],p.id));
-    const before=R.FramebufferRenderer.renderPage(editor.state.project,p.id,editor.state.assets);
-    editor.setBackgroundPreview(true);
-    const get=(x,y)=>Array.from(editor.ctx.getImageData(x,y,1,1).data);
-    const pixels=[get(20,20),get(21,20),get(22,20)];
-    editor.state.selection.replace([node.id]);editor.renderOverlay();
-    const selected=get(20,20);
-    editor.state.selection.clear();editor.renderOverlay();
-    const deselected=get(20,20);
-    editor.setBackgroundPreview(false);
-    const restored=get(20,20);
-    const after=R.FramebufferRenderer.renderPage(editor.state.project,p.id,editor.state.assets);
-    return{pixels,selected,deselected,restored,same:before.every((v,i)=>v===after[i])};
+  const result=await page.evaluate(()=>{
+    const e=window.PixelEditorTest.editor,M=window.PixelEditorDebug.services.model;
+    const C=window.PixelEditorDebug.services.commands,R=window.PixelEditorDebug.services.renderer;
+    e.newProject({force:true});const p=e.activePage();
+    const raster=M.createNode('raster',{parentId:p.id,x:20,y:20,w:4,h:4,
+      pixels:Uint8Array.from([2,2,2,2,2,0,0,2,2,0,0,2,2,2,2,2])});
+    e.exec(new C.AddNodesCommand([raster],p.id));
+    const before=R.FramebufferRenderer.renderPage(e.state.project,p.id,e.state.assets);
+    e.setTransparencyContours(true);
+    const sample=(x,y)=>Array.from(e.ctx.getImageData(x,y,1,1).data);
+    const edge=sample(21,21),ink=sample(20,20),outside=sample(0,0);
+    e.state.selection.replace([raster.id]);e.renderOverlay();
+    const selected=sample(21,21);
+    e.state.selection.clear();e.renderOverlay();
+    const deselected=sample(21,21);
+    e.setTransparencyContours(false);
+    const restored=sample(21,21),after=R.FramebufferRenderer.renderPage(e.state.project,p.id,e.state.assets);
+    return{edge,ink,outside,selected,deselected,restored,unchanged:before.every((v,i)=>v===after[i])};
   });
-  expect(result.pixels).toEqual([[0,0,0,0],[255,255,255,255],[0,0,0,255]]);
-  expect(result.selected).toEqual(result.pixels[0]);
-  expect(result.deselected).toEqual(result.pixels[0]);
-  expect(result.restored).toEqual([255,255,255,255]);
-  expect(result.same).toBe(true);
+  expect(result).toEqual({
+    edge:[65,135,216,255],ink:[0,0,0,255],outside:[255,255,255,255],
+    selected:[65,135,216,255],deselected:[65,135,216,255],
+    restored:[255,255,255,255],unchanged:true,
+  });
 });
 
 test('page eraser stays opaque white and tri-state raster round-trip is byte exact', async ({ page }) => {

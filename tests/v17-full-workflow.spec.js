@@ -81,10 +81,10 @@ test('complete V17 workflow survives round-trip and exports opaque black-white P
     editor.state.selection.replace([raster.id]);
     editor.runSelectionTransform('rotate-cw-90');
 
-    const previewOn = editor.setBackgroundPreview(true);
-    const previewButtonOn = document.querySelector('#backgroundPreviewBtn')?.getAttribute('aria-pressed');
-    const previewOff = editor.setBackgroundPreview(false);
-    const previewButtonOff = document.querySelector('#backgroundPreviewBtn')?.getAttribute('aria-pressed');
+    const previewOn = editor.setTransparencyContours(true);
+    const previewButtonOn = document.querySelector('#transparencyContoursBtn')?.getAttribute('aria-pressed');
+    const previewOff = editor.setTransparencyContours(false);
+    const previewButtonOff = document.querySelector('#transparencyContoursBtn')?.getAttribute('aria-pressed');
 
     return {
       sourcePageId: source.id,
@@ -235,7 +235,7 @@ test('complete V17 workflow survives round-trip and exports opaque black-white P
       version: parsed.version,
       hasWorkspaceLayout: Object.hasOwn(parsed, 'workspaceLayout'),
       hasTools: Object.hasOwn(parsed, 'tools'),
-      hasBackgroundPreview: Object.hasOwn(parsed, 'hidePageBackground'),
+      hasTransparencyContours: Object.hasOwn(parsed, 'showTransparencyContours'),
       hasEditorPreferences: Object.hasOwn(parsed, 'editorPreferences'),
       savedRasterEncoding: savedRaster?.raster?.encoding,
       savedRasterTransform: savedRaster?.transform,
@@ -256,7 +256,7 @@ test('complete V17 workflow survives round-trip and exports opaque black-white P
   expect(roundTrip.testApiVersion).toBe(17);
   expect(roundTrip.hasWorkspaceLayout).toBe(false);
   expect(roundTrip.hasTools).toBe(false);
-  expect(roundTrip.hasBackgroundPreview).toBe(false);
+  expect(roundTrip.hasTransparencyContours).toBe(false);
   expect(roundTrip.hasEditorPreferences).toBe(false);
   expect(roundTrip.savedRasterEncoding).toBe('tristate-packed-v1');
   expect(roundTrip.savedRasterTransform.rotation).toBe(113);
@@ -267,7 +267,7 @@ test('complete V17 workflow survives round-trip and exports opaque black-white P
   expect(roundTrip.blackWhiteOnly).toBe(true);
   expect(roundTrip.preferencesAfterRestore).toEqual(roundTrip.preferencesBeforeRestore);
   expect(roundTrip.preferencesAfterRestore.tools.rectangle).toEqual({ width: 3, color: 0, style: 'dash-dot', fill: { mode: 'transparent', color: 1 } });
-  expect(roundTrip.preferencesAfterRestore.hidePageBackground).toBe(false);
+  expect(roundTrip.preferencesAfterRestore.showTransparencyContours).toBe(false);
   expect(roundTrip.pageCount).toBe(2);
   expect(roundTrip.hierarchyValid).toBe(true);
 });
