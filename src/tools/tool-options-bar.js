@@ -203,7 +203,7 @@ function installGlobalToolbar(editor) {
     preview.title = enabled ? '显示页面背景' : '隐藏页面背景（仅预览，不影响导出）';
     preview.setAttribute('aria-label', preview.title);
   };
-  editor.updateTransparencyPreviewButton();
+  editor.updateBackgroundPreviewButton();
   return toolBar;
 }
 
