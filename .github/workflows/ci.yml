@@ -25,6 +25,9 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium firefox webkit
 
+      - name: Background preview smoke tests
+        run: npx playwright test tests/page-background-alpha.spec.js tests/page-transparency-preview.spec.js tests/transparency-preview-zoom.spec.js
+
       - name: Run browser regression tests
         run: npm test
 
