@@ -140,6 +140,7 @@ class Workspace {
 
   mount() {
     this.canvas = $('#screenCanvas');
+    this.transparencyCanvas = $('#transparencyOverlayCanvas');
     this.overlay = $('#overlaySvg');
     this.ctx = this.canvas.getContext('2d', { alpha: false });
     this.pageLayers = new U.PageDock(this, $('#pageLayerDock'));
@@ -686,7 +687,7 @@ class Workspace {
   }
 
   drawFramebuffer(framebuffer) {
-    const image = this.ctx.createImageData(400, 300); for (let index = 0; index < framebuffer.length; index += 1) { const value = framebuffer[index] ? 0 : 255, offset = index * 4; image.data[offset] = value; image.data[offset + 1] = value; image.data[offset + 2] = value; image.data[offset + 3] = 255; } this.ctx.putImageData(image, 0, 0); this.lastFramebuffer = framebuffer;
+    const image = this.ctx.createImageData(400, 300); for (let index = 0; index < framebuffer.length; index += 1) { const value = framebuffer[index] ? 0 : 255, offset = index * 4; image.data[offset] = value; image.data[offset + 1] = value; image.data[offset + 2] = value; image.data[offset + 3] = 255; } this.ctx.putImageData(image, 0, 0); this.lastFramebuffer = framebuffer; PE.transparencyOverlay.render(this);
   }
 
   renderCanvas() { const page = this.activePage(); if (!page) return; this.drawFramebuffer(R.FramebufferRenderer.renderPage(this.state.project, page.id, this.state.assets)); }
@@ -790,7 +791,7 @@ class Workspace {
     if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences(); this.editorPreferences = updateEditorPreferences(this.editorPreferences, { tools: { [tool]: { [key]: value } } }); saveEditorPreferences(this.editorPreferences); this.toolOptionsBar?.render?.(); if (key === 'width' && tool === this.tool && PE.canvasCursor?.cursorModeForTool?.(tool) === 'brush' && this.canvasCursorInside) this.renderOverlay(); return this.getToolDefaults(tool);
   }
 
-  setTransparencyPreview(enabled) { if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences(); this.editorPreferences = updateEditorPreferences(this.editorPreferences, { transparencyPreview: Boolean(enabled) }); saveEditorPreferences(this.editorPreferences); this.updateTransparencyPreviewButton?.(); this.renderOverlay(); return this.editorPreferences.transparencyPreview; }
+  setTransparencyPreview(enabled) { if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences(); this.editorPreferences = updateEditorPreferences(this.editorPreferences, { transparencyPreview: Boolean(enabled) }); saveEditorPreferences(this.editorPreferences); this.updateTransparencyPreviewButton?.(); PE.transparencyOverlay.render(this); return this.editorPreferences.transparencyPreview; }
 
   exportPng() {
     const framebuffer = R.FramebufferRenderer.renderPage(this.state.project, this.activePage().id, this.state.assets), canvas = document.createElement('canvas'); canvas.width = 400; canvas.height = 300; const context = canvas.getContext('2d'), image = context.createImageData(400, 300); for (let index = 0; index < framebuffer.length; index += 1) { const value = framebuffer[index] ? 0 : 255, offset = index * 4; image.data[offset] = value; image.data[offset + 1] = value; image.data[offset + 2] = value; image.data[offset + 3] = 255; } context.putImageData(image, 0, 0); canvas.toBlob(blob => downloadBlob(blob, 'screen-400x300.png'), 'image/png'); return canvas;

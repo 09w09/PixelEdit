@@ -27,6 +27,7 @@ class Renderer {
     this.binaryImage = createBinaryImagePipeline(this.runtime);
     this.facade = Object.freeze({
       renderPage: this.renderPage.bind(this),
+      renderContentCoverage: this.renderContentCoverage.bind(this),
       renderSubtree: this.renderSubtree.bind(this),
       subtreeRgba: this.subtreeRgba.bind(this),
       visualBounds: this.visualBounds.bind(this),
@@ -104,6 +105,15 @@ class Renderer {
     this.drawPageBackground(context);
     for (const root of context.tree.roots()) this.renderNode(context, root.id);
     return framebuffer.toUint8Array();
+  }
+
+  // Alpha of every visible content node, independent of the always-opaque page background.
+  // This follows the exact same hierarchy, clipping and transforms as renderPage().
+  renderContentCoverage(project, pageId, assets) {
+    const framebuffer = new Framebuffer(400, 300);
+    const context = this.context(project, pageId, assets, framebuffer);
+    for (const root of context.tree.roots()) this.renderNode(context, root.id);
+    return framebuffer.alpha;
   }
 
   renderSubtree(project, pageId, nodeId, assets, base = 0) {

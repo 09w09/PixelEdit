@@ -1,27 +1,31 @@
-const PREVIEW_FILL = '#72b7ff';
+// Whole-page content coverage overlay. Page background is intentionally excluded:
+// the exported 1-bit frame remains fully opaque, but empty artwork pixels can be inspected.
+const PREVIEW_RGB = [114, 183, 255];
 const PREVIEW_OPACITY = 0.32;
+const PREVIEW_ALPHA = Math.round(PREVIEW_OPACITY * 255);
 
-function transparentPixelRects(node, decodePixels) {
-  if (!node || node.type !== 'raster') return [];
-  const pixels = decodePixels(node.raster.data, node.w, node.h);
-  const rects = [];
-  for (let y = 0; y < node.h; y += 1) {
-    for (let x = 0; x < node.w; x += 1) {
-      if (pixels[y * node.w + x] === 0) rects.push({ x: node.x + x, y: node.y + y, w: 1, h: 1 });
-    }
+function drawTransparencyPreview(canvas, coverage) {
+  if (!canvas) return;
+  const context = canvas.getContext('2d', { alpha: true });
+  if (!context) return;
+  if (!coverage) {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    return;
   }
-  return rects;
+  if (coverage.length !== canvas.width * canvas.height)
+    throw new Error('透明区域尺寸与画布不一致');
+
+  const image = context.createImageData(canvas.width, canvas.height);
+  const data = image.data;
+  for (let index = 0; index < coverage.length; index += 1) {
+    if (coverage[index]) continue;
+    const offset = index * 4;
+    data[offset] = PREVIEW_RGB[0];
+    data[offset + 1] = PREVIEW_RGB[1];
+    data[offset + 2] = PREVIEW_RGB[2];
+    data[offset + 3] = PREVIEW_ALPHA;
+  }
+  context.putImageData(image, 0, 0);
 }
 
-function transparencyPreviewMarkup(node, decodePixels) {
-  return transparentPixelRects(node, decodePixels).map(rect =>
-    `<rect data-transparency-preview="true" x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="${PREVIEW_FILL}" fill-opacity="${PREVIEW_OPACITY}" stroke="none"/>`,
-  ).join('');
-}
-
-export {
-  PREVIEW_FILL,
-  PREVIEW_OPACITY,
-  transparentPixelRects,
-  transparencyPreviewMarkup,
-};
+export { PREVIEW_RGB, PREVIEW_OPACITY, drawTransparencyPreview };

@@ -25,12 +25,7 @@ import * as paintBrush from '../raster/paint-brush.js';
 import * as tristateRaster from '../raster/tristate-raster.js';
 import { rasterLayer } from '../media/raster-layer.js';
 import { OverlayPipeline } from '../rendering/overlay-pipeline.js';
-import {
-  PREVIEW_FILL,
-  PREVIEW_OPACITY,
-  transparentPixelRects,
-  transparencyPreviewMarkup,
-} from '../rendering/transparency-overlay.js';
+import { PREVIEW_RGB, PREVIEW_OPACITY, drawTransparencyPreview } from '../rendering/transparency-overlay.js';
 import * as canvasCursor from '../tools/canvas-cursor.js';
 import { createContextMenuService } from '../ui/context-menu.js';
 import { classifyContextRegion, installNativeContextMenuBoundary } from '../ui/context-menu-boundary.js';
@@ -77,17 +72,16 @@ function createServices() {
   const tools = Object.freeze({ ToolController, ToolRegistry, registry: toolRegistry });
   const contextMenu = createContextMenuService({ model, commands, interaction, target: globalThis });
   const transparencyOverlay = Object.freeze({
-    PREVIEW_FILL,
+    PREVIEW_RGB,
     PREVIEW_OPACITY,
-    transparentPixelRects: node => transparentPixelRects(node, tristateRaster.decodeTriStatePixels),
-    transparencyPreviewMarkup: node => transparencyPreviewMarkup(node, tristateRaster.decodeTriStatePixels),
-    markup(editor) {
-      if (!editor?.editorPreferences?.transparencyPreview) return '';
-      const id = editor.state.selection.primaryId;
-      if (!id) return '';
-      const node = model.nodeById(editor.activePage(), id);
-      if (!node || node.type !== 'raster') return '';
-      return transparencyPreviewMarkup(node, tristateRaster.decodeTriStatePixels);
+    render(editor) {
+      if (!editor?.transparencyCanvas) return;
+      const page = editor.activePage();
+      const active = Boolean(editor.editorPreferences?.transparencyPreview && page);
+      const coverage = active
+        ? FramebufferRenderer.renderContentCoverage(editor.state.project, page.id, editor.state.assets)
+        : null;
+      drawTransparencyPreview(editor.transparencyCanvas, coverage);
     },
   });
   const photopeaTransformUI = Object.freeze({
