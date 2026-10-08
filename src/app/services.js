@@ -25,7 +25,6 @@ import * as paintBrush from '../raster/paint-brush.js';
 import * as tristateRaster from '../raster/tristate-raster.js';
 import { rasterLayer } from '../media/raster-layer.js';
 import { OverlayPipeline } from '../rendering/overlay-pipeline.js';
-import { PREVIEW_RGB, PREVIEW_OPACITY, drawTransparencyPreview } from '../rendering/transparency-overlay.js';
 import * as canvasCursor from '../tools/canvas-cursor.js';
 import { createContextMenuService } from '../ui/context-menu.js';
 import { classifyContextRegion, installNativeContextMenuBoundary } from '../ui/context-menu-boundary.js';
@@ -71,22 +70,6 @@ function createServices() {
   const ui = Object.freeze({ Toolbar, PageDock, HistoryDock, Properties });
   const tools = Object.freeze({ ToolController, ToolRegistry, registry: toolRegistry });
   const contextMenu = createContextMenuService({ model, commands, interaction, target: globalThis });
-  const transparencyOverlay = Object.freeze({
-    PREVIEW_RGB,
-    PREVIEW_OPACITY,
-    render(editor, alpha = null) {
-      if (!editor?.transparencyCanvas) return;
-      const page = editor.activePage();
-      if (!editor.editorPreferences?.transparencyPreview || !page) {
-        drawTransparencyPreview(editor.transparencyCanvas, null);
-        return;
-      }
-      const coverage = alpha || FramebufferRenderer.renderPageComposite(
-        editor.state.project, page.id, editor.state.assets,
-      ).alpha;
-      drawTransparencyPreview(editor.transparencyCanvas, coverage);
-    },
-  });
   const photopeaTransformUI = Object.freeze({
     integerVisualBounds: photopeaTransformModule.integerVisualBounds,
     withEdgeHandles: photopeaTransformModule.withEdgeHandles,
@@ -98,7 +81,6 @@ function createServices() {
     }),
   });
   const overlayPipeline = new OverlayPipeline({
-    transparencyOverlay,
     photopeaTransformUI,
     canvasCursor,
     selection: selectionOverlay,
@@ -123,7 +105,6 @@ function createServices() {
     tristateRaster,
     rasterLayer,
     overlayPipeline,
-    transparencyOverlay,
     canvasCursor,
     contextMenu,
     contextMenuBoundary,

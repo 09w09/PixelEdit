@@ -140,7 +140,6 @@ class Workspace {
 
   mount() {
     this.canvas = $('#screenCanvas');
-    this.transparencyCanvas = $('#transparencyOverlayCanvas');
     this.overlay = $('#overlaySvg');
     this.ctx = this.canvas.getContext('2d', { alpha: true });
     this.pageLayers = new U.PageDock(this, $('#pageLayerDock'));
@@ -281,7 +280,7 @@ class Workspace {
   applyZoom() {
     const width = 400 * this.zoom;
     const height = 300 * this.zoom;
-    for (const element of [this.canvas, this.transparencyCanvas, this.overlay]) {
+    for (const element of [this.canvas, this.overlay]) {
       element.style.width = `${width}px`;
       element.style.height = `${height}px`;
     }
@@ -700,16 +699,23 @@ class Workspace {
     context.putImageData(image, 0, 0);
   }
 
-  drawFramebuffer(composite) {
+  // Background visibility is an editing-only view mode; the project is unchanged.
+  drawFramebuffer(composite, actualComposite = composite) {
     this.writeComposite(this.ctx, composite);
-    this.lastFramebuffer = composite.bits.slice();
-    this.canvas.classList.toggle('has-transparency', this.activePage()?.fill?.mode === 'transparent');
-    PE.transparencyOverlay.render(this, composite.alpha);
+    this.lastFramebuffer = actualComposite.bits.slice();
+    this.canvas.classList.toggle('has-transparency',
+      Boolean(this.editorPreferences?.hidePageBackground) || this.activePage()?.fill?.mode === 'transparent');
   }
 
   renderCanvas() {
     const page = this.activePage();
-    if (page) this.drawFramebuffer(R.FramebufferRenderer.renderPageComposite(this.state.project, page.id, this.state.assets));
+    if (!page) return;
+    const project = this.state.project, assets = this.state.assets;
+    const actual = R.FramebufferRenderer.renderPageComposite(project, page.id, assets);
+    const preview = this.editorPreferences?.hidePageBackground
+      ? R.FramebufferRenderer.renderPageComposite(project, page.id, assets, { hidePageBackground: true })
+      : actual;
+    this.drawFramebuffer(preview, actual);
   }
 
   renderCanvasPreviewMove() {
@@ -718,9 +724,8 @@ class Workspace {
     const tree = new M.TreeModel(page);
     const roots = new M.SelectionSet(preview.ids || this.state.selection.ids).transformRoots(tree);
     for (const id of roots) C.moveNodeTree(page, id, preview.dx, preview.dy, tree);
-    try {
-      this.drawFramebuffer(R.FramebufferRenderer.renderPageComposite(this.state.project, page.id, this.state.assets));
-    } finally {
+    try { this.renderCanvas(); }
+    finally {
       for (const id of roots) C.moveNodeTree(page, id, -preview.dx, -preview.dy, tree);
     }
   }
@@ -820,7 +825,14 @@ class Workspace {
     if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences(); this.editorPreferences = updateEditorPreferences(this.editorPreferences, { tools: { [tool]: { [key]: value } } }); saveEditorPreferences(this.editorPreferences); this.toolOptionsBar?.render?.(); if (key === 'width' && tool === this.tool && PE.canvasCursor?.cursorModeForTool?.(tool) === 'brush' && this.canvasCursorInside) this.renderOverlay(); return this.getToolDefaults(tool);
   }
 
-  setTransparencyPreview(enabled) { if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences(); this.editorPreferences = updateEditorPreferences(this.editorPreferences, { transparencyPreview: Boolean(enabled) }); saveEditorPreferences(this.editorPreferences); this.updateTransparencyPreviewButton?.(); PE.transparencyOverlay.render(this); return this.editorPreferences.transparencyPreview; }
+  setBackgroundPreview(enabled) {
+    if (!this.editorPreferences) this.editorPreferences = loadEditorPreferences();
+    this.editorPreferences = updateEditorPreferences(this.editorPreferences, { hidePageBackground: Boolean(enabled) });
+    saveEditorPreferences(this.editorPreferences);
+    this.updateBackgroundPreviewButton?.();
+    this.renderCanvas();
+    return this.editorPreferences.hidePageBackground;
+  }
 
   exportPng() {
     const page = this.activePage();

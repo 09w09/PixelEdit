@@ -78,13 +78,13 @@ class Renderer {
 
   visibleBounds(nodeId, context) { return intersectBounds(this.visualBounds(nodeId, context), this.ancestorClip(nodeId, context)); }
 
-  drawPageBackground(context) {
+  drawPageBackground(context, { hideFill = false } = {}) {
     const page = context.page;
     const framebuffer = context.framebuffer;
-    if (page.fill.mode === 'solid') {
+    if (!hideFill && page.fill.mode === 'solid') {
       framebuffer.bits.fill(page.fill.color ? 1 : 0);
       framebuffer.alpha.fill(1);
-    } else if (page.fill.mode !== 'transparent') {
+    } else if (!hideFill && page.fill.mode !== 'transparent') {
       for (let y = 0; y < 300; y += 1) for (let x = 0; x < 400; x += 1) {
         const color = fillValue(page, this.runtime, x, y, x, y, { background: true });
         if (color != null) framebuffer.plot(x, y, color, true);
@@ -107,10 +107,10 @@ class Renderer {
   }
 
   // Single source of truth for both 1-bit output and actual composited alpha.
-  renderPageComposite(project, pageId, assets) {
+  renderPageComposite(project, pageId, assets, { hidePageBackground = false } = {}) {
     const framebuffer = new Framebuffer(400, 300);
     const context = this.context(project, pageId, assets, framebuffer);
-    this.drawPageBackground(context);
+    this.drawPageBackground(context, { hideFill: hidePageBackground });
     for (const root of context.tree.roots()) this.renderNode(context, root.id);
     return { bits: framebuffer.bits, alpha: framebuffer.alpha };
   }

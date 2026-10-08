@@ -142,18 +142,18 @@ test('per-tool defaults persist locally and never mutate existing nodes', async 
   });
 });
 
-test('row-one transparency toggle is a persisted editor preference', async ({ page }) => {
+test('row-one background visibility toggle is a persisted editor-only preference', async ({ page }) => {
   await openEditor(page);
   const state = await page.evaluate(() => {
-    const button = document.querySelector('#transparencyPreviewBtn');
+    const button = document.querySelector('#backgroundPreviewBtn');
     const before = button?.getAttribute('aria-pressed');
     button?.click();
     const after = button?.getAttribute('aria-pressed');
     const stored = JSON.parse(localStorage.getItem('pixeledit:v17:preferences'));
-    return { before, after, stored: stored.transparencyPreview, title: button?.getAttribute('title') };
+    return { before, after, stored: stored.hidePageBackground, title: button?.getAttribute('title') };
   });
   expect(state.before).toBe('false');
   expect(state.after).toBe('true');
   expect(state.stored).toBe(true);
-  expect(state.title).toMatch(/透明/);
+  expect(state.title).toMatch(/背景/);
 });
