@@ -10,6 +10,8 @@ async function boot(page) {
   await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
     editor.newProject({ force: true });
+    editor.activePage().fill = { mode: 'transparent', color: 0 };
+    editor.renderAll();
     editor.setTransparencyPreview(false);
   });
 }

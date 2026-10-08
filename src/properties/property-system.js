@@ -346,7 +346,7 @@ class PropertyProvider {
     const fill = normalizeFill(page.fill, { background: true });
     const locked = Boolean(page.locked);
     let html = section('页面', `${field('propPageName', '名称', page.name, { type: 'text' })}<label class="check"><input id="propPageLocked" type="checkbox" ${locked ? 'checked' : ''}> 锁定页面</label>`)
-      + section('背景', `${select('propFill', '填充', [['solid', '纯色'], ['dither', '抖动'], ['pattern', '图案']], fill.mode, { disabled: locked })}${fill.mode === 'solid' ? select('propBgSolid', '颜色', [[0, '白'], [1, '黑']], fill.color, { disabled: locked }) : ''}`);
+      + section('背景', `${select('propFill', '填充', [['transparent', '透明'], ['solid', '纯色'], ['dither', '抖动'], ['pattern', '图案']], fill.mode, { disabled: locked })}${fill.mode === 'solid' ? select('propBgSolid', '颜色', [[0, '白'], [1, '黑']], fill.color, { disabled: locked }) : ''}`);
     if (fill.mode === 'dither') html += this.ditherFields([page], locked);
     if (fill.mode === 'pattern') html += this.patternFields([page], locked);
     return html;

@@ -27,7 +27,7 @@ class Renderer {
     this.binaryImage = createBinaryImagePipeline(this.runtime);
     this.facade = Object.freeze({
       renderPage: this.renderPage.bind(this),
-      renderContentCoverage: this.renderContentCoverage.bind(this),
+      renderPageComposite: this.renderPageComposite.bind(this),
       renderSubtree: this.renderSubtree.bind(this),
       subtreeRgba: this.subtreeRgba.bind(this),
       visualBounds: this.visualBounds.bind(this),
@@ -80,13 +80,20 @@ class Renderer {
 
   drawPageBackground(context) {
     const page = context.page;
-    for (let y = 0; y < 300; y += 1) for (let x = 0; x < 400; x += 1) {
-      const value = fillValue(page, this.runtime, x, y, x, y, { background: true });
-      context.framebuffer.plot(x, y, value == null ? 0 : value, true);
+    const framebuffer = context.framebuffer;
+    if (page.fill.mode === 'solid') {
+      framebuffer.bits.fill(page.fill.color ? 1 : 0);
+      framebuffer.alpha.fill(1);
+    } else if (page.fill.mode !== 'transparent') {
+      for (let y = 0; y < 300; y += 1) for (let x = 0; x < 400; x += 1) {
+        const color = fillValue(page, this.runtime, x, y, x, y, { background: true });
+        if (color != null) framebuffer.plot(x, y, color, true);
+      }
     }
+    // Page-level painting remains an opaque white/black mark, even on transparent pages.
     for (const [key, value] of Object.entries(page.overlay || {})) {
       const [x, y] = key.split(',').map(Number);
-      if (Number.isFinite(x) && Number.isFinite(y)) context.framebuffer.plot(x, y, value, true);
+      if (Number.isFinite(x) && Number.isFinite(y)) framebuffer.plot(x, y, value, true);
     }
   }
 
@@ -99,21 +106,22 @@ class Renderer {
     context.withClip(bounds, () => { for (const child of context.tree.childrenOf(node.id)) this.renderNode(context, child.id); });
   }
 
-  renderPage(project, pageId, assets) {
-    const framebuffer = new Framebuffer(400, 300, { base: 0, opaque: true });
+  // Single source of truth for both 1-bit output and actual composited alpha.
+  renderPageComposite(project, pageId, assets) {
+    const framebuffer = new Framebuffer(400, 300);
     const context = this.context(project, pageId, assets, framebuffer);
     this.drawPageBackground(context);
     for (const root of context.tree.roots()) this.renderNode(context, root.id);
-    return framebuffer.toUint8Array();
+    return { bits: framebuffer.bits, alpha: framebuffer.alpha };
   }
 
-  // Alpha of every visible content node, independent of the always-opaque page background.
-  // This follows the exact same hierarchy, clipping and transforms as renderPage().
-  renderContentCoverage(project, pageId, assets) {
-    const framebuffer = new Framebuffer(400, 300);
-    const context = this.context(project, pageId, assets, framebuffer);
-    for (const root of context.tree.roots()) this.renderNode(context, root.id);
-    return framebuffer.alpha;
+  // Hardware preview/output is always opaque 1-bit, with transparent pixels flattened to white.
+  renderPage(project, pageId, assets) {
+    const { bits, alpha } = this.renderPageComposite(project, pageId, assets);
+    const output = bits.slice();
+    for (let index = 0; index < output.length; index += 1)
+      if (!alpha[index]) output[index] = 0;
+    return output;
   }
 
   renderSubtree(project, pageId, nodeId, assets, base = 0) {

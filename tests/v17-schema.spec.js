@@ -104,7 +104,7 @@ test('V17 schema rejects deprecated lineWidth and fill.value fields', async ({ p
   expect(result.fill.message).toMatch(/fill\.value|V17|填充/);
 });
 
-test('V17 page background may not be transparent and shape fill is canonical', async ({ page }) => {
+test('V17 page background supports transparent and shape fill stays canonical', async ({ page }) => {
   await openEditor(page);
   const result = await page.evaluate(() => {
     const editor = window.PixelEditorTest.editor;
@@ -123,8 +123,11 @@ test('V17 page background may not be transparent and shape fill is canonical', a
     });
     const invalidBackground = structuredClone(editor.state.project);
     invalidBackground.pages[0].fill = { mode: 'transparent', color: 0 };
-    let backgroundRejected = false;
-    try { serializer.validate(invalidBackground); } catch { backgroundRejected = true; }
+    let backgroundAccepted = false;
+    try { serializer.validate(invalidBackground); backgroundAccepted = true; } catch { }
+    invalidBackground.pages[0].fill = { mode: 'invalid', color: 0 };
+    let invalidBackgroundRejected = false;
+    try { serializer.validate(invalidBackground); } catch { invalidBackgroundRejected = true; }
     return {
       node: {
         stroke: structuredClone(node.stroke),
@@ -132,7 +135,8 @@ test('V17 page background may not be transparent and shape fill is canonical', a
         hasLineWidth: Object.hasOwn(node, 'lineWidth'),
         hasFillValue: Object.hasOwn(node.fill || {}, 'value'),
       },
-      backgroundRejected,
+      backgroundAccepted,
+      invalidBackgroundRejected,
     };
   });
 
@@ -140,5 +144,6 @@ test('V17 page background may not be transparent and shape fill is canonical', a
   expect(result.node.fill).toEqual({ mode: 'solid', color: 0 });
   expect(result.node.hasLineWidth).toBe(false);
   expect(result.node.hasFillValue).toBe(false);
-  expect(result.backgroundRejected).toBe(true);
+  expect(result.backgroundAccepted).toBe(true);
+  expect(result.invalidBackgroundRejected).toBe(true);
 });

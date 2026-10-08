@@ -86,6 +86,7 @@ test('whole-page transparency preview ignores selection and never changes frameb
     const R = window.PixelEditorDebug.services.renderer;
     editor.newProject({ force: true });
     const p = editor.activePage();
+    p.fill = { mode: 'transparent', color: 0 };
     const raster = M.createNode('raster', { parentId: p.id, x: 20, y: 20, w: 2, h: 1, pixels: Uint8Array.from([0, 2]) });
     p.nodes.push(raster);
     editor.state.selection.clear();

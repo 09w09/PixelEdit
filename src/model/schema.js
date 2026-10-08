@@ -11,7 +11,7 @@ const SAFE_ID = /^[a-zA-Z0-9_.:-]{1,128}$/;
 const FILLABLE_TYPES = new Set(['rectangle', 'circle', 'polygon', 'text']);
 const STROKE_STYLES = new Set(['solid', 'short-dash', 'long-dash', 'dot', 'dash-dot']);
 const FILL_MODES = new Set(['transparent', 'solid', 'dither', 'pattern']);
-const BACKGROUND_FILL_MODES = new Set(['solid', 'dither', 'pattern']);
+const BACKGROUND_FILL_MODES = new Set(['transparent', 'solid', 'dither', 'pattern']);
 
 function normalizeStroke(input = {}) { const source = input && typeof input === 'object' ? input : {}; return { width: normalizeStrokeWidth(source.width, 1), color: normalizeStrokeColor(source.color), style: STROKE_STYLES.has(source.style) ? source.style : 'solid' }; }
 function normalizeFill(input = {}, { background = false } = {}) { const source = input && typeof input === 'object' ? input : {}, allowed = background ? BACKGROUND_FILL_MODES : FILL_MODES; return { mode: allowed.has(source.mode) ? source.mode : (background ? 'solid' : 'transparent'), color: Number(source.color) === 0 ? 0 : 1 }; }
@@ -43,7 +43,7 @@ function validateProject(project) {
     if (page.nodes.length > MAX_NODES_PER_PAGE) throw new Error('图层数量超出上限');
     validateOverlay(page.overlay);
     if (page.nodes.some(node => node.type === 'background')) throw new Error('V17 页面不得包含 background 图层');
-    if (page.fill?.mode === 'transparent' || Object.hasOwn(page.fill || {}, 'value') || !sameRecord(page.fill, normalizeFill(page.fill, { background: true }))) throw new Error('V17 页面填充数据无效');
+    if (Object.hasOwn(page.fill || {}, 'value') || !sameRecord(page.fill, normalizeFill(page.fill, { background: true }))) throw new Error('V17 页面填充数据无效');
     for (const node of page.nodes) {
       if (!SAFE_ID.test(node?.id || '') || !NODE_TYPES.has(node.type) || !SAFE_ID.test(node?.parentId || '')) throw new Error('V17 图层 ID 或类型无效');
       validateOverlay(node.overlay);
