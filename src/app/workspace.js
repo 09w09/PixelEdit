@@ -281,7 +281,7 @@ class Workspace {
   applyZoom() {
     const width = 400 * this.zoom;
     const height = 300 * this.zoom;
-    for (const element of [this.canvas, this.overlay]) {
+    for (const element of [this.canvas, this.transparencyCanvas, this.overlay]) {
       element.style.width = `${width}px`;
       element.style.height = `${height}px`;
     }
