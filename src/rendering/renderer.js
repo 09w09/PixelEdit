@@ -28,7 +28,7 @@ class Renderer {
     this.facade = Object.freeze({
       renderPage: this.renderPage.bind(this),
       renderPageComposite: this.renderPageComposite.bind(this),
-      renderPageTransparentEdges: this.renderPageTransparentEdges.bind(this),
+      renderPageTransparentRegions: this.renderPageTransparentRegions.bind(this),
       renderSubtree: this.renderSubtree.bind(this),
       subtreeRgba: this.subtreeRgba.bind(this),
       visualBounds: this.visualBounds.bind(this),
@@ -118,16 +118,34 @@ class Renderer {
 
   // Scope transparency marks to the transformed bounds of *visible* nodes.
   // This mask is separate from the page backdrop, and from the pixels each node paints.
+  // Geometric footprints of visible area-bearing nodes, independent of their paint.
+  // Lines do not define a filled region and therefore must not tint nearby pixels.
   renderNodeBoundsMask(project, pageId, assets) {
     const mask = new Framebuffer(400, 300);
     const context = this.context(project, pageId, assets, mask);
+    const areaTypes = new Set(['rectangle', 'circle', 'polygon', 'image', 'raster', 'text']);
     const visit = id => {
       const node = context.tree.node(id);
       if (!node || node.visible === false || !hasArea(context.currentClip)) return;
       const bounds = this.sourceBounds(node, context);
-      if (hasArea(bounds)) {
+      if (areaTypes.has(node.type) && hasArea(bounds)) {
         const layer = context.createLayer(bounds);
-        layer.alpha.fill(1);
+        const x0 = Math.floor(bounds.x), y0 = Math.floor(bounds.y);
+        const x1 = Math.ceil(bounds.x + bounds.w), y1 = Math.ceil(bounds.y + bounds.h);
+        const runtime = this.runtime;
+        const radii = node.type === 'rectangle'
+          ? runtime.normalizeRadii(node, node.w, node.h) : null;
+        for (let y = y0; y < y1; y += 1) for (let x = x0; x < x1; x += 1) {
+          const lx = x - (node.x || 0), ly = y - (node.y || 0);
+          let inside = true;
+          if (node.type === 'rectangle')
+            inside = runtime.pointInRoundedRectLocal(lx, ly, node.w, node.h, radii);
+          else if (node.type === 'circle')
+            inside = runtime.ellipseInside(lx, ly, node.w, node.h, 0);
+          else if (node.type === 'polygon')
+            inside = runtime.pointInPolygon(node.points || [], x + 0.5, y + 0.5);
+          if (inside) layer.plot(x, y, 0, true);
+        }
         context.compositeNodeLayer(node, layer, bounds);
       }
       const visible = this.visualBounds(node.id, { project, pageId, assets });
@@ -139,23 +157,15 @@ class Renderer {
     return mask.alpha;
   }
 
-  // Mark only transparent pixels *inside* visible layer bounds, and only at
-  // their contours. Never recolor the blank page background or opaque artwork.
-  renderPageTransparentEdges(project, pageId, assets) {
-    const bounds = this.renderNodeBoundsMask(project, pageId, assets);
+  // All transparent pixels inside a visible layer footprint, not just
+  // contours next to ink. The page background is excluded *only* from the
+  // transparency calculation; it is still drawn by the actual page renderer.
+  renderPageTransparentRegions(project, pageId, assets) {
+    const regions = this.renderNodeBoundsMask(project, pageId, assets);
     const content = this.renderPageComposite(project, pageId, assets, { hidePageBackground: true }).alpha;
-    const edges = new Uint8Array(bounds.length);
-    const hole = i => bounds[i] === 1 && content[i] === 0;
-    for (let y = 0; y < 300; y += 1) {
-      for (let x = 0; x < 400; x += 1) {
-        const i = y * 400 + x;
-        if (!hole(i)) continue;
-        if (x === 0 || !hole(i - 1) || x === 399 || !hole(i + 1)
-          || y === 0 || !hole(i - 400) || y === 299 || !hole(i + 400))
-          edges[i] = 1;
-      }
-    }
-    return edges;
+    for (let i = 0; i < regions.length; i += 1)
+      regions[i] = regions[i] && !content[i] ? 1 : 0;
+    return regions;
   }
 
   // Hardware preview/output is always opaque 1-bit, with transparent pixels flattened to white.

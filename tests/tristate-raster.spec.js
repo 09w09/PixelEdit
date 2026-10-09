@@ -78,7 +78,7 @@ test('raster transparent pixels reveal lower layers while white pixels cover bla
   expect(result).toEqual([1, 0, 1]);
 });
 
-test('栅格透明像素仅出现边界线，页面背景和导出不变',async({page})=>{
+test('栅格透明像素显示透明区域，页面背景和导出不变',async({page})=>{
   await openEditor(page);
   const result=await page.evaluate(()=>{
     const e=window.PixelEditorTest.editor,M=window.PixelEditorDebug.services.model;
@@ -100,8 +100,8 @@ test('栅格透明像素仅出现边界线，页面背景和导出不变',async(
     return{edge,ink,outside,selected,deselected,restored,unchanged:before.every((v,i)=>v===after[i])};
   });
   expect(result).toEqual({
-    edge:[65,135,216,255],ink:[0,0,0,255],outside:[255,255,255,255],
-    selected:[65,135,216,255],deselected:[65,135,216,255],
+    edge:[195,225,250,255],ink:[0,0,0,255],outside:[255,255,255,255],
+    selected:[195,225,250,255],deselected:[195,225,250,255],
     restored:[255,255,255,255],unchanged:true,
   });
 });

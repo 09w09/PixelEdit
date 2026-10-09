@@ -13,7 +13,7 @@ async function boot(page) {
   });
 }
 
-test('白色背景保持完全不透明，只在空心图形内部产生透明边界', async ({ page }) => {
+test('白色背景保持完全不透明，只在空心图形内部产生透明区域', async ({ page }) => {
   await boot(page);
   const result = await page.evaluate(() => {
     const e = window.PixelEditorTest.editor, M = window.PixelEditorDebug.services.model;
@@ -43,8 +43,8 @@ test('白色背景保持完全不透明，只在空心图形内部产生透明�
       checkerboard:e.canvas.classList.contains('has-transparency') };
   });
   expect(result.screenshotPixels.outside).toEqual([255,255,255,255]);
-  expect(result.screenshotPixels.interior).toEqual([65,135,216,255]);
-  expect(result.screenshotPixels.center).toEqual([255,255,255,255]);
+  expect(result.screenshotPixels.interior).toEqual([195,225,250,255]);
+  expect(result.screenshotPixels.center).toEqual([195,225,250,255]);
   expect(result.screenshotPixels.ink).toEqual([0,0,0,255]);
   expect(result.restored).toEqual([255,255,255,255]);
   expect(result.alpha).toBe(1);
@@ -75,7 +75,7 @@ test('黑色、白色、抖动、图案背景颜色与 Alpha 均不被替换', a
   }
 });
 
-test('白色底图上栅格透明洞可见，下层遮挡会消除透明边界',async({page})=>{
+test('白色底图上栅格透明洞可见，下层遮挡会消除透明区域',async({page})=>{
   await boot(page);
   const result=await page.evaluate(()=>{
     const e=window.PixelEditorTest.editor,M=window.PixelEditorDebug.services.model;
@@ -103,7 +103,7 @@ test('白色底图上栅格透明洞可见，下层遮挡会消除透明边界',
     const actual=R.FramebufferRenderer.renderPageComposite(e.state.project,p.id,e.state.assets);
     return{hole,ink,outside,opaqueWhite,filled,alpha:actual.alpha[31*400+31]};
   });
-  expect(result.hole).toEqual([65,135,216,255]);
+  expect(result.hole).toEqual([195,225,250,255]);
   expect(result.ink).toEqual([0,0,0,255]);
   expect(result.outside).toEqual([255,255,255,255]);
   expect(result.opaqueWhite).toEqual([255,255,255,255]);
@@ -140,7 +140,7 @@ test('透明底图的 PNG Alpha 保持原样，预览边界不进入导出', asy
   expect(result.unchanged).toBe(true);
 });
 
-test('完整页面截图只添加边界线，开关关闭后逐字节恢复',async({page})=>{
+test('完整页面截图只在图层范围内着色，开关关闭后逐字节恢复',async({page})=>{
   await boot(page);
   await page.evaluate(()=>{
     const e=window.PixelEditorTest.editor,M=window.PixelEditorDebug.services.model;

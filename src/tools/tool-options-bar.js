@@ -188,7 +188,7 @@ function installGlobalToolbar(editor) {
 
   let preview = document.querySelector('#transparencyContoursBtn');
   if (!preview) {
-    preview = iconButton({ title: '显示图层透明边界（不改变页面背景）', svg: ICONS.transparency, pressed: false });
+    preview = iconButton({ title: '显示图层透明区域（不改变页面背景）', svg: ICONS.transparency, pressed: false });
     preview.id = 'transparencyContoursBtn';
     const grow = topbar.querySelector('.grow');
     topbar.insertBefore(preview, grow || null);
@@ -200,7 +200,7 @@ function installGlobalToolbar(editor) {
   editor.updateTransparencyContoursButton = () => {
     const enabled = Boolean(editor.editorPreferences?.showTransparencyContours);
     preview.setAttribute('aria-pressed', String(enabled));
-    preview.title = enabled ? '隐藏图层透明边界' : '显示图层透明边界（不改变页面背景）';
+    preview.title = enabled ? '隐藏图层透明区域' : '显示图层透明区域（不改变页面背景）';
     preview.setAttribute('aria-label', preview.title);
   };
   editor.updateTransparencyContoursButton();

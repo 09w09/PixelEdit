@@ -29,7 +29,7 @@ test('全部图层统一预览，选中状态不改变轮廓结果',async({page}
     const after=[pixel(21,21),pixel(91,81),pixel(0,0)];
     return{before,selected,after};
   });
-  expect(result.before).toEqual([[65,135,216,255],[65,135,216,255],[255,255,255,255]]);
+  expect(result.before).toEqual([[195,225,250,255],[195,225,250,255],[255,255,255,255]]);
   expect(result.selected).toEqual(result.before);
   expect(result.after).toEqual(result.before);
 });
@@ -55,7 +55,7 @@ test('没有图层的页面不被整页染色，隐藏图层不会贡献透明�
     return{blank,shown,hidden,other,restored,background:e.activePage().fill.mode};
   });
   expect(result).toEqual({
-    blank:[255,255,255,255],shown:[65,135,216,255],hidden:[255,255,255,255],
+    blank:[255,255,255,255],shown:[195,225,250,255],hidden:[255,255,255,255],
     other:[255,255,255,255],restored:[255,255,255,255],background:'solid',
   });
 });

@@ -686,7 +686,7 @@ class Workspace {
   }
 
   // Canvas displays actual alpha; hardware renderPage() always flattens to 1-bit white.
-  writeComposite(context, composite, transparencyEdges = null) {
+  writeComposite(context, composite, transparencyRegions = null) {
     const image = context.createImageData(400, 300);
     for (let index = 0; index < composite.bits.length; index += 1) {
       const offset = index * 4;
@@ -695,19 +695,21 @@ class Workspace {
       image.data[offset + 1] = value;
       image.data[offset + 2] = value;
       image.data[offset + 3] = composite.alpha[index] ? 255 : 0;
-      // Editing-only blue contour; never part of export or project pixels.
-      if (transparencyEdges?.[index]) {
-        image.data[offset] = 65;
-        image.data[offset + 1] = 135;
-        image.data[offset + 2] = 216;
+      // Editing-only highlight for a genuinely transparent layer pixel.
+      // Opaque black/white pixels remain untouched; actual alpha and exports
+      // continue to use the unmodified composite.
+      if (transparencyRegions?.[index]) {
+        image.data[offset] = 195;
+        image.data[offset + 1] = 225;
+        image.data[offset + 2] = 250;
         image.data[offset + 3] = 255;
       }
     }
     context.putImageData(image, 0, 0);
   }
 
-  drawFramebuffer(composite, transparencyEdges = null) {
-    this.writeComposite(this.ctx, composite, transparencyEdges);
+  drawFramebuffer(composite, transparencyRegions = null) {
+    this.writeComposite(this.ctx, composite, transparencyRegions);
     this.lastFramebuffer = composite.bits.slice();
     // Page background is always the real project fill, even while previewing.
     this.canvas.classList.toggle('has-transparency', this.activePage()?.fill?.mode === 'transparent');
@@ -719,7 +721,7 @@ class Workspace {
     const project = this.state.project, assets = this.state.assets;
     const actual = R.FramebufferRenderer.renderPageComposite(project, page.id, assets);
     const edges = this.editorPreferences?.showTransparencyContours
-      ? R.FramebufferRenderer.renderPageTransparentEdges(project, page.id, assets)
+      ? R.FramebufferRenderer.renderPageTransparentRegions(project, page.id, assets)
       : null;
     this.drawFramebuffer(actual, edges);
   }

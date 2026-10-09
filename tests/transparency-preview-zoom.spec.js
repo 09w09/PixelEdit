@@ -17,7 +17,7 @@ async function boot(page){
   });
 }
 
-test('缩放 1–30x 后透明边界仅在图层范围内显示，画布保持不透明', async({page})=>{
+test('缩放 1–30x 后透明区域仅在图层范围内显示，画布保持不透明', async({page})=>{
   await boot(page);
   const result=await page.evaluate(()=>{
     const e=window.PixelEditorTest.editor;
@@ -37,8 +37,8 @@ test('缩放 1–30x 后透明边界仅在图层范围内显示，画布保持�
     expect(item.sizes).toEqual([400*item.zoom,300*item.zoom]);
     expect(item.aligned).toBe(true);
     expect(item.outside).toEqual([255,255,255,255]);
-    expect(item.edge).toEqual([65,135,216,255]);
-    expect(item.center).toEqual([255,255,255,255]);
+    expect(item.edge).toEqual([195,225,250,255]);
+    expect(item.center).toEqual([195,225,250,255]);
     expect(item.checker).toBe(false);
   }
 });
