@@ -32,7 +32,7 @@ function commandDefinitions(editor, Model, Commands) {
       },
     },
     { id: 'rasterize', label: '栅格化', enabled: Boolean(one) && modifiable, run: () => editor.rasterizeSelected() },
-    { id: 'save-image', label: '图片另存为', visible: one?.type === 'image', enabled: one?.type === 'image', run: () => editor.saveSelectedImage() },
+    { id: 'save-image', label: '图层另存为 PNG', visible: Boolean(one), enabled: Boolean(one), run: () => editor.saveSelectedImage() },
     { id: 'copy-image', label: '复制图片', visible: one?.type === 'image', enabled: one?.type === 'image', run: () => editor.copySelectedImage() },
   ];
 }

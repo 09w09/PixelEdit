@@ -16,6 +16,10 @@ test('project creation, browser download, undo and PNG export work without file 
   });
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.pix$/);
+  // Explicit Save As must also download on browsers without the picker API.
+  const saveAsPromise = page.waitForEvent('download');
+  await page.locator('#saveAsBtn').click();
+  expect((await saveAsPromise).suggestedFilename()).toMatch(/\.pix$/);
   // Downloads cannot prove that bytes reached the user's disk.
   expect(await page.evaluate(() => window.PixelEditorTest.editor.state.dirty)).toBe(true);
   await page.evaluate(() => { window.PixelEditorTest.editor.bus.undo(); });

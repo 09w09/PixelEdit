@@ -215,6 +215,7 @@ class Workspace {
     $('#redoBtn').onclick = () => { if (this.bus.redo()) { this.state.selection.clear(); this.renderAll(); } };
     $('#newBtn').onclick = () => this.newProject();
     $('#saveBtn').onclick = () => this.saveProject();
+    $('#saveAsBtn').onclick = () => this.saveProjectAs();
     $('#openBtn').onclick = () => this.openProject();
     $('#exportPngBtn').onclick = () => this.exportPng();
   }
@@ -766,7 +767,7 @@ class Workspace {
   setupKeyboard() {
     window.addEventListener('keydown', event => {
       const mod = event.ctrlKey || event.metaKey, editing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName) || event.target?.isContentEditable;
-      if (mod && event.key.toLowerCase() === 's') { event.preventDefault(); this.saveProject(); return; }
+      if (mod && event.key.toLowerCase() === 's') { event.preventDefault(); if (event.shiftKey) this.saveProjectAs(); else this.saveProject(); return; }
       if (editing) return;
       if (event.code === 'Space') { this.spaceDown = true; this.interaction?.setPanModifier(true); event.preventDefault(); return; }
       if (mod && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey ? this.bus.redo() : this.bus.undo()) { this.state.selection.clear(); this.renderAll(); } return; }
@@ -856,13 +857,18 @@ class Workspace {
     return canvas;
   }
 
-  async saveProject() {
-    if (typeof window.showSaveFilePicker === 'function') {
+  saveProjectAs() { return this.saveProject({ saveAs: true }); }
+
+  async saveProject({ saveAs = false } = {}) {
+    // An already-opened file can still be saved even when the picker API is unavailable.
+    if (typeof window.showSaveFilePicker === 'function' || (!saveAs && this.state.projectFileHandle)) {
       try {
-        await this.files.save();
+        const raw = await (saveAs ? this.files.saveAs() : this.files.save());
+        if (raw === null) return false; // The picker was dismissed without a file.
         this.bus.markSaved();
         this.autosave?.clear();
         this.renderAll({ canvas: false });
+        this.notice(`工程已保存：${this.state.projectFileName}`);
         return true;
       } catch (error) {
         if (error?.name === 'AbortError') return false;
@@ -870,13 +876,15 @@ class Workspace {
         return false;
       }
     }
-    // A browser download cannot confirm that the file was actually written.
+    // Downloads have no write confirmation: keep the dirty flag and any existing handle.
     try {
       const raw = P.ProjectSerializer.serialize(this.state.project, this.state.assets);
       const name = this.state.projectFileName?.endsWith('.pix') ? this.state.projectFileName : DEFAULT_FILENAME;
       downloadBlob(new Blob([raw], { type: 'application/json' }), name);
-      this.state.projectFileName = name;
-      this.notice('已开始下载工程；请确认文件保存成功，未保存保护仍然有效');
+      if (!this.state.projectFileHandle) this.state.projectFileName = name;
+      this.notice(saveAs && this.state.projectFileHandle
+        ? '已开始下载工程副本；后续“保存”仍写入原文件，未保存保护仍然有效'
+        : '已开始下载工程；请确认文件保存成功，未保存保护仍然有效');
       this.renderAll({ canvas: false });
       return true;
     } catch (error) {
@@ -955,7 +963,25 @@ class Workspace {
   }
 
   rasterizeSelected() { return PE.rasterLayer?.rasterizeSelected?.(this, globalThis) || false; }
-  async saveSelectedImage() { const id = this.state.selection.primaryId; if (!id) return; const asset = this.subtreeAsset(id); asset.canvas.toBlob(blob => downloadBlob(blob, `${M.nodeById(this.activePage(), id)?.name || 'element'}.png`), 'image/png'); }
+  saveSelectedImage() {
+    const id = this.state.selection.primaryId;
+    const node = M.nodeById(this.activePage(), id);
+    if (!node) return false;
+    try {
+      const { canvas } = this.subtreeAsset(id);
+      // Keep the download in the original click gesture; async toBlob can lose it.
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `${String(node.name || 'element').replace(/[\\/:*?"<>|]/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return true;
+    } catch (error) {
+      this.notice(`图层 PNG 另存为失败：${error?.message || error}`);
+      return false;
+    }
+  }
 
   async copySelectedImage() {
     const id = this.state.selection.primaryId; if (!id) return false; try { const asset = this.subtreeAsset(id), blob = await new Promise(resolve => asset.canvas.toBlob(resolve, 'image/png')); if (!blob) throw new Error('无法生成图片'); if (!navigator.clipboard?.write || !globalThis.ClipboardItem) { this.notice('当前浏览器不支持复制图片到系统剪贴板'); return false; } await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); this.notice('图片已复制到剪贴板'); return true; } catch (error) { this.notice(`复制图片失败：${error?.message || error}`); return false; }
